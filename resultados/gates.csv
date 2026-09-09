@@ -1,0 +1,31 @@
+red,activo,escenario,compuerta,resultado,valor_medido
+tempo,n/a,E1,G3,no_evaluable,
+tempo,n/a,E2,G1,pasa,0.5900001525878906
+tempo,n/a,E2,G3,no_evaluable,
+tempo,n/a,E2,G4,pasa,556.8040922656879
+tempo,n/a,E3,G3,no_evaluable,
+tempo,n/a,E3,G4,pasa,556.8040922656879
+aptos,n/a,E1,G3,no_evaluable,
+aptos,n/a,E2,G1,pasa,0.086047
+aptos,n/a,E2,G3,no_evaluable,
+aptos,n/a,E2,G4,no_evaluable,
+aptos,n/a,E3,G3,no_evaluable,
+aptos,n/a,E3,G4,no_evaluable,
+canton,n/a,E1,G3,no_evaluable,
+canton,n/a,E2,G1,pasa,1.061222
+canton,n/a,E2,G3,no_evaluable,
+canton,n/a,E2,G4,no_evaluable,
+canton,n/a,E3,G3,no_evaluable,
+canton,n/a,E3,G4,no_evaluable,
+tempo,TIP-20 nativo,E1,G2p,pasa,1.0
+tempo,TIP-20 nativo,E2,G2p,pasa,1.0
+tempo,TIP-20 nativo,E3,G2p,pasa,1.0
+aptos,Fungible Asset (generico),E1,G2p,no_evaluable,1.0
+aptos,Fungible Asset (generico),E2,G2p,no_evaluable,1.0
+aptos,Fungible Asset (generico),E3,G2p,no_evaluable,1.0
+canton,Canton Coin (Amulet),E1,G2p,pasa,1.0
+canton,Canton Coin (Amulet),E2,G2p,pasa,1.0
+canton,Canton Coin (Amulet),E3,G2p,pasa,1.0
+canton,"USDCx (Circle xReserve, CIP-56)",E1,G2p,falla,0.0
+canton,"USDCx (Circle xReserve, CIP-56)",E2,G2p,falla,0.0
+canton,"USDCx (Circle xReserve, CIP-56)",E3,G2p,falla,0.0

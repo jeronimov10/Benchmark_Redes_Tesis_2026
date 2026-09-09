@@ -1,0 +1,19 @@
+{
+  "n_blocks": 350,
+  "B1_cadencia_mediana_s": 0.022088,
+  "B1_cadencia_p95_s": 0.086047,
+  "B1_n": 349,
+  "C3_fraccion_continuidad": 1.0,
+  "C3_n": 349,
+  "C1_herfindahl_produccion": 0.020555102040816325,
+  "C1_n_proposers_distintos": 69,
+  "C1_n_bloques_con_metadata": 350,
+  "C1b_herfindahl_peso_consenso": 0.016862464751180528,
+  "C1b_n_validadores": 84,
+  "C2_operadores_sobre_50pct_por_peso": 24,
+  "C2_operadores_sobre_50pct_por_produccion": 19,
+  "C4_tasa_fallo": 0.0,
+  "C4_n": 869,
+  "D1_fraccion_fee_payer_distinto": 0.011507479861910242,
+  "D1_n": 869
+}

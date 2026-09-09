@@ -1,0 +1,15 @@
+metrica_id,valores_por_red,rango,discrimino
+A1,"{""tempo"": 2.01522e-05, ""canton"": 0.8952600000000001}",0.8952398478000001,si
+A2,"{""tempo"": 0.0001785474, ""canton"": 2.75022}",2.7500414526,si
+A3,"{""tempo"": 2019.3640331462352}",,no_evaluable (menos de 2 redes con dato)
+B1,"{""tempo"": 0.5900001525878906, ""aptos"": 0.086047, ""canton"": 1.061222}",0.9751750000000001,si
+B2,"{""tempo"": 0.630202054977417, ""canton"": 1.061222}",0.4310199450225831,si
+B3,"{""tempo"": 556.8040922656879}",,no_evaluable (menos de 2 redes con dato)
+C1b,"{""tempo"": 0.06666666666666667, ""aptos"": 0.016862464751180528}",0.04980420191548614,si
+C2,"{""tempo"": 8.0, ""aptos"": 24.0}",16.0,si
+C3,"{""aptos"": 1.0}",,no_evaluable (menos de 2 redes con dato)
+C4,"{""tempo"": 0.0, ""aptos"": 0.0, ""canton"": 0.004125}",0.004125,si
+C5,{},,no_evaluable (menos de 2 redes con dato)
+D1,"{""tempo"": 1.0, ""aptos"": 0.011507479861910242}",0.9884925201380897,si
+D2,{},,no_evaluable (menos de 2 redes con dato)
+D3,"{""tempo"": 0.7681818181818182}",,no_evaluable (menos de 2 redes con dato)

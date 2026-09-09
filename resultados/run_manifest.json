@@ -1,0 +1,40 @@
+{
+  "fecha_ejecucion": "2026-09-09T02:14:20.503279+00:00",
+  "tipo_de_corrida": "verificacion/implementacion con muestra reducida, NO la ventana W_H de 14 dias del plan",
+  "redes": {
+    "tempo": {
+      "endpoint": "https://rpc.tempo.xyz",
+      "proveedores_independientes": 1,
+      "rango": "ver resultados/raw/tempo/blocks_sample.json (150 bloques mas recientes al momento de la corrida)",
+      "n_bloques": 700,
+      "n_transacciones": 220
+    },
+    "aptos": {
+      "endpoint": "https://api.mainnet.aptoslabs.com/v1",
+      "proveedores_independientes": 1,
+      "rango": "ver resultados/raw/aptos/blocks_sample.json (60 bloques mas recientes al momento de la corrida)",
+      "n_bloques": 350
+    },
+    "canton": {
+      "endpoint": "https://api.cantonnodes.com (espejo publico de terceros; los Scan de SV directos -sync.global, digitalasset.com, cumberland.io, fivenorth.io- rechazaron acceso publico con 403/RBAC)",
+      "proveedores_independientes": 1,
+      "rango": "2026-09-07T14:00:00.037299+00:00 a 2026-09-07T14:08:12.913840+00:00 (492.876541 s) -- ventana dominada por un burst periodico, no representativa del trafico tipico",
+      "n_eventos": 8000
+    }
+  },
+  "limitaciones_estructurales": [
+    "Tempo: no se localizo la direccion del precompilado ValidatorConfig (T-2) -> C1b no computable en Tempo",
+    "Aptos: oraculo Pyth (APT/USD) descontinuado el 2026-08-26 -> A1/A2 no computables sin oraculo vivo",
+    "Aptos: limite de gas de bloque ahora es un blob BCS opaco (ExecutionConfig) -> A3/B3 no computables sin decodificacion BCS",
+    "Canton: los Scan de Super Validador individuales bloquean acceso publico directo (403/RBAC); solo se pudo verificar un espejo de tercero (api.cantonnodes.com) -> no se cumplio el control de concordancia entre dos SV independientes (C-7)"
+  ],
+  "segundo_proveedor_por_red": "NO CUMPLIDO en esta pasada para ninguna red -- solo se uso un proveedor por red",
+  "codigo": {
+    "collect_tempo.py": "resultados/raw/tempo",
+    "collect_aptos.py": "resultados/raw/aptos",
+    "collect_canton.py": "resultados/raw/canton",
+    "compute_tempo_metrics.py": "resultados/tempo_metrics.json",
+    "compute_aptos_metrics.py": "resultados/aptos_metrics.json",
+    "compute_canton_metrics.py": "resultados/canton_metrics.json"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "type": "0x1::transaction_limits::TxnLimitsConfig",
+  "data": {
+    "__variant__": "V1",
+    "execution_tiers": [
+      {
+        "min_stake": "100000000000000",
+        "multiplier_percent": "200"
+      },
+      {
+        "min_stake": "500000000000000",
+        "multiplier_percent": "400"
+      },
+      {
+        "min_stake": "1000000000000000",
+        "multiplier_percent": "800"
+      }
+    ],
+    "io_tiers": [
+      {
+        "min_stake": "500000000000000",
+        "multiplier_percent": "200"
+      },
+      {
+        "min_stake": "1000000000000000",
+        "multiplier_percent": "400"
+      },
+      {
+        "min_stake": "2000000000000000",
+        "multiplier_percent": "800"
+      }
+    ]
+  }
+}

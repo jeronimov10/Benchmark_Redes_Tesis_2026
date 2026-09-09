@@ -1,0 +1,3346 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Blueprint Canton Chain API",
+    "version": "1.0.0",
+    "summary": "Full-history Canton Network chain data over one REST API.",
+    "description": "Query every Canton Coin transaction since genesis (June 2024), any party's complete history, live balances and holdings, mining rounds, ANS names, network configuration, and aggregated chain statistics.\n\nThe API is backed by Blueprint's own Canton validator infrastructure: a continuously ingesting index of the global transaction feed (~seconds behind head), normalized per party, plus live pass-through to the Super Validator Scan API for point-in-time state. All endpoints are read-only GETs returning JSON.\n\n**Cursors** — list endpoints paginate by the monotonic `seq` cursor: pass `before_seq` (newest-first) or `after_seq` (oldest-first, party history only) and chain the `next_before_seq` / `next_after_seq` value from each response. `before_seq=0` means \"start at the newest\".\n\n**Authentication & rate limits** — browsing is open (anonymous, 300 req/min per IP). Authenticate with an API key — `Authorization: Bearer <key>` or `X-API-Key: <key>` — to unlock a plan: Free (300 req/min), Pro (3,000), Enterprise (30,000). Live tiers at `GET /api/plans`. Every response carries `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` headers; exceeding the limit returns `429` with `Retry-After`, an invalid key returns `401`.\n\n**Access** — public for evaluation. For a key, production terms, SLAs, or dedicated capacity, contact Blueprint at https://theblueprint.xyz.\n\n**Quotas** — the Free plan includes 10,000 requests/day and 150,000/month (pooled across your keys). Responses on quota-capped plans carry `X-Quota-Daily-Limit` / `X-Quota-Daily-Remaining` / `X-Quota-Monthly-Limit` / `X-Quota-Monthly-Remaining`; an exhausted quota returns `429` naming the window that reset it. Pro and Enterprise have no volume caps — upgrade at https://ccscan.xyz/pricing.",
+    "contact": {
+      "name": "Blueprint",
+      "url": "https://theblueprint.xyz"
+    },
+    "termsOfService": "https://ccscan.xyz/terms",
+    "license": {
+      "name": "Open data — see documentation",
+      "url": "https://ccscan.xyz/docs/"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://ccscan.xyz"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Overview",
+      "description": "Chain head, totals, and live feed snapshot"
+    },
+    {
+      "name": "Transactions",
+      "description": "The global transaction feed from genesis, filterable and cursor-paginated"
+    },
+    {
+      "name": "Parties",
+      "description": "Any party's history, balance, and holdings"
+    },
+    {
+      "name": "Rounds",
+      "description": "Mining-round activity"
+    },
+    {
+      "name": "Names",
+      "description": "Canton Name Service (ANS) directory"
+    },
+    {
+      "name": "Network",
+      "description": "DSO, super validators, and CC configuration"
+    },
+    {
+      "name": "Governance",
+      "description": "Decoded DSO on-chain governance: vote requests, per-SV tallies, participation."
+    },
+    {
+      "name": "Stats",
+      "description": "Daily aggregates and market data"
+    },
+    {
+      "name": "Search",
+      "description": "Universal query classifier"
+    },
+    {
+      "name": "Meta",
+      "description": "Health and machine-readable discovery"
+    },
+    {
+      "name": "Live",
+      "description": "Real-time chain pulse — in-memory head samples, throughput, and server-push (SSE). Metering-exempt."
+    }
+  ],
+  "paths": {
+    "/api/overview": {
+      "get": {
+        "tags": [
+          "Overview"
+        ],
+        "operationId": "getOverview",
+        "summary": "Chain head snapshot",
+        "description": "Head sequence, latest round, indexed totals, 24-hour transaction count, ingest freshness, and the 12 most recent transactions.",
+        "responses": {
+          "200": {
+            "description": "Current chain overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "head_seq": {
+                      "type": "integer",
+                      "description": "Highest indexed sequence number"
+                    },
+                    "latest_round": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "latest_tx_date": {
+                      "type": "string",
+                      "description": "Timestamp of the newest indexed transaction (UTC)"
+                    },
+                    "total_tx_est": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Planner estimate of total indexed transactions"
+                    },
+                    "party_count_est": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Planner estimate of distinct parties ever seen"
+                    },
+                    "tx_24h": {
+                      "type": "integer",
+                      "description": "Transactions indexed in the trailing 24 hours"
+                    },
+                    "ingest_cursor_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Last ingest checkpoint time — freshness signal"
+                    },
+                    "latest_txs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TxRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/txs": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "operationId": "listTransactions",
+        "summary": "Global transaction feed",
+        "description": "Newest-first, cursor-paginated global feed. Combine `type`, `round`, and `day` filters freely. `day` navigation costs ~30 index probes via binary search over the sequence key — no scan.",
+        "parameters": [
+          {
+            "name": "before_seq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Return rows with seq < this value; 0 or omitted = start at newest. Chain `next_before_seq` to page."
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TxType"
+            },
+            "description": "Filter by transaction type"
+          },
+          {
+            "name": "round",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter to one mining round"
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2025-01-15"
+            },
+            "description": "Jump to a UTC calendar day (YYYY-MM-DD)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set to 1/true to attach the full per-transaction `detail` object (transfer legs, fees — sender_fee / receiver_fee / holding_fees / sender_change_fee — and balance_changes) to every row, matching /api/tx/{key}. Off by default to keep the list lean."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "next_before_seq": {
+                      "type": "integer",
+                      "description": "Pass back as before_seq for the next (older) page; 0 when empty"
+                    },
+                    "txs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TxRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/IndexBuilding"
+          }
+        }
+      }
+    },
+    "/api/tx/{key}": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "operationId": "getTransaction",
+        "summary": "One transaction by seq or event id",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Sequence number (digits) or full event id (e.g. `#1220…:0`)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The transaction with its full financial body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tx"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/party/search": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "searchParties",
+        "summary": "Substring search over every party ever seen",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2
+            },
+            "description": "Case-insensitive fragment of a party id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 50 matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "parties": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/parties/notable": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getNotableParties",
+        "summary": "Curated party directory",
+        "description": "A curated starting set for party discovery: Blueprint's validator, then every super validator, then featured-app providers — each with a display name and tag. All from cached network data.",
+        "responses": {
+          "200": {
+            "description": "Notable parties",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "parties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "party": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "tag": {
+                            "type": "string",
+                            "enum": [
+                              "validator",
+                              "super validator",
+                              "featured app"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/party/{party}/summary": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getPartySummary",
+        "summary": "Party activity summary + ANS name",
+        "description": "First/last activity and transaction count (exact up to 100,000, then reported as capped), plus the party's ANS entry when registered.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Party"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Party summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "party": {
+                      "type": "string"
+                    },
+                    "tx_count": {
+                      "type": "integer",
+                      "description": "Exact up to 100,000"
+                    },
+                    "tx_count_capped": {
+                      "type": "boolean",
+                      "description": "true when the party has more than 100,000 transactions"
+                    },
+                    "first_seen": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "first_seq": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "last_seen": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "last_seq": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "ans": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "description": "ANS entry (name, user, url, description, expires_at, contract_id) when registered"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/party/{party}/balance": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getPartyBalance",
+        "summary": "Live CC balance (point-in-time ACS snapshot)",
+        "description": "Balance computed against the most recent valid ACS snapshot from the Scan API: unlocked/locked/total holdings, accrued holding fees, and available coin.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Party"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Balance summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "record_time": {
+                      "type": "string",
+                      "description": "Snapshot time the balance is computed as of"
+                    },
+                    "computed_as_of_round": {
+                      "type": "integer"
+                    },
+                    "summary": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "description": "Null when the party holds no CC at the snapshot",
+                      "properties": {
+                        "party_id": {
+                          "type": "string"
+                        },
+                        "total_unlocked_coin": {
+                          "type": "string"
+                        },
+                        "total_locked_coin": {
+                          "type": "string"
+                        },
+                        "total_coin_holdings": {
+                          "type": "string"
+                        },
+                        "accumulated_holding_fees_unlocked": {
+                          "type": "string"
+                        },
+                        "accumulated_holding_fees_locked": {
+                          "type": "string"
+                        },
+                        "accumulated_holding_fees_total": {
+                          "type": "string"
+                        },
+                        "total_available_coin": {
+                          "type": "string",
+                          "description": "Holdings minus accrued holding fees"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamUnavailable"
+          }
+        }
+      }
+    },
+    "/api/party/{party}/holdings": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getPartyHoldings",
+        "summary": "Live holding contracts",
+        "description": "The party's active Amulet holding contracts at the latest ACS snapshot (Scan API pass-through, page size 200).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Party"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Scan API pagination token from a previous page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Holding contracts (Scan API `created_events` shape)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Live ACS snapshot passed through from the Super Validator Scan API — the party's active Amulet holding contracts.",
+                  "properties": {
+                    "record_time": {
+                      "type": "string",
+                      "description": "Snapshot record time (UTC)"
+                    },
+                    "migration_id": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Synchronizer migration id"
+                    },
+                    "created_events": {
+                      "type": "array",
+                      "description": "Array of created-event objects for the party's active Amulet holding contracts; each has contract_id, template_id, created_at, signatories, observers, and create_arguments (create_arguments.amount.initialAmount / ratePerRound.rate, plus lock state on locked holdings).",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "next_page_token": {
+                      "type": [
+                        "string",
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Scan pagination token; pass as ?after= for the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamUnavailable"
+          }
+        }
+      }
+    },
+    "/api/party/{party}/txs": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "listPartyTransactions",
+        "summary": "A party's complete transaction history",
+        "description": "Every transaction the party appears in, from genesis. Page forward (oldest-first) with `after_seq` or backward (newest-first) with `before_seq` — mutually exclusive. Each row carries the party's roles in that transaction.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Party"
+          },
+          {
+            "name": "after_seq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Oldest-first: rows with seq > this value"
+          },
+          {
+            "name": "before_seq",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Newest-first: rows with seq < this value; 0 = start at newest"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TxType"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set to 1/true to attach the full per-transaction `detail` object (transfer legs, fees — sender_fee / receiver_fee / holding_fees — balance_changes) to every row — the full per-transaction economic detail. Off by default to keep the list lean."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the party's transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "party": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "next_after_seq": {
+                      "type": "integer",
+                      "description": "Present in forward mode"
+                    },
+                    "next_before_seq": {
+                      "type": "integer",
+                      "description": "Present in backward mode"
+                    },
+                    "txs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PartyTxRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/IndexBuilding"
+          }
+        }
+      }
+    },
+    "/api/round/{round}": {
+      "get": {
+        "tags": [
+          "Rounds"
+        ],
+        "operationId": "getRound",
+        "summary": "One mining round",
+        "description": "Transaction count, sequence range, time span, and a newest-first page of the round's transactions.",
+        "parameters": [
+          {
+            "name": "round",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "before_seq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Round detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "round": {
+                      "type": "integer"
+                    },
+                    "tx_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "first_seq": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "last_seq": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "started": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "ended": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "next_before_seq": {
+                      "type": "integer"
+                    },
+                    "txs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TxRow"
+                      }
+                    },
+                    "note": {
+                      "type": "string",
+                      "description": "present for round 0 (large automation bucket): explains the omitted exact count"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/IndexBuilding"
+          }
+        }
+      }
+    },
+    "/api/ans": {
+      "get": {
+        "tags": [
+          "Names"
+        ],
+        "operationId": "listAnsEntries",
+        "summary": "ANS name directory",
+        "description": "Canton Name Service entries (Scan API pass-through). Filter with a lowercase name prefix.",
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Name prefix, lowercased server-side"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ANS entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "string",
+                            "description": "The party id the name resolves to"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "expires_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "contract_id": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamUnavailable"
+          }
+        }
+      }
+    },
+    "/api/network": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "operationId": "getNetwork",
+        "summary": "DSO, super validators, CC configuration, versions",
+        "description": "Aggregated network metadata: DSO state, the super validator scan directory, Splice instance names, Scan version, and the current Amulet (CC) rules payload.",
+        "responses": {
+          "200": {
+            "description": "Network metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dso": {
+                      "type": "object"
+                    },
+                    "scans": {
+                      "type": "object",
+                      "description": "Super validator scan directory"
+                    },
+                    "instance_names": {
+                      "type": "object"
+                    },
+                    "version": {
+                      "type": "object"
+                    },
+                    "amulet_rules": {
+                      "type": "object",
+                      "description": "Current AmuletRules contract payload (fees, limits, schedule)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/netstat": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "operationId": "getNetstat",
+        "summary": "Live network economics snapshot",
+        "description": "Compact one-call snapshot of network economics: on-chain oracle CC price, the current open mining round and its open/close timing, issuance per year, app/validator reward split, synchronizer traffic price, holding-fee rate, SV and featured-app counts, and protocol version. Built from shared upstream caches (30–600s).",
+        "responses": {
+          "200": {
+            "description": "Current network configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "oracle_price": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "On-chain amulet price (USD) from the SV oracle"
+                    },
+                    "round": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "round_opens_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "round_closes_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tick_seconds": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "issuance_per_year": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "On-chain annual Canton Coin issuance (amuletToIssuePerYear from the DSO AmuletRules config)."
+                    },
+                    "circulating_supply": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Circulating CC supply: cumulative net minting from genesis (rewards + mints + taps - fees burned), summed from the full index."
+                    },
+                    "inflation_pct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Annualized inflation rate (%): issuance_per_year / circulating_supply."
+                    },
+                    "app_reward_pct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "validator_reward_pct": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "traffic_price": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "holding_fee_rate": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "sv_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "voting_threshold": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "featured_apps": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "version": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marker_value": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "USD value of one featured-app activity marker (featuredAppActivityMarkerAmount)."
+                    },
+                    "developer_fund": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Developer-fund pool: on-chain CC in the DSO's optDevelopmentFundManager party + % of issuance routed.",
+                      "properties": {
+                        "party": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "balance": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "pct": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/governance": {
+      "get": {
+        "tags": [
+          "Governance"
+        ],
+        "operationId": "getGovernance",
+        "summary": "DSO governance proposals (open + closed)",
+        "description": "Open and recently-closed DSO vote requests, decoded from on-chain contracts into human-readable proposals: action, category, requester, per-proposal tallies. Closed history extends past the upstream ~100-item window via a permanent local archive.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 200,
+              "default": 40
+            },
+            "description": "Max closed proposals to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decoded proposals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "open": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tracking_cid": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": "string",
+                            "description": "the on-chain action target"
+                          },
+                          "requester": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reason_url": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "vote_before": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "effective_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "completed_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "accepted",
+                              "rejected",
+                              "expired"
+                            ]
+                          },
+                          "accepts": {
+                            "type": "integer"
+                          },
+                          "rejects": {
+                            "type": "integer"
+                          },
+                          "votes_cast": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "closed": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tracking_cid": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": "string",
+                            "description": "the on-chain action target"
+                          },
+                          "requester": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reason_url": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "vote_before": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "effective_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "completed_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "accepted",
+                              "rejected",
+                              "expired"
+                            ]
+                          },
+                          "accepts": {
+                            "type": "integer"
+                          },
+                          "rejects": {
+                            "type": "integer"
+                          },
+                          "votes_cast": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "categories": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "tally": {
+                      "type": "object",
+                      "properties": {
+                        "open": {
+                          "type": "integer"
+                        },
+                        "accepted": {
+                          "type": "integer"
+                        },
+                        "rejected": {
+                          "type": "integer"
+                        },
+                        "expired": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "archived_total": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/governance/{cid}": {
+      "get": {
+        "tags": [
+          "Governance"
+        ],
+        "operationId": "getGovernanceProposal",
+        "summary": "One proposal with the full per-SV vote breakdown",
+        "description": "A single vote request by its tracking contract id, including every SV’s vote (`all_votes`), the raw action payload, and the current electorate size (`sv_count`) for the tally denominator.",
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The proposal tracking contract id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The decoded proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tracking_cid": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string",
+                      "description": "the on-chain action target"
+                    },
+                    "requester": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reason_url": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "vote_before": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "effective_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "completed_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "accepted",
+                        "rejected",
+                        "expired"
+                      ]
+                    },
+                    "accepts": {
+                      "type": "integer"
+                    },
+                    "rejects": {
+                      "type": "integer"
+                    },
+                    "votes_cast": {
+                      "type": "integer"
+                    },
+                    "all_votes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sv": {
+                            "type": "string"
+                          },
+                          "accept": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reason_url": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "cast_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "action_raw": {
+                      "type": "object",
+                      "description": "raw decoded action payload"
+                    },
+                    "sv_count": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "current electorate size (tally denominator)"
+                    },
+                    "abstaining": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/governance/participation": {
+      "get": {
+        "tags": [
+          "Governance"
+        ],
+        "operationId": "getGovernanceParticipation",
+        "summary": "Per-SV voting participation",
+        "description": "Voting participation for every super validator across all archived decided proposals: votes cast, accept/reject split, participation rate. Cached ~5 minutes.",
+        "responses": {
+          "200": {
+            "description": "Participation per SV",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "proposals": {
+                      "type": "integer",
+                      "description": "decided proposals in the denominator"
+                    },
+                    "svs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sv": {
+                            "type": "string"
+                          },
+                          "cast": {
+                            "type": "integer"
+                          },
+                          "accepts": {
+                            "type": "integer"
+                          },
+                          "rejects": {
+                            "type": "integer"
+                          },
+                          "participation": {
+                            "type": "number",
+                            "description": "fraction of decided proposals this SV voted on"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/validators": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "operationId": "getValidators",
+        "summary": "Validator directory (trailing 7 days)",
+        "description": "Every party that collected validator rewards in the trailing 7 days, ranked by rewards, with a per-day series. Super validators are flagged with `is_sv`. Background-computed and cached; `pending:true` until the first rollup lands.",
+        "responses": {
+          "200": {
+            "description": "Ranked validators + daily series",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "validators": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "party": {
+                            "type": "string"
+                          },
+                          "rewards_24h": {
+                            "type": "number"
+                          },
+                          "rewards_7d": {
+                            "type": "number"
+                          },
+                          "sv_rewards_7d": {
+                            "type": "number"
+                          },
+                          "collections_7d": {
+                            "type": "integer"
+                          },
+                          "last_seen": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "is_sv": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "daily": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "rewards": {
+                            "type": "number"
+                          },
+                          "actives": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "window": {
+                      "type": "string",
+                      "description": "ranking window, e.g. 7d"
+                    },
+                    "computed_at": {
+                      "type": "number",
+                      "description": "unix seconds of the rollup"
+                    },
+                    "pending": {
+                      "type": "boolean",
+                      "description": "true until the first background rollup lands"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/daily": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "operationId": "getDailyStats",
+        "summary": "Per-day aggregates from genesis",
+        "description": "Daily transaction counts and CC volume by type, aggregated from the full index by a background job. `complete=false` means the genesis backfill is still filling in (progress = aggregated_to_seq / head_seq); days appear oldest-first as it advances.",
+        "responses": {
+          "200": {
+            "description": "Daily aggregate series",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "tx_count": {
+                            "type": "integer"
+                          },
+                          "transfers": {
+                            "type": "integer"
+                          },
+                          "mints": {
+                            "type": "integer"
+                          },
+                          "taps": {
+                            "type": "integer"
+                          },
+                          "aborts": {
+                            "type": "integer"
+                          },
+                          "cc_transferred": {
+                            "type": "number"
+                          },
+                          "cc_minted": {
+                            "type": "number"
+                          },
+                          "cc_tapped": {
+                            "type": "number"
+                          },
+                          "sv_rewards": {
+                            "type": "number",
+                            "description": "CC minted as super-validator rewards that day"
+                          },
+                          "app_rewards": {
+                            "type": "number",
+                            "description": "CC minted as app rewards that day"
+                          },
+                          "validator_rewards": {
+                            "type": "number",
+                            "description": "CC minted as validator rewards (coupon de-duplicated: max(reward, faucet))"
+                          },
+                          "cc_fees_burned": {
+                            "type": "number",
+                            "description": "CC burned in sender/receiver/holding fees that day"
+                          },
+                          "reward_collections": {
+                            "type": "integer",
+                            "description": "Count of reward-collection transfers that day"
+                          }
+                        }
+                      }
+                    },
+                    "aggregated_to_seq": {
+                      "type": "integer"
+                    },
+                    "head_seq": {
+                      "type": "integer"
+                    },
+                    "complete": {
+                      "type": "boolean"
+                    },
+                    "econ_to_seq": {
+                      "type": "integer",
+                      "description": "Economics backfill progress (seq walked)"
+                    },
+                    "econ_complete": {
+                      "type": "boolean",
+                      "description": "True once the economics columns cover the full index"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/IndexBuilding"
+          }
+        }
+      }
+    },
+    "/api/stats/recent": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "operationId": "getRecentStats",
+        "summary": "Per-day tx counts for the last N days (always current)",
+        "description": "Computed live by binary-searching the sequence key at each UTC day boundary — independent of the background aggregator, cached 10 minutes. The last entry is the current partial day.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 14,
+              "minimum": 1,
+              "maximum": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent daily counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "tx_count": {
+                            "type": "integer"
+                          },
+                          "partial": {
+                            "type": "boolean",
+                            "description": "Present and true on the current (incomplete) day"
+                          }
+                        }
+                      }
+                    },
+                    "head_seq": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/price": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "operationId": "getPrice",
+        "summary": "Canton Coin market data",
+        "description": "USD and BTC price, market cap, and 24h change (CoinGecko, cached 120s). `available=false` when market data cannot be fetched.",
+        "responses": {
+          "200": {
+            "description": "Market data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "usd": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "btc": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "usd_market_cap": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "usd_24h_change": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "as_of": {
+                      "type": "integer",
+                      "description": "Unix timestamp the quote was fetched (present when available)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "operationId": "search",
+        "summary": "Universal search",
+        "description": "Classifies the query and returns typed results: sequence numbers and rounds (digits), event ids, exact party ids (`name::fingerprint`), party-id fragments, and ANS name prefixes.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 20 typed results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "tx",
+                              "round",
+                              "party"
+                            ]
+                          },
+                          "key": {
+                            "type": "string",
+                            "description": "Seq (tx), round number, or party id — feed to the matching endpoint"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "ans": {
+                            "type": "string",
+                            "description": "Present when matched via an ANS name"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plans": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "operationId": "getPlans",
+        "summary": "Rate-limit tiers & how to authenticate",
+        "description": "The anonymous baseline plus the sellable plans (Free / Pro / Enterprise) with their per-minute limits and included query volume. Free includes 10,000 requests/day and 150,000/month; Pro and Enterprise are uncapped on volume.",
+        "responses": {
+          "200": {
+            "description": "Plans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "anonymous": {
+                      "type": "object"
+                    },
+                    "plans": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "rpm": {
+                            "type": "integer"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "daily_quota": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "description": "Included requests per day (null = uncapped)"
+                          },
+                          "monthly_quota": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "description": "Included requests per month (null = uncapped)"
+                          }
+                        }
+                      }
+                    },
+                    "auth": {
+                      "type": "string"
+                    },
+                    "note": {
+                      "type": "string",
+                      "description": "Human-readable note about where the rate-limit budget is reported"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "operationId": "health",
+        "summary": "Liveness",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/party/{party}/validator": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getPartyValidator",
+        "summary": "Validator / super-validator status + liveness",
+        "description": "Whether a party is a validator, super-validator, and/or app-provider — derived from the reward types it collects — plus a liveness assessment and recent reward performance. Computed from a bounded scan of the party's most recent transactions, so reward figures are over that recent window (see recent.note), NOT lifetime. Liveness is measured by round progress (Canton issues no validator liveness rewards): active when the party's latest round is within a few rounds of the network head, inactive when further behind, or unknown when the network tip is unavailable; rounds_behind reports the gap.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Party"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validator status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "party": {
+                      "type": "string"
+                    },
+                    "is_validator": {
+                      "type": "boolean",
+                      "description": "Collects validator rewards"
+                    },
+                    "is_super_validator": {
+                      "type": "boolean",
+                      "description": "Collects super-validator (SV) rewards"
+                    },
+                    "is_app_provider": {
+                      "type": "boolean",
+                      "description": "Collects app-provider rewards"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive",
+                        "unknown"
+                      ]
+                    },
+                    "liveness": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "inactive",
+                            "unknown"
+                          ]
+                        },
+                        "rounds_behind": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "network_round - our_round; 0 means fully caught up"
+                        },
+                        "network_round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "latest mining round on the network, from the super-validator scan"
+                        },
+                        "our_round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "latest round our validator's participant has recorded"
+                        }
+                      }
+                    },
+                    "recent": {
+                      "type": "object",
+                      "description": "Reward performance over the scanned window (recent, not lifetime)",
+                      "properties": {
+                        "window_txs": {
+                          "type": "integer",
+                          "description": "Transactions scanned (most-recent first)"
+                        },
+                        "reward_collections": {
+                          "type": "integer"
+                        },
+                        "rewards_total": {
+                          "type": "number"
+                        },
+                        "sv_rewards": {
+                          "type": "number"
+                        },
+                        "validator_rewards": {
+                          "type": "number"
+                        },
+                        "app_rewards": {
+                          "type": "number"
+                        },
+                        "avg_per_collection": {
+                          "type": "number"
+                        },
+                        "span_rounds": {
+                          "type": "integer"
+                        },
+                        "span_hours": {
+                          "type": "number"
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "lifetime": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "description": "Exact lifetime reward totals from a cached full-history scan (null if the party is not a validator).",
+                      "properties": {
+                        "complete": {
+                          "type": "boolean",
+                          "description": "false only when the history was too large to total within the timeout; the recent window still applies"
+                        },
+                        "reward_collections": {
+                          "type": "integer"
+                        },
+                        "rewards_total": {
+                          "type": "number"
+                        },
+                        "sv_rewards": {
+                          "type": "number"
+                        },
+                        "validator_rewards": {
+                          "type": "number"
+                        },
+                        "app_rewards": {
+                          "type": "number"
+                        },
+                        "first_reward_round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "last_reward_round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "first_reward_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last_reward_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "note": {
+                          "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean",
+                          "description": "true while exact totals are still being computed in the background — refetch shortly"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/sync": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "operationId": "getSync",
+        "summary": "Chain-tip sync status",
+        "description": "Network head round (from the super-validator scan) vs our validator's recorded height (max round). Powers Active/Inactive.",
+        "responses": {
+          "200": {
+            "description": "sync status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "network_round": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "our_round": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "rounds_behind": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "synced": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/featured-apps": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "operationId": "getFeaturedApps",
+        "summary": "Featured apps directory",
+        "description": "Featured apps (on-chain FeaturedAppRight, from the SV scan) with per-app app-reward / transaction metrics over 24h and 7d and a 14-day daily reward series. Metrics are aggregated in a background thread and cached.",
+        "responses": {
+          "200": {
+            "description": "featured apps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "apps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "handle": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "featured_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "windows": {
+                            "type": "object",
+                            "description": "per-window metrics (24h, 7d): txs, app rewards, burns",
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "txs": {
+                                  "type": "integer"
+                                },
+                                "rewards": {
+                                  "type": "number"
+                                },
+                                "burns": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "available metric windows, e.g. [\"24h\",\"7d\"]"
+                    },
+                    "metrics_ready": {
+                      "type": "boolean",
+                      "description": "false until the first background aggregation pass finishes"
+                    },
+                    "metrics_age_seconds": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "series": {
+                      "type": "object",
+                      "description": "14-day daily app-reward series for the stacked chart",
+                      "properties": {
+                        "days": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "apps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "provider": {
+                                "type": "string"
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "others": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/party/{party}/validator/rewards": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getValidatorRewards",
+        "summary": "Validator weekly reward history",
+        "parameters": [
+          {
+            "name": "party",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Weekly reward totals (sv+app+max(validator,faucet)) over the validator's full history, gap-filled. Powers the reward-history chart. Cached 30 min.",
+        "responses": {
+          "200": {
+            "description": "Weekly reward series",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "weeks": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "rewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "collections": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "total": {
+                      "type": "number"
+                    },
+                    "incomplete": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "operationId": "getStatus",
+        "summary": "Service health",
+        "description": "Live operational state: chain-index freshness (seconds behind head), upstream Scan API reachability, live-feed buffer, and background aggregate progress. Metering-exempt — safe to poll.",
+        "responses": {
+          "200": {
+            "description": "Current service health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ]
+                    },
+                    "uptime_seconds": {
+                      "type": "integer"
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "head_seq": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "latest_tx_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "lag_seconds": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
+                    "scan_api": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "live_feed": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "samples": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "aggregates": {
+                      "type": "object",
+                      "properties": {
+                        "stats_to_seq": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "econ_to_seq": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "head_seq": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
+                    "network_version": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/live": {
+      "get": {
+        "tags": [
+          "Live"
+        ],
+        "operationId": "getLive",
+        "summary": "Live chain pulse (snapshot)",
+        "description": "The trailing ~3 minutes of ~2s head-seq samples plus instant/1m/5m throughput — the data behind the landing-page pulse chart. Served entirely from memory and **exempt from rate metering**, so polling every 2s is always safe. Prefer `/api/live/stream` for push.",
+        "responses": {
+          "200": {
+            "description": "In-memory sample ring + throughput",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean",
+                      "description": "false only in the first seconds after a deploy while the buffer warms"
+                    },
+                    "now": {
+                      "type": "number"
+                    },
+                    "t0": {
+                      "type": "number",
+                      "description": "Unix seconds of the first sample; each ts[i] is an offset from t0"
+                    },
+                    "ts": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "seqs": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "rounds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "head_seq": {
+                      "type": "integer"
+                    },
+                    "round": {
+                      "type": "integer"
+                    },
+                    "last_tx_at": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "tps_10s": {
+                      "type": "number"
+                    },
+                    "tps_60s": {
+                      "type": "number"
+                    },
+                    "tps_5m": {
+                      "type": "number"
+                    },
+                    "interval": {
+                      "type": "number",
+                      "description": "Sampling interval in seconds (~2)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/live/stream": {
+      "get": {
+        "tags": [
+          "Live"
+        ],
+        "operationId": "getLiveStream",
+        "summary": "Live chain pulse (SSE push)",
+        "description": "Server-Sent Events: the `/api/live` payload — plus each newly indexed transaction in `txs[]` — pushed the moment it lands (sub-second after the chain head moves). The first event arrives immediately with a ~30-tx backfill. Streams close after ~120s and `EventSource` reconnects transparently; at capacity the endpoint returns `503` and clients should fall back to polling `/api/live`. Metering-exempt.",
+        "responses": {
+          "200": {
+            "description": "text/event-stream — one `data:` JSON event per chain-head advance",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "At connection capacity — poll /api/live instead",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rounds": {
+      "get": {
+        "tags": [
+          "Rounds"
+        ],
+        "operationId": "listRounds",
+        "summary": "Bulk round summaries",
+        "description": "Per-round transaction counts, time spans, and sequence ranges, newest-first, in one grouped index-backed scan. Page back with `before`. Cached 60s.",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Return rounds strictly below this round number; 0/omitted = newest"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of round summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "latest_round": {
+                      "type": "integer"
+                    },
+                    "next_before": {
+                      "type": "integer",
+                      "description": "Pass back as before for the next (older) page; 0 when exhausted"
+                    },
+                    "rounds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "round": {
+                            "type": "integer"
+                          },
+                          "txs": {
+                            "type": "integer"
+                          },
+                          "started": {
+                            "type": "string"
+                          },
+                          "ended": {
+                            "type": "string"
+                          },
+                          "first_seq": {
+                            "type": "integer"
+                          },
+                          "last_seq": {
+                            "type": "integer"
+                          },
+                          "duration_s": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/IndexBuilding"
+          }
+        }
+      }
+    },
+    "/api/party/{party}/counterparties": {
+      "get": {
+        "tags": [
+          "Parties"
+        ],
+        "operationId": "getCounterparties",
+        "summary": "Counterparty net-exposure for a party",
+        "description": "For each party this one transacts with, the directional CC volume — sent, received, and NET — plus counts and first/last interaction, over a window (24h/7d/30d/all). Net exposure is the custody/compliance view a flat interaction count can't give. Big parties compute in the background; the response carries `pending:true` until ready.",
+        "parameters": [
+          {
+            "name": "party",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full party id (name::fingerprint)"
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "24h",
+                "7d",
+                "30d",
+                "all"
+              ]
+            },
+            "description": "Exposure window (default 30d)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Top-N counterparties (default 25)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counterparties + totals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/assets": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "operationId": "getAssets",
+        "summary": "Registered CIP-56 assets with issued supply",
+        "description": "Canton Coin plus registered CIP-56 (Canton Token Standard) assets — cETH, CBTC, USDCx, etc. — with on-chain **issued supply** from each registry's token-metadata API. Issued supply only: Canton's privacy model keeps per-party balances and non-CC transfer volume off the DSO-scoped Scan feed, so those are intentionally not shown (never fabricated). Cached 5 min.",
+        "responses": {
+          "200": {
+            "description": "Canton Coin + CIP-56 assets with issued supply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "canton_coin": {
+                      "type": "object",
+                      "properties": {
+                        "symbol": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "standard": {
+                          "type": "string"
+                        },
+                        "total_supply": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      }
+                    },
+                    "cip56_assets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "symbol": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "instrument_id": {
+                            "type": "string"
+                          },
+                          "admin": {
+                            "type": "string",
+                            "description": "Registrar/admin party id (full)."
+                          },
+                          "total_supply": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Issued supply (registry-reported)."
+                          },
+                          "decimals": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "standard": {
+                            "type": "string"
+                          },
+                          "capabilities": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Human CIP-56 capabilities the asset supports: Transfers, DvP / Allocation, Holdings, Metadata."
+                          },
+                          "supported_apis": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Raw token-standard API ids the asset supports."
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "note": {
+                      "type": "string",
+                      "description": "Why per-asset transfer volume / holders are not shown (Canton privacy)."
+                    },
+                    "as_of": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/app-locking": {
+      "get": {
+        "tags": [
+          "Governance"
+        ],
+        "operationId": "getAppLocking",
+        "summary": "CIP-0116 featured-app locking",
+        "description": "The featured-app roster and each app's CIP-0116 required lock (5M CC per PartyId, or 25M for an asset issuer) are exact on-chain / spec data. The locked amount is held in a wallet disclosed off-chain to the Foundation, so it populates live from the app→wallet mapping where configured and reads 'pending' otherwise — never estimated.",
+        "responses": {
+          "200": {
+            "description": "Featured apps with required + locked amounts and status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "phase": {
+                      "type": "integer"
+                    },
+                    "activation": {
+                      "type": "string"
+                    },
+                    "apps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "classification": {
+                            "type": "string",
+                            "enum": [
+                              "app-provider",
+                              "asset-issuer"
+                            ]
+                          },
+                          "required": {
+                            "type": "number"
+                          },
+                          "locked": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Verified on-chain locked CC (sum of the app's segregated lock party LockedAmulet), or null if none."
+                          },
+                          "lock_parties": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "verified": {
+                            "type": "boolean",
+                            "description": "true when `locked` is a verified on-chain figure."
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "featured",
+                              "short",
+                              "pending"
+                            ]
+                          },
+                          "featured_at": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    },
+                    "app_count": {
+                      "type": "integer"
+                    },
+                    "required_app": {
+                      "type": "number"
+                    },
+                    "required_issuer": {
+                      "type": "number"
+                    },
+                    "issuer_count": {
+                      "type": "integer"
+                    },
+                    "required_total": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "locked_total": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Sum of verified on-chain locked CC across featured apps."
+                    },
+                    "locked_coverage": {
+                      "type": "integer"
+                    },
+                    "pre_featured_locks": {
+                      "type": "array",
+                      "description": "CIP-0116-scale on-chain locks by operators not yet in the featured roster (anticipatory).",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "owner": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "holders": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "pre_featured_total": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "record_time": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "scan_ready": {
+                      "type": "boolean",
+                      "description": "false during the first ~90s while the LockedAmulet scan runs."
+                    },
+                    "unlock_days": {
+                      "type": "integer"
+                    },
+                    "locked_source": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sv-locking": {
+      "get": {
+        "operationId": "getSvLocking",
+        "summary": "Super-validator locking state",
+        "description": "CIP-0118 super-validator locking and vesting state, derived from the DSO rules and on-chain locked amounts.",
+        "tags": [
+          "Network"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/recent": {
+      "get": {
+        "operationId": "getRecentCollections",
+        "summary": "Recent reward collections",
+        "description": "The most recent validator/super-validator reward-collection events observed in the index.",
+        "tags": [
+          "Network"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api": {
+      "get": {
+        "operationId": "getApiIndex",
+        "summary": "Machine-readable API index",
+        "description": "Index of the API surface: endpoint list, docs/spec/llms links, the MCP endpoint, and the anonymous rate limit. Intended as an agent entry point.",
+        "tags": [
+          "Network"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {},
+    {
+      "BearerAuth": []
+    },
+    {
+      "ApiKeyHeader": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key as 'Authorization: Bearer <key>'. Omit for anonymous (per-IP) access."
+      },
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key as 'X-API-Key: <key>'."
+      }
+    },
+    "parameters": {
+      "Party": {
+        "name": "party",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Full party id: `name::fingerprint` (URL-encode the `::`)",
+        "example": "Cumberland-1::12201aa8a23046d5740c9edd58f7e820c83e7f5c58f25551f955f3252d3a04240860"
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Invalid or inactive API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded — see the Retry-After header (seconds)",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Seconds until the window resets"
+          },
+          "RateLimit-Remaining": {
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid parameter",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "UpstreamUnavailable": {
+        "description": "The Scan API upstream did not respond — retry shortly",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "IndexBuilding": {
+        "description": "A supporting index is still building; the response carries `building: true` — retry in a few minutes",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "building": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "TxType": {
+        "type": "string",
+        "enum": [
+          "transfer",
+          "mint",
+          "tap",
+          "abort_transfer_instruction"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "TxRow": {
+        "type": "object",
+        "description": "One indexed transaction (list shape).",
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "description": "Monotonic index sequence — the pagination cursor"
+          },
+          "event_id": {
+            "type": "string",
+            "description": "Canton event id, globally unique"
+          },
+          "round": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Mining round (null/0 on some automation records)"
+          },
+          "tx_type": {
+            "$ref": "#/components/schemas/TxType"
+          },
+          "tx_date": {
+            "type": "string",
+            "description": "Ledger record time (UTC)"
+          },
+          "amount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Headline CC amount — a send: sum of receiver amounts; a reward collection: gross rewards claimed; a self-transfer/merge: the sender's net change (sender_change_amount); mint/tap: their amount. null only for aborts, which move no value."
+          },
+          "parties": {
+            "type": "object",
+            "description": "Every party in the transaction, mapped to its roles",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "sender",
+                  "receiver",
+                  "balance_change",
+                  "mint",
+                  "tap"
+                ]
+              }
+            }
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "transfer_kind for transfers (e.g. preapproval_send, transfer_instruction_accept)"
+          },
+          "nature": {
+            "type": "string",
+            "enum": [
+              "send",
+              "reward",
+              "self",
+              "mint",
+              "tap",
+              "abort",
+              "other"
+            ],
+            "description": "Economic nature: send (to a distinct receiver), reward (validator/SV/app reward collection), self (self-transfer/merge), mint, tap, abort, or other."
+          },
+          "rewards": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Rewards the sender collected in this transfer (validator + SV + app; the duplicate validator_reward/validator_faucet coupon is de-duplicated via max), or null if none."
+          },
+          "detail": {
+            "type": "object",
+            "nullable": true,
+            "description": "Present only with `?detail=1`. The full transaction detail — transfer legs, exact per-leg fees (sender_fee, receiver_fee, holding_fees, sender_change_fee), balance_changes, and the ledger offset."
+          }
+        }
+      },
+      "PartyTxRow": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TxRow"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "roles": {
+                "type": "array",
+                "description": "How the requested party appears in this transaction",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "sender",
+                    "receiver",
+                    "balance_change"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "object",
+            "nullable": true,
+            "description": "Present only with `?detail=1`. The full transaction detail — transfer legs, exact per-leg fees (sender_fee, receiver_fee, holding_fees, sender_change_fee), balance_changes, and the ledger offset."
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The party's roles in this transaction (sender, receiver, …)."
+          }
+        }
+      },
+      "Tx": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TxRow"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "detail": {
+                "type": "object",
+                "description": "Full financial body: `type`, ledger `offset`, and the matching `transfer` / `mint` / `tap` / `abort_transfer_instruction` payload with every party, amount, fee, and balance change",
+                "properties": {
+                  "type": {
+                    "$ref": "#/components/schemas/TxType"
+                  },
+                  "offset": {
+                    "type": "string",
+                    "description": "Ledger offset"
+                  },
+                  "transfer": {
+                    "type": "object",
+                    "description": "sender {party, input_amulet_amount, sender_fee, holding_fees, sender_change_amount, …}, receivers [{party, amount, receiver_fee}], balance_changes [{party, change_to_initial_amount_as_of_round_zero, change_to_holding_fees_rate}], transfer_kind, description"
+                  },
+                  "mint": {
+                    "type": "object"
+                  },
+                  "tap": {
+                    "type": "object"
+                  },
+                  "abort_transfer_instruction": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Guides & reference",
+    "url": "https://ccscan.xyz/docs/"
+  }
+}
