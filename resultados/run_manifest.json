@@ -1,5 +1,5 @@
 {
-  "fecha_ejecucion": "2026-09-09T02:14:20.503279+00:00",
+  "fecha_ejecucion": "2026-09-21T01:57:54.601278+00:00",
   "tipo_de_corrida": "verificacion/implementacion con muestra reducida, NO la ventana W_H de 14 dias del plan",
   "redes": {
     "tempo": {
@@ -23,12 +23,19 @@
     }
   },
   "limitaciones_estructurales": [
-    "Tempo: no se localizo la direccion del precompilado ValidatorConfig (T-2) -> C1b no computable en Tempo",
-    "Aptos: oraculo Pyth (APT/USD) descontinuado el 2026-08-26 -> A1/A2 no computables sin oraculo vivo",
-    "Aptos: limite de gas de bloque ahora es un blob BCS opaco (ExecutionConfig) -> A3/B3 no computables sin decodificacion BCS",
-    "Canton: los Scan de Super Validador individuales bloquean acceso publico directo (403/RBAC); solo se pudo verificar un espejo de tercero (api.cantonnodes.com) -> no se cumplio el control de concordancia entre dos SV independientes (C-7)"
+    "Aptos: oraculo Pyth (APT/USD) descontinuado el 2026-08-26 -> RESUELTO como parcialmente_derivada: el ID del feed se obtuvo de hermes.pyth.network (API en vivo de Pyth) y se verifico contra la tabla on-chain (self-consistente); el precio esta congelado en 0.55654017 USD/APT (timestamp on-chain 2026-08-26T16:08:48Z) y se aplica como fijo a toda la muestra -- desviacion explicita prevista por el plan (Sec.4.2 A-2), no una limitacion abierta",
+    "Aptos: limite de gas de bloque -> RESUELTO: ExecutionConfig (variante V7, ComplexLimitV1) decodificado contra el layout exacto de aptos-core (types/src/on_chain_config/execution_config.rs), 79/79 bytes consumidos. A3/B3 parcialmente_derivada con la simplificacion declarada de no ponderar execution/io gas por separado",
+    "Aptos: B2 no es reconstruible con datos historicos por definicion del plan (D1) -> requiere sondeo en vivo (W_L) de al menos 72h en dos fullnodes independientes, no ejecutado en esta pasada",
+    "Canton: los Scan de Super Validador individuales bloquean acceso publico directo (403/RBAC); solo se pudo verificar un espejo de tercero (api.cantonnodes.com) -> no se cumplio el control de concordancia entre dos SV independientes (C-7)",
+    "Canton: B3 (H_cfg) se calcula sobre baseRateTrafficLimits, que es la asignacion GRATUITA por miembro antes de comprar trafico extra, no el techo agregado del sincronizador -> probablemente subestima la capacidad real; se reporta parcialmente_derivada con esa advertencia explicita, no computada"
   ],
   "segundo_proveedor_por_red": "NO CUMPLIDO en esta pasada para ninguna red -- solo se uso un proveedor por red",
+  "resumen_modo_dato": {
+    "historico_W_H": 41,
+    "tiempo_real_W_L": 2,
+    "no_aplica_transversal_o_degenerada": 6,
+    "nota": "historico = consulta reproducible sobre bloques/eventos/estado ya producidos por la red (aunque la peticion se haga en vivo contra un nodo, lo que se mide ya ocurrio); tiempo_real = requiere sondeo continuo mientras el evento ocurre (solo B2 en Tempo y Aptos, via scripts/poll_finality.py); no_aplica = transversal o degenerada por arquitectura, sin ventana temporal."
+  },
   "codigo": {
     "collect_tempo.py": "resultados/raw/tempo",
     "collect_aptos.py": "resultados/raw/aptos",

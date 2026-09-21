@@ -15,5 +15,47 @@
   "C4_tasa_fallo": 0.0,
   "C4_n": 869,
   "D1_fraccion_fee_payer_distinto": 0.011507479861910242,
-  "D1_n": 869
+  "D1_n": 869,
+  "A1A2_precio_apt_usd_congelado": 0.55654017,
+  "A1A2_precio_timestamp_unix": 1787760528,
+  "A1_costo_mediano_usd": 0.00028550510721,
+  "A2_costo_p95_usd": 0.00066172626213,
+  "A_n": 869,
+  "execution_config_decodificado": {
+    "onchain_execution_config_variant": 7,
+    "transaction_shuffler_type": {
+      "type": 4,
+      "sender_spread_factor": 32,
+      "platform_use_case_spread_factor": 0,
+      "user_use_case_spread_factor": 4
+    },
+    "block_gas_limit_type": {
+      "type": "ComplexLimitV1",
+      "effective_block_gas_limit": 300000,
+      "execution_gas_effective_multiplier": 1,
+      "io_gas_effective_multiplier": 1,
+      "conflict_penalty_window": 9,
+      "use_granular_resource_group_conflicts": false,
+      "use_module_publishing_block_conflict": true,
+      "block_output_limit": 5242880,
+      "include_user_txn_size_in_block_output": true,
+      "add_block_limit_outcome_onchain": true
+    },
+    "enable_per_block_gas_limit": true,
+    "transaction_deduper_type": 1,
+    "gas_price_to_burn": 90,
+    "persisted_auxiliary_info_version": 1
+  },
+  "B3_block_gas_limit": 300000,
+  "B3_tps_cfg": 28473.868960977135,
+  "B3_h_cfg": 593.2056033536903,
+  "B3_gas_mediana_tx": 477,
+  "B3_n": 869,
+  "A3_beta_ocupacion_global": 8.628401605393135,
+  "A3_n": 869,
+  "C5_publicaciones_modulo": 0,
+  "C5_n": 869,
+  "D3_fraccion_multi_transferencia": 1.0,
+  "D3_fraccion_multi_activo": 0.4166666666666667,
+  "D3_n_tx_con_transferencia": 12
 }

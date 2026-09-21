@@ -1,0 +1,37 @@
+{
+  "feed_id": "0x03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5",
+  "table_handle": "0xd1321c17eebcaceee2d54d5f6ea0f78dae846689935ef53d1f0c3cff9e2d6c49",
+  "price_info": {
+    "arrival_time": "1787760537",
+    "attestation_time": "1787760537",
+    "price_feed": {
+      "ema_price": {
+        "conf": "89443",
+        "expo": {
+          "magnitude": "8",
+          "negative": true
+        },
+        "price": {
+          "magnitude": "55786360",
+          "negative": false
+        },
+        "timestamp": "1787760528"
+      },
+      "price": {
+        "conf": "73808",
+        "expo": {
+          "magnitude": "8",
+          "negative": true
+        },
+        "price": {
+          "magnitude": "55654017",
+          "negative": false
+        },
+        "timestamp": "1787760528"
+      },
+      "price_identifier": {
+        "bytes": "0x03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5"
+      }
+    }
+  }
+}

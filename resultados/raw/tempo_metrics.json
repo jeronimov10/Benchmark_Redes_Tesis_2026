@@ -3,6 +3,9 @@
   "B1_cadencia_mediana_s": 0.556999921798706,
   "B1_cadencia_p95_s": 0.5900001525878906,
   "B1_n": 699,
+  "C3_fraccion_continuidad": 1.0,
+  "C3_n": 699,
+  "C3_umbral_s": 5.5699992179870605,
   "C1_herfindahl_produccion": 0.06809795918367346,
   "C1_n_proposers_distintos": 15,
   "C1_n_bloques": 700,
@@ -22,6 +25,8 @@
   "D3_n_tx_con_transferencia": 220,
   "D3_fraccion_multi_transferencia": 0.7681818181818182,
   "D3_fraccion_multi_activo": 0.09545454545454546,
+  "D2_fraccion_con_memo": 0.45,
+  "D2_n": 220,
   "inventario_tokens_por_conteo_transferencias": {
     "0x20c000000000000000000000b9537d11c60e8b50": 302,
     "0x20c0000000000000000000000000000000000000": 76,
@@ -33,6 +38,13 @@
     "0x83a1491f3e7f8daab8f787a631334b9ca7a87023": 1,
     "0x20c0000000000000000000003158081efd85bfc2": 1
   },
+  "C5_actualizaciones_en_ventana": 0,
+  "C5_detalle": [],
+  "C5_ventana_ts": [
+    1788918165.369,
+    1788918555.9
+  ],
+  "C5_fork_activo_actual": "T11",
   "C1b_herfindahl_peso_consenso": 0.06666666666666667,
   "C1b_n_validadores_activos": 15,
   "C1b_direccion_precompilado": "0xCCCCCCCC00000000000000000000000000000001"

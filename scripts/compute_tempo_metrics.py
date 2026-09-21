@@ -5,6 +5,12 @@ from collections import Counter, defaultdict
 
 RAW = "resultados/raw/tempo"
 TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+# event TransferWithMemo(address indexed from, address indexed to, uint256 amount,
+# bytes32 indexed memo) -- interfaz ITIP20 confirmada leyendo el codigo fuente publico
+# (github.com/tempoxyz/tempo, crates/contracts/src/precompiles/tip20.rs). El topic0
+# es keccak256("TransferWithMemo(address,address,uint256,bytes32)"), calculado aqui,
+# no copiado de documentacion. D2 se mide sobre logs ya descargados (historico).
+MEMO_TOPIC = "0x57bc7354aa85aed339e000bccffabbc529466af35f0772c8f8ee1145927de7f0"
 
 
 def load(name):
@@ -38,6 +44,18 @@ def main():
         results["B1_cadencia_p95_s"] = deltas[p95_idx]
         results["B1_n"] = len(deltas)
 
+    # --- C3: continuidad, 1 - fraccion de tiempo en huecos > 10x cadencia mediana ---
+    # Reconstruible con datos historicos (los mismos bloques ya descargados para B1):
+    # no requiere sondeo en vivo, a diferencia de B2.
+    if deltas:
+        med_c3 = st.median(deltas)
+        umbral_c3 = 10 * med_c3
+        total_span = ts[-1] - ts[0]
+        gap_time = sum(d for d in deltas if d > umbral_c3)
+        results["C3_fraccion_continuidad"] = (1 - gap_time / total_span) if total_span else None
+        results["C3_n"] = len(deltas)
+        results["C3_umbral_s"] = umbral_c3
+
     # --- C1: Herfindahl sobre produccion de bloques (proposer real, no 'miner') ---
     proposers = Counter()
     for b in blocks:
@@ -65,6 +83,7 @@ def main():
     tx_transfer_tokens = defaultdict(set)  # tx_hash -> set(token_addr)
     tx_transfer_count = Counter()
     token_transfer_count = Counter()
+    tx_con_memo = set()
     occ_cost_pairs = []
 
     for r in receipts:
@@ -99,6 +118,8 @@ def main():
                 tx_transfer_tokens[h].add(log["address"])
                 tx_transfer_count[h] += 1
                 token_transfer_count[log["address"]] += 1
+            if log["topics"] and log["topics"][0].lower() == MEMO_TOPIC:
+                tx_con_memo.add(h)
 
     results["n_receipts"] = n_receipts
     results["C4_tasa_fallo"] = fails / n_receipts if n_receipts else None
@@ -141,8 +162,37 @@ def main():
     )
     results["D3_fraccion_multi_activo"] = multi_asset / n_tx_with_transfer if n_tx_with_transfer else None
 
+    # --- D2: memo de 32 bytes via evento TransferWithMemo (ver MEMO_TOPIC arriba) ---
+    tx_con_memo_en_muestra = tx_con_memo & set(tx_transfer_count.keys())
+    results["D2_fraccion_con_memo"] = (
+        len(tx_con_memo_en_muestra) / n_tx_with_transfer if n_tx_with_transfer else None
+    )
+    results["D2_n"] = n_tx_with_transfer
+
     # --- inventario de activos (T-5, informativo) ---
     results["inventario_tokens_por_conteo_transferencias"] = dict(token_transfer_count.most_common())
+
+    # --- C5: actualizaciones de red (TIPs) activadas dentro de la ventana muestreada.
+    # Fuente admisible: RPC en vivo tempo_forkSchedule (extension tempo_*, confirmada
+    # leyendo crates/node/src/rpc/fork_schedule.rs), NO el changelog/TIPs de GitHub
+    # -- eso si violaria la regla de oro (documentacion, no consulta al registro).
+    # activationTime es un timestamp unix real que el nodo expone para su propio
+    # fork schedule, comparable directamente contra la ventana de bloques ya
+    # descargada (ts_min/ts_max de esta misma muestra).
+    try:
+        fork_sched = load("fork_schedule.json")
+        forks = fork_sched["result"]["schedule"]
+        ts_min, ts_max = ts[0], ts[-1]
+        en_ventana = [
+            f for f in forks
+            if f["name"] != "T0" and ts_min <= f["activationTime"] <= ts_max
+        ]
+        results["C5_actualizaciones_en_ventana"] = len(en_ventana)
+        results["C5_detalle"] = [f["name"] for f in en_ventana]
+        results["C5_ventana_ts"] = [ts_min, ts_max]
+        results["C5_fork_activo_actual"] = fork_sched["result"]["active"]
+    except (FileNotFoundError, KeyError):
+        pass
 
     # --- C1b: validadores activos via ValidatorConfigV2 (T-2 resuelto) ---
     try:

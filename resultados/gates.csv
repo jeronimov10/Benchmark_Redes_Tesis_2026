@@ -1,22 +1,22 @@
 red,activo,escenario,compuerta,resultado,valor_medido
-tempo,n/a,E1,G3,no_evaluable,
+tempo,n/a,E1,G3,pasa,0.45
 tempo,n/a,E2,G1,pasa,0.5900001525878906
-tempo,n/a,E2,G3,no_evaluable,
+tempo,n/a,E2,G3,pasa,0.45
 tempo,n/a,E2,G4,pasa,556.8040922656879
-tempo,n/a,E3,G3,no_evaluable,
+tempo,n/a,E3,G3,pasa,0.45
 tempo,n/a,E3,G4,pasa,556.8040922656879
 aptos,n/a,E1,G3,no_evaluable,
 aptos,n/a,E2,G1,pasa,0.086047
 aptos,n/a,E2,G3,no_evaluable,
-aptos,n/a,E2,G4,no_evaluable,
+aptos,n/a,E2,G4,pasa,593.2056033536903
 aptos,n/a,E3,G3,no_evaluable,
-aptos,n/a,E3,G4,no_evaluable,
-canton,n/a,E1,G3,no_evaluable,
+aptos,n/a,E3,G4,pasa,593.2056033536903
+canton,n/a,E1,G3,pasa,0.11741682974559686
 canton,n/a,E2,G1,pasa,1.061222
-canton,n/a,E2,G3,no_evaluable,
-canton,n/a,E2,G4,no_evaluable,
-canton,n/a,E3,G3,no_evaluable,
-canton,n/a,E3,G4,no_evaluable,
+canton,n/a,E2,G3,pasa,0.11741682974559686
+canton,n/a,E2,G4,falla,0.00023270707206100275
+canton,n/a,E3,G3,pasa,0.11741682974559686
+canton,n/a,E3,G4,falla,0.00023270707206100275
 tempo,TIP-20 nativo,E1,G2p,pasa,1.0
 tempo,TIP-20 nativo,E2,G2p,pasa,1.0
 tempo,TIP-20 nativo,E3,G2p,pasa,1.0

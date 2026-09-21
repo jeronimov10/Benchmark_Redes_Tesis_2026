@@ -34,6 +34,121 @@ def min_operators_over_50(weights_desc):
     return len(weights_desc)
 
 
+class BcsReader:
+    def __init__(self, data):
+        self.data = data
+        self.pos = 0
+
+    def u8(self):
+        v = self.data[self.pos]
+        self.pos += 1
+        return v
+
+    def u32(self):
+        v = int.from_bytes(self.data[self.pos:self.pos + 4], "little")
+        self.pos += 4
+        return v
+
+    def u64(self):
+        v = int.from_bytes(self.data[self.pos:self.pos + 8], "little")
+        self.pos += 8
+        return v
+
+    def boolean(self):
+        return bool(self.u8())
+
+    def option_u64(self):
+        return self.u64() if self.u8() != 0 else None
+
+
+def decode_execution_config(hex_blob):
+    """Decodifica el blob BCS de 0x1::execution_config::ExecutionConfig contra el
+    layout EXACTO de `OnChainExecutionConfig` confirmado leyendo el codigo fuente
+    publico de aptos-labs/aptos-core (types/src/on_chain_config/execution_config.rs,
+    commit visto en esta sesion: fetch directo de raw.githubusercontent.com, no
+    adivinado). Devuelve dict con block_gas_limit_type resuelto, o lanza si aparece
+    una variante del enum que esta funcion no cubre (mejor fallar fuerte que
+    devolver un numero silenciosamente incorrecto).
+
+    Orden de variantes de OnChainExecutionConfig tal como estan declaradas en el
+    enum (BCS serializa por indice de declaracion, 0-based):
+        0 V1, 1 V2, 2 V3, 3 Missing, 4 V4, 5 V5, 6 V6, 7 V7
+    """
+    data = bytes.fromhex(hex_blob[2:] if hex_blob.startswith("0x") else hex_blob)
+    r = BcsReader(data)
+
+    def shuffler():
+        v = r.u8()
+        if v == 0:  # NoShuffling
+            return {"type": "NoShuffling"}
+        if v in (1, 2):  # DeprecatedSenderAwareV1(u32) / SenderAwareV2(u32)
+            return {"type": v, "param": r.u32()}
+        if v == 3:  # DeprecatedFairness
+            return {"type": "DeprecatedFairness"}
+        if v in (4, 5):  # UseCaseAware / UseCaseAndEncryptedTxnsAware
+            return {
+                "type": v,
+                "sender_spread_factor": r.u64(),
+                "platform_use_case_spread_factor": r.u64(),
+                "user_use_case_spread_factor": r.u64(),
+            }
+        raise ValueError(f"TransactionShufflerType: variante {v} no reconocida")
+
+    def block_gas_limit_type():
+        v = r.u8()
+        if v == 0:
+            return {"type": "NoLimit", "effective_block_gas_limit": None}
+        if v == 1:
+            return {"type": "Limit", "effective_block_gas_limit": r.u64()}
+        if v == 2:  # ComplexLimitV1
+            eff = r.u64()
+            exec_mult = r.u64()
+            io_mult = r.u64()
+            conflict_window = r.u32()
+            granular = r.boolean()
+            module_conflict = r.boolean()
+            output_limit = r.option_u64()
+            include_size = r.boolean()
+            add_outcome = r.boolean()
+            return {
+                "type": "ComplexLimitV1",
+                "effective_block_gas_limit": eff,
+                "execution_gas_effective_multiplier": exec_mult,
+                "io_gas_effective_multiplier": io_mult,
+                "conflict_penalty_window": conflict_window,
+                "use_granular_resource_group_conflicts": granular,
+                "use_module_publishing_block_conflict": module_conflict,
+                "block_output_limit": output_limit,
+                "include_user_txn_size_in_block_output": include_size,
+                "add_block_limit_outcome_onchain": add_outcome,
+            }
+        raise ValueError(f"BlockGasLimitType: variante {v} no reconocida")
+
+    variant = r.u8()
+    out = {"onchain_execution_config_variant": variant}
+
+    out["transaction_shuffler_type"] = shuffler()
+    if variant in (0,):  # V1: solo shuffler
+        out["block_gas_limit_type"] = {"type": "NoLimit", "effective_block_gas_limit": None}
+        return out
+    if variant in (1, 2):  # V2/V3: shuffler + block_gas_limit: Option<u64>
+        out["block_gas_limit_type"] = {"type": "Option<u64>", "effective_block_gas_limit": r.option_u64()}
+        if variant == 2:
+            out["transaction_deduper_type"] = r.u8()
+        return out
+    if variant in (4, 5, 6, 7):  # V4..V7: shuffler + block_gas_limit_type (enum completo)
+        out["block_gas_limit_type"] = block_gas_limit_type()
+        if variant >= 5:
+            out["enable_per_block_gas_limit"] = r.boolean()
+        out["transaction_deduper_type"] = r.u8()
+        if variant >= 6:
+            out["gas_price_to_burn"] = r.u64()
+        if variant >= 7:
+            out["persisted_auxiliary_info_version"] = r.u8()
+        return out
+    raise ValueError(f"OnChainExecutionConfig: variante {variant} no reconocida (Missing=3 no deberia aparecer on-chain)")
+
+
 def main():
     blocks = load("blocks_sample.json")
     vs = load("validator_set.json")
@@ -98,6 +213,156 @@ def main():
     results["C4_n"] = total_tx
     results["D1_fraccion_fee_payer_distinto"] = sponsored / total_tx if total_tx else None
     results["D1_n"] = total_tx
+
+    # --- A1/A2: costo real por tx usando el precio de Pyth CONGELADO desde
+    # 2026-08-26 (ver collect_aptos.py). Es una desviacion explicita de la
+    # regla general (Sec.4.2 [VERIFICAR A-2] del plan preve exactamente este
+    # caso: "si no se puede leer historico... se marca parcialmente_derivada"
+    # -- aqui el caso real es peor, se puede leer pero esta congelado, mismo
+    # tratamiento). costo_apt = gas_used * gas_unit_price / 1e8 (octas->APT).
+    try:
+        pyth = load("pyth_apt_usd_price.json")
+        pf = pyth["price_info"]["price_feed"]["price"]
+        expo = pf["expo"]
+        precio_usd = int(pf["price"]["magnitude"]) / (10 ** int(expo["magnitude"]))
+        if pf["price"]["negative"]:
+            precio_usd = -precio_usd
+        results["A1A2_precio_apt_usd_congelado"] = precio_usd
+        results["A1A2_precio_timestamp_unix"] = int(pf["timestamp"])
+
+        costos_usd = []
+        for b in blocks:
+            for tx in b.get("transactions", []):
+                if tx.get("type") != "user_transaction":
+                    continue
+                gu = tx.get("gas_used")
+                gp = tx.get("gas_unit_price")
+                if gu is None or gp is None:
+                    continue
+                costo_apt = int(gu) * int(gp) / 1e8
+                costos_usd.append(costo_apt * precio_usd)
+        if costos_usd:
+            costos_sorted = sorted(costos_usd)
+            p95_idx = min(len(costos_sorted) - 1, math.ceil(0.95 * len(costos_sorted)) - 1)
+            results["A1_costo_mediano_usd"] = st.median(costos_sorted)
+            results["A2_costo_p95_usd"] = costos_sorted[p95_idx]
+            results["A_n"] = len(costos_sorted)
+    except FileNotFoundError:
+        pass
+
+    # --- A3/B3: decodificar ExecutionConfig (ver decode_execution_config arriba)
+    # para obtener el limite de gas de bloque real, y con eso: B3 = H_cfg igual
+    # que en Tempo (limite/gas_mediano/cadencia sobre 48 TPS), A3 = regresion
+    # ln(costo) ~ ocupacion (gas total del bloque / limite).
+    try:
+        exec_cfg_raw = load("execution_config.json")
+        decoded = decode_execution_config(exec_cfg_raw["data"]["config"])
+        results["execution_config_decodificado"] = decoded
+        block_gas_limit = decoded["block_gas_limit_type"].get("effective_block_gas_limit")
+        results["B3_block_gas_limit"] = block_gas_limit
+
+        if block_gas_limit and "A1_costo_mediano_usd" in results:
+            gas_used_por_tx = []
+            occ_cost_pairs = []
+            gas_por_bloque = {}
+            for b in blocks:
+                total_gas_bloque = 0
+                for tx in b.get("transactions", []):
+                    if tx.get("type") == "user_transaction" and tx.get("gas_used"):
+                        total_gas_bloque += int(tx["gas_used"])
+                gas_por_bloque[b["block_height"]] = total_gas_bloque
+
+            for b in blocks:
+                h = b["block_height"]
+                occ = gas_por_bloque.get(h, 0) / block_gas_limit
+                for tx in b.get("transactions", []):
+                    if tx.get("type") != "user_transaction":
+                        continue
+                    gu, gp = tx.get("gas_used"), tx.get("gas_unit_price")
+                    if gu is None or gp is None:
+                        continue
+                    gas_used_por_tx.append(int(gu))
+                    costo_usd = int(gu) * int(gp) / 1e8 * results["A1A2_precio_apt_usd_congelado"]
+                    if costo_usd > 0:
+                        occ_cost_pairs.append((occ, costo_usd))
+
+            if gas_used_por_tx:
+                gas_mediana = sorted(gas_used_por_tx)[len(gas_used_por_tx) // 2]
+                cadencia_mediana = results.get("B1_cadencia_mediana_s")
+                if cadencia_mediana:
+                    tps_cfg = (block_gas_limit / gas_mediana) / cadencia_mediana
+                    results["B3_tps_cfg"] = tps_cfg
+                    results["B3_h_cfg"] = tps_cfg / 48.0
+                    results["B3_gas_mediana_tx"] = gas_mediana
+                    results["B3_n"] = len(gas_used_por_tx)
+
+            if len(occ_cost_pairs) >= 5:
+                xs = [p[0] for p in occ_cost_pairs]
+                ys = [math.log(p[1]) for p in occ_cost_pairs]
+                n = len(xs)
+                mean_x = sum(xs) / n
+                mean_y = sum(ys) / n
+                cov = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+                var = sum((x - mean_x) ** 2 for x in xs)
+                results["A3_beta_ocupacion_global"] = cov / var if var else None
+                results["A3_n"] = n
+    except (FileNotFoundError, KeyError, ValueError) as e:
+        results["execution_config_error"] = str(e)
+
+    # --- C5: publicaciones de modulo/paquete en la ventana observada ---
+    # Reconstruible con datos historicos (mismos bloques ya descargados): se
+    # cuentan las entry functions que publican codigo (0x1::code::publish_*)
+    # entre las transacciones de la muestra. n=0 en la muestra es un resultado
+    # valido (no se observaron publicaciones), no un no_computable.
+    PUBLISH_FUNCS = {
+        "0x1::code::publish_package_txn",
+        "0x1::code::publish_package",
+        "0x1::code::freeze_code_object",
+    }
+    publicaciones = 0
+    for b in blocks:
+        for tx in b.get("transactions", []):
+            if tx.get("type") != "user_transaction":
+                continue
+            pl = tx.get("payload") or {}
+            fn = pl.get("function")
+            if fn in PUBLISH_FUNCS or pl.get("type") == "module_bundle_payload":
+                publicaciones += 1
+    results["C5_publicaciones_modulo"] = publicaciones
+    results["C5_n"] = total_tx
+
+    # --- D3: multi-transferencia / multi-activo via eventos Fungible Asset,
+    # resolviendo el activo real de cada `store` (ver collect_aptos.py). Se
+    # normaliza sobre la misma poblacion que D1/C4 no se puede (esta usa solo
+    # las tx que efectivamente tocaron un store de FA, distinto universo).
+    try:
+        store_to_asset = load("fa_store_to_asset.json")
+        n_tx_fa = 0
+        multi_transfer = 0
+        multi_asset = 0
+        for b in blocks:
+            for tx in b.get("transactions", []):
+                if tx.get("type") != "user_transaction":
+                    continue
+                fa_events = [
+                    e for e in tx.get("events", [])
+                    if e.get("type") in ("0x1::fungible_asset::Deposit", "0x1::fungible_asset::Withdraw")
+                ]
+                if not fa_events:
+                    continue
+                n_tx_fa += 1
+                if len(fa_events) > 1:
+                    multi_transfer += 1
+                assets = {store_to_asset.get(e.get("data", {}).get("store")) for e in fa_events}
+                assets.discard(None)
+                if len(assets) > 1:
+                    multi_asset += 1
+        if n_tx_fa:
+            results["D3_fraccion_multi_transferencia"] = multi_transfer / n_tx_fa
+            results["D3_fraccion_multi_activo"] = multi_asset / n_tx_fa
+            results["D3_n_tx_con_transferencia"] = n_tx_fa
+    except FileNotFoundError:
+        pass
 
     print(json.dumps(results, indent=2, default=str))
     with open(f"{RAW}/../aptos_metrics.json", "w") as f:

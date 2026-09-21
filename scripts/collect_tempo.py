@@ -116,6 +116,15 @@ def main():
         json.dump({"validator_config_v2_address": V2, "n_activos": n_activos}, f, indent=2)
     print("Validadores activos (ValidatorConfigV2):", n_activos)
 
+    # --- C5: RPC tempo_forkSchedule (extension tempo_*, confirmada leyendo
+    # crates/node/src/rpc/fork_schedule.rs en el repo publico). Da el schedule
+    # completo de TIPs/forks con su activationTime real -- fuente admisible del
+    # registro, no changelog de GitHub.
+    fork_schedule = rpc_batch([("tempo_forkSchedule", [])])[0]
+    with open(f"{OUT_RAW}/fork_schedule.json", "w") as f:
+        json.dump({"result": fork_schedule}, f, indent=2)
+    print("Fork activo actual:", fork_schedule.get("active"))
+
     print("OK - crudo guardado en", OUT_RAW)
 
 
