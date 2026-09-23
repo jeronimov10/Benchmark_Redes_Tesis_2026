@@ -1,6 +1,6 @@
 # Limitaciones — generado desde metrics.csv
 
-Fecha: 2026-09-21T01:57:54.601278+00:00
+Fecha: 2026-09-23T11:47:44.941962+00:00
 
 Esta es una pasada de verificacion/implementacion con muestras reducidas, no la recoleccion completa de 14 dias (W_H) que especifica el plan. Cada entrada abajo es una metrica que NO se completo con un valor pleno, junto con la razon exacta.
 
