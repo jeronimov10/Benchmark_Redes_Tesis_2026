@@ -22,6 +22,8 @@ export function useFmt() {
   const cop = (n: number) =>
     f.number(n, { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
+  const copSmall = (n: number) => (n < 1 ? tc("lessThanCop") : cop(n));
+
   const usdt = (n: number) => {
     const formatted =
       n > 0 && n < 0.01
@@ -34,11 +36,14 @@ export function useFmt() {
     if (s < 1) return f.number(s, { style: "unit", unit: "second", maximumFractionDigits: 1 });
     if (s < 60) return f.number(s, { style: "unit", unit: "second", maximumFractionDigits: 1 });
     if (s < 3600) return f.number(s / 60, { style: "unit", unit: "minute", maximumFractionDigits: 1 });
-    return f.number(s / 3600, { style: "unit", unit: "hour", maximumFractionDigits: 1 });
+    if (s < 86_400) return f.number(s / 3600, { style: "unit", unit: "hour", maximumFractionDigits: 1 });
+    return f.number(s / 86_400, { style: "unit", unit: "day", maximumFractionDigits: 2 });
   };
 
   const percent = (fraction: number) =>
     f.number(fraction, { style: "percent", maximumSignificantDigits: 2 });
+
+  const decimal = (n: number, digits = 2) => f.number(n, { maximumFractionDigits: digits });
 
   const metricValue = (n: number, unit: Unit) => {
     switch (unit) {
@@ -49,7 +54,9 @@ export function useFmt() {
       case "ratio":
         return `${f.number(n, { maximumFractionDigits: 1 })}×`;
       case "percent":
-        return `${f.number(n, { maximumFractionDigits: 2 })} %`;
+        return `${f.number(n, { maximumFractionDigits: n > 99 ? 3 : 2 })} %`;
+      case "usd":
+        return usdt(n);
       default:
         return f.number(n, { maximumFractionDigits: 2 });
     }
@@ -72,5 +79,5 @@ export function useFmt() {
       a.code === "OTHER" ? 1 : b.code === "OTHER" ? -1 : a.label.localeCompare(b.label, locale),
     );
 
-  return { cop, usdt, seconds, percent, metricValue, date, country, countryOptions };
+  return { cop, copSmall, usdt, seconds, percent, decimal, metricValue, date, country, countryOptions };
 }

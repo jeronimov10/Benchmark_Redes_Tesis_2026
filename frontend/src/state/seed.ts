@@ -1,5 +1,5 @@
 import { COUNTRY_CODES } from "@/data/countries";
-import { defaultPriorities } from "@/engine/scoring";
+import { defaultsFor } from "@/lib/attrs";
 import type { AmountBracket, Frequency, NetworkId, Purpose, RecipientType, TxInput } from "@/engine/types";
 import { NETWORK_IDS } from "@/engine/types";
 import type { HistoryEntry, User } from "./store";
@@ -57,11 +57,12 @@ export function seedHistory(user: User, makeId: () => string): HistoryEntry[] {
     const country = pick(rand, a.destinationCountries.length ? a.destinationCountries : ["CO"], "CO");
     const accepted: NetworkId[] | "unknown" =
       rand() < 0.4 ? [pick<NetworkId>(rand, [...NETWORK_IDS], "polygon")] : "unknown";
+    const preset = defaultsFor(purpose, a);
     const tx: TxInput = {
       amountCop: Math.max(1, amount),
       purpose,
-      urgency: rand() < 0.2 ? "urgent" : "normal",
-      priorities: defaultPriorities(a.defaultPriority),
+      waitSec: preset.waitSec,
+      irreversibility: preset.irreversibility,
       recipient: {
         type,
         country: COUNTRY_CODES.includes(country) ? country : "OTHER",

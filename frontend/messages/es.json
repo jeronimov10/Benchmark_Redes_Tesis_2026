@@ -1,11 +1,12 @@
 {
   "meta": {
-    "title": "Redfacil · Recomendador de red para tu transacción",
-    "description": "Prototipo demostrativo que recomienda la red blockchain más conveniente para una transacción, con semáforos de riesgo explicables."
+    "title": "Redfacil · La red de liquidación para tu pago",
+    "description": "Prototipo que recomienda en qué red blockchain liquidar un pago en Colombia, con el modelo de la tesis y semáforos de riesgo explicables."
   },
   "common": {
     "demo": "Demo",
-    "otherCountry": "Otro país"
+    "otherCountry": "Otro país",
+    "lessThanCop": "< COP 1"
   },
   "nav": {
     "brand": "Redfacil",
@@ -18,8 +19,8 @@
     "main": "Navegación principal"
   },
   "footer": {
-    "demo": "Prototipo demostrativo: todos los datos, comisiones, tiempos y calificaciones son simulados. No se consultan redes reales ni se ejecutan transacciones.",
-    "academic": "Proyecto académico de tesis. Inspirado visualmente en la paleta de Bancolombia, sin afiliación alguna con la entidad."
+    "demo": "Prototipo académico. Polygon, Celo y Arbitrum usan las mediciones de la tesis (ventana de 90 días); Tempo, Aptos y Canton, la pasada preliminar del benchmark. Los costos en pesos usan una TRM demostrativa y no incluyen rampas de entrada y salida.",
+    "academic": "Proyecto de grado. Inspirado visualmente en la paleta de Bancolombia, sin afiliación alguna con la entidad."
   },
   "risk": {
     "light": {
@@ -33,46 +34,78 @@
   },
   "landing": {
     "hero": {
-      "title": "La red correcta para cada transacción, explicada.",
-      "sub": "Cuéntanos quién eres y qué vas a enviar. Comparamos seis redes blockchain, calificamos el riesgo con un semáforo claro y te decimos por cuál enviar tus pesos convertidos a USDT, y por qué.",
+      "title": "¿En qué red liquidar este pago?",
+      "sub": "Describe un pago en pesos: se convierte a USDT y lo evaluamos en seis redes con datos medidos en las cadenas, no con lo que cada red dice de sí misma. Recibes la red recomendada, qué tan segura es la respuesta y un semáforo de riesgo por red.",
       "cta": "Empezar",
       "ctaContinue": "Continuar",
       "ctaStandard": "Ver cómo calificamos",
-      "cardKicker": "Mejor red para tu operación",
+      "cardKicker": "Red recomendada",
       "cardSub": "Ejemplo ilustrativo"
     },
     "how": {
       "title": "Cómo funciona",
-      "s1": { "title": "1. Crea tu perfil", "desc": "Un onboarding corto con tu experiencia, uso habitual y tolerancia al riesgo. Puedes crear varios usuarios." },
-      "s2": { "title": "2. Describe la transacción", "desc": "Monto en COP (se convierte a USDT), destinatario, urgencia y qué priorizas: costo, velocidad o seguridad." },
-      "s3": { "title": "3. Recibe la recomendación", "desc": "La mejor red, la justificación, un semáforo por cada red y el detalle por bloques de calificación." }
+      "s1": {
+        "title": "1. Crea tu perfil",
+        "desc": "Un onboarding corto con tu experiencia, uso habitual y tolerancias. Puedes crear varios usuarios."
+      },
+      "s2": {
+        "title": "2. Describe el pago",
+        "desc": "Monto en COP, destinatario, cuánto puedes esperar y qué tan definitivo debe ser."
+      },
+      "s3": {
+        "title": "3. Recibe la recomendación",
+        "desc": "Red recomendada, bandas de desempeño, certidumbre y el detalle por bloques de calificación."
+      }
     },
     "scenarios": {
-      "title": "Cuatro escenarios de pago",
-      "sub": "Según el monto y el propósito, cambia lo que más importa. El sistema ajusta los pesos de la evaluación automáticamente."
+      "title": "Tres escenarios de referencia",
+      "sub": "Un pago real rara vez coincide con uno de ellos. El modelo mezcla sus pesos según el parecido y te dice qué tan bien te representan."
     },
     "networks": {
-      "title": "Seis redes evaluadas",
-      "sub": "Ninguna aloja un peso colombiano digital, por eso toda operación se convierte primero a USDT."
+      "title": "Seis redes medidas",
+      "sub": "Ninguna aloja hoy un peso colombiano nativo en esta medición, por eso el pago se hace en USDT."
     },
     "final": {
-      "title": "Listo para probar una transacción hipotética",
-      "sub": "Todo es una simulación: puedes experimentar sin riesgo y cambiar tus prioridades para ver cómo cambia la recomendación."
+      "title": "Prueba un pago hipotético",
+      "sub": "Cambia el monto, la espera o la irreversibilidad y mira cómo se mueve la recomendación."
     }
   },
   "scenarios": {
-    "micro": { "name": "Micro", "desc": "Pagos desde COP 1 hasta COP 15.000. Manda el costo: la comisión no puede comerse el pago." },
-    "commerce": { "name": "Comercio", "desc": "Pagos cotidianos a comercios. Manda la velocidad de confirmación." },
-    "remittance": { "name": "Remesas", "desc": "Envíos familiares o entre personas. Manda el costo, con tolerancia a esperar." },
-    "high_value": { "name": "Alto valor", "desc": "Montos superiores a COP 100 millones. Manda la seguridad y la irreversibilidad." }
+    "E1": {
+      "name": "Remesas",
+      "desc": "Envíos de USD 200 a 500 a otro país. Manda el costo; se tolera esperar horas.",
+      "ticket": "USD 200 a 500"
+    },
+    "E2": {
+      "name": "Comercio doméstico",
+      "desc": "Compras de COP 15.000 a 159.456. Manda la latencia: segundos, frente a Bre-B.",
+      "ticket": "COP 15.000 a 159.456"
+    },
+    "E3": {
+      "name": "Alto valor",
+      "desc": "Liquidaciones de más de COP 100 millones. Mandan la concentración y la irreversibilidad.",
+      "ticket": "Más de COP 100 millones"
+    }
   },
   "networks": {
-    "tempo": { "desc": "Red nueva orientada a pagos con comisiones en dólares digitales y validadores con permisos. Muy rápida y barata, pero joven." },
-    "aptos": { "desc": "Red de propósito general con finalidad inmediata y muchos validadores independientes. Equilibrada." },
-    "canton": { "desc": "Red institucional con privacidad por diseño. La contraparte puede ser difícil de auditar por terceros." },
-    "polygon": { "desc": "Ecosistema maduro con mucha liquidez de USDT y soporte amplio en casas de cambio." },
-    "arbitrum": { "desc": "Segunda capa de Ethereum con gran liquidez; la finalidad definitiva es lenta y depende de un secuenciador central." },
-    "celo": { "desc": "Red enfocada en pagos móviles con comisiones bajas y una comunidad activa en América Latina." }
+    "polygon": {
+      "desc": "Capa 1 con prueba de participación. En ella Wenia emite COPW. Sus bloques los producen cuatro direcciones."
+    },
+    "celo": {
+      "desc": "Capa 2 sobre la pila OP desde marzo de 2025, con secuenciador único y comisiones que pueden pagarse en monedas estables."
+    },
+    "arbitrum": {
+      "desc": "Rollup optimista de capa 2 con secuenciador único; el estado solo es irrevocable al vencer una ventana de disputa de unos 6 días."
+    },
+    "tempo": {
+      "desc": "L1 compatible con EVM, permisionada y pensada para pagos, sin token nativo volátil. Medida en una pasada preliminar."
+    },
+    "aptos": {
+      "desc": "L1 de propósito general con máquina virtual Move y finalidad determinística. Medida en una pasada preliminar."
+    },
+    "canton": {
+      "desc": "Plataforma sin cadena global para finanzas institucionales. Con una stablecoin, un tercero no puede verificar el pago."
+    }
   },
   "start": {
     "title": "¿Quién va a operar?",
@@ -94,12 +127,30 @@
     "finish": "Crear usuario",
     "save": "Guardar cambios",
     "steps": {
-      "identity": { "title": "Quién eres", "sub": "Lo básico para personalizar la experiencia." },
-      "experience": { "title": "Tu experiencia con blockchain", "sub": "Ajusta cuánta explicación necesitas y qué opciones son viables para ti." },
-      "usage": { "title": "Para qué envías dinero", "sub": "El propósito y la frecuencia afectan qué redes tienen sentido." },
-      "amounts": { "title": "Montos y destinatarios", "sub": "Nos ayuda a sembrar un historial coherente y a anticipar escenarios." },
-      "risk": { "title": "Tus prioridades y tolerancia al riesgo", "sub": "Definen los pesos con que evaluamos cada red." },
-      "summary": { "title": "Revisa tu perfil", "sub": "Podrás editarlo cuando quieras desde el inicio." }
+      "identity": {
+        "title": "Quién eres",
+        "sub": "Lo básico para personalizar la experiencia."
+      },
+      "experience": {
+        "title": "Tu experiencia con blockchain",
+        "sub": "Ajusta cuánta explicación necesitas y qué opciones son viables para ti."
+      },
+      "usage": {
+        "title": "Para qué envías dinero",
+        "sub": "El propósito y la frecuencia afectan qué redes tienen sentido."
+      },
+      "amounts": {
+        "title": "Montos y destinatarios",
+        "sub": "Nos ayuda a sembrar un historial coherente y a anticipar escenarios."
+      },
+      "risk": {
+        "title": "Tus prioridades y tolerancia al riesgo",
+        "sub": "Definen los pesos con que evaluamos cada red."
+      },
+      "summary": {
+        "title": "Revisa tu perfil",
+        "sub": "Podrás editarlo cuando quieras desde el inicio."
+      }
     },
     "q": {
       "alias": "¿Cómo te llamamos?",
@@ -114,23 +165,21 @@
       "recipientTypes": "¿A quién le envías normalmente?",
       "destinationCountries": "¿A qué países envías?",
       "defaultPriority": "¿Qué priorizas habitualmente?",
-      "costTolerance": "Tolerancia a pagar comisiones",
       "timeTolerance": "Tolerancia a esperar la confirmación",
       "riskTolerance": "Tolerancia al riesgo",
-      "needsReconciliation": "¿Necesitas conciliar cada pago con una orden o factura?",
-      "privacyPref": "Privacidad frente a auditabilidad"
+      "needsReconciliation": "¿Necesitas conciliar cada pago con una orden o factura?"
     },
     "h": {
       "alias": "Se usa solo para identificar tu perfil en este prototipo.",
       "multi": "Puedes elegir varias opciones.",
       "typicalAmount": "En pesos colombianos (COP).",
-      "costTolerance": "Baja: cada peso de comisión importa.",
       "timeTolerance": "Baja: necesito confirmación en segundos.",
       "riskTolerance": "Baja: prefiero redes más conservadoras.",
-      "needsReconciliation": "Algunas redes permiten adjuntar una referencia (memo) al pago.",
-      "privacyPref": "Auditable: terceros pueden verificar el pago. Privada: el pago no es visible públicamente."
+      "needsReconciliation": "Algunas redes permiten adjuntar una referencia (memo) al pago."
     },
-    "placeholder": { "alias": "Ej. María, Tienda La Esquina" },
+    "placeholder": {
+      "alias": "Ej. María, Tienda La Esquina"
+    },
     "errors": {
       "alias": "Escribe un nombre de al menos 2 caracteres.",
       "pickOne": "Elige al menos una opción."
@@ -189,11 +238,10 @@
         "security": "Mayor seguridad",
         "balanced": "Equilibrio"
       },
-      "tolerance": { "low": "Baja", "medium": "Media", "high": "Alta" },
-      "privacyPref": {
-        "auditable": "Auditable",
-        "private": "Privada",
-        "indifferent": "Me da igual"
+      "tolerance": {
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta"
       }
     },
     "summary": {
@@ -207,23 +255,22 @@
       "typicalAmount": "Monto habitual",
       "recipientTypes": "Destinatarios",
       "destinationCountries": "Países de destino",
-      "defaultPriority": "Prioridad habitual",
-      "privacyPref": "Privacidad"
+      "defaultPriority": "Prioridad habitual"
     }
   },
   "home": {
     "sub": "Esto es lo que puedes hacer hoy.",
     "greeting": "Hola, {name}",
     "cta": {
-      "kicker": "Nueva transacción",
-      "title": "¿Por qué red conviene enviar?",
+      "kicker": "Nuevo pago",
+      "title": "¿En qué red conviene liquidarlo?",
       "sub": "Ingresa el monto y el destinatario. No repites el onboarding.",
-      "action": "Analizar una transacción"
+      "action": "Analizar un pago"
     },
     "profile": "Tu perfil",
     "edit": "Editar",
     "stats": {
-      "count": "Análisis realizados",
+      "count": "Pagos analizados",
       "volume": "Volumen analizado",
       "top": "Red más recomendada"
     },
@@ -234,26 +281,27 @@
   },
   "history": {
     "title": "Historial",
-    "sub": "Los registros marcados como Demo fueron sembrados a partir de tu perfil. Ábrelos para volver a ver su resultado.",
+    "sub": "Los registros marcados como Demo se sembraron a partir de tu perfil. Ábrelos para volver a ver su resultado.",
     "empty": "Sin transacciones todavía.",
-    "new": "Nueva transacción",
+    "new": "Nuevo pago",
     "clear": "Borrar historial",
     "confirmClear": "¿Borrar todo el historial de este usuario?",
     "to": "a",
     "none": "Sin red"
   },
   "tx": {
-    "title": "Nueva transacción",
-    "sub": "Describe la operación hipotética. El origen eres tú; el destinatario importa para calificar el riesgo.",
+    "title": "Nuevo pago",
+    "sub": "Describe el pago hipotético. El origen eres tú; el destinatario determina qué redes son viables.",
     "sections": {
-      "operation": "La operación",
+      "operation": "El pago",
       "recipient": "El destinatario",
-      "priorities": "¿Qué priorizas en esta operación?"
+      "attributes": "Qué necesita este pago"
     },
     "q": {
       "amount": "Monto a enviar (COP)",
       "purpose": "¿Para qué es?",
-      "urgency": "¿Qué tan urgente es?",
+      "wait": "¿Cuánto puedes esperar hasta la confirmación?",
+      "irreversibility": "¿Qué tan definitivo debe ser el pago?",
       "recipientType": "¿Quién recibe?",
       "recipientCountry": "País del destinatario",
       "firstTime": "¿Es la primera vez que le envías?",
@@ -261,159 +309,187 @@
       "needsMemo": "¿Necesitas adjuntar una referencia (memo)?"
     },
     "h": {
-      "amount": "Mínimo COP 1. Los pesos se convierten a USDT antes de enviar.",
-      "accepted": "Si el destinatario no acepta una red, la marcamos en rojo.",
+      "amount": "Mínimo COP 1. Los pesos se convierten a USDT antes de enviar. Para ponderar la evaluación, montos menores de COP 10.000 se tratan como 10.000.",
+      "accepted": "Si el destinatario no acepta una red, la dejamos fuera.",
       "needsMemo": "Útil para conciliar el pago con una orden o factura.",
-      "priorities": "Usa un preajuste o mueve los controles. Se combinan con tu perfil y con el escenario."
+      "attributes": "Se preselecciona según el propósito y tu perfil; ajústalo a tu caso. De estos cuatro atributos (monto, frontera, espera e irreversibilidad) salen los pesos de la evaluación."
     },
-    "trmNote": "Tasa demo: 1 USDT = {trm}",
-    "scenarioDetected": "Escenario: {scenario}",
-    "urgency": {
-      "low": "Sin prisa",
-      "low_d": "Puede tardar minutos u horas",
-      "normal": "Normal",
-      "normal_d": "Unos segundos o minutos",
-      "urgent": "Urgente",
-      "urgent_d": "Lo necesito casi al instante"
+    "crossBorder": {
+      "label": "Cruza frontera",
+      "yes": "Sí: el destinatario está en otro país",
+      "no": "No: es un pago doméstico"
     },
-    "originNote": "Origen: tú (tu wallet). El destinatario determina qué redes son viables y cuánto riesgo tiene la operación.",
-    "firstTime": { "yes": "Sí, primera vez", "no": "No, ya le he enviado" },
+    "trmNote": "TRM demo: 1 USDT = {trm}",
+    "scenarioDetected": "Se parece a: {scenario}",
+    "wait": {
+      "2": "Inmediato",
+      "2_d": "Un par de segundos",
+      "20": "Segundos",
+      "20_d": "Hasta unos 20 s",
+      "300": "Minutos",
+      "300_d": "Unos 5 minutos",
+      "3600": "Horas",
+      "3600_d": "Alrededor de una hora",
+      "86400": "Un día",
+      "86400_d": "Puede esperar hasta un día"
+    },
+    "irr": {
+      "0": "Baja",
+      "0_d": "Acepto esperar días para que sea definitivo",
+      "1": "Alta",
+      "1_d": "Debe quedar en firme lo antes posible",
+      "half": "Media",
+      "half_d": "Idealmente definitivo en horas o menos"
+    },
+    "originNote": "Origen: tú, en {country}. El destinatario determina qué redes son viables y cuánto riesgo tiene el pago.",
+    "firstTime": {
+      "yes": "Sí, primera vez",
+      "no": "No, ya le he enviado"
+    },
     "acceptedUnknown": "No lo sé",
     "errors": {
       "amountMin": "El monto debe ser de al menos COP 1.",
       "amountMax": "El monto es demasiado alto para este prototipo.",
       "accepted": "Elige al menos una red o marca No lo sé."
     },
-    "submit": "Analizar transacción"
-  },
-  "priorities": {
-    "preset": {
-      "cost": "Menor comisión",
-      "speed": "Mayor velocidad",
-      "security": "Mayor seguridad",
-      "balanced": "Equilibrio"
-    },
-    "axis": { "cost": "Costo", "speed": "Velocidad", "security": "Seguridad" },
-    "axisHint": {
-      "cost": "Comisión como fracción de lo que envías.",
-      "speed": "Tiempo de confirmación y de irreversibilidad.",
-      "security": "Descentralización, continuidad y verificabilidad."
-    }
+    "submit": "Analizar pago"
   },
   "analyzing": {
-    "title": "Analizando tu transacción",
-    "sub": "Estamos comparando las seis redes para tu caso.",
+    "title": "Analizando tu pago",
+    "sub": "Estamos corriendo el modelo sobre las seis redes.",
     "steps": {
-      "scenario": "Clasificando el escenario de pago",
+      "scenario": "Interpretando el pago frente a los tres escenarios",
       "convert": "Convirtiendo COP a USDT",
-      "networks": "Evaluando seis redes",
-      "lights": "Calculando semáforos de riesgo",
-      "rank": "Ordenando y redactando la justificación"
+      "networks": "Normalizando métricas y aplicando compuertas",
+      "lights": "Simulando 10.000 réplicas para formar bandas",
+      "rank": "Calculando semáforos y la métrica determinante"
     },
-    "disclaimer": "Simulación: no se consultan redes en tiempo real."
+    "disclaimer": "Cálculo local con las mediciones guardadas: no se consultan redes en tiempo real."
   },
   "result": {
     "notFound": "No encontramos este análisis.",
     "backHome": "Volver al inicio",
     "best": {
-      "kicker": "Mejor red para esta transacción",
-      "summary": "{network} es la mejor opción para este escenario de {scenario}, según tu perfil y tus prioridades.",
-      "fee": "Comisión estimada",
-      "time": "Confirmación estimada",
-      "finality": "Definitiva en {time}",
-      "risk": "Riesgo de la transacción",
-      "disclaimer": "Cifras simuladas para la demostración. No es una garantía."
+      "kicker": "Red recomendada para este pago",
+      "summary": "{network} queda en el primer lugar para tu pago, que se parece sobre todo a {scenario}.",
+      "tie": "Está en la misma banda que {others}: los datos no alcanzan para declarar una ganadora.",
+      "fee": "Costo mediano de red",
+      "time": "Inclusión en la red",
+      "finality": "Definitivo en {time}",
+      "risk": "Semáforo del pago",
+      "disclaimer": "Valores medidos en la red; el costo no incluye rampas a pesos.",
+      "preliminary": "Esta red se midió en la pasada preliminar del benchmark (muestras de minutos): tómala con más cautela que las medidas en la tesis."
     },
     "why": {
       "title": "Por qué esta red",
-      "weights": "Pesos aplicados: costo {cost}, velocidad {speed}, seguridad {security}.",
-      "axis": {
-        "cost": "La comisión frente al monto es baja y estable en esta red.",
-        "speed": "Confirma y deja la operación irreversible rápidamente.",
-        "security": "Cumple mejor los criterios de concentración, continuidad y verificabilidad."
+      "determinant": "La métrica que más pesó para separarla de la siguiente banda fue {metric}.",
+      "noDeterminant": "Todas las redes admisibles están en la misma banda: ninguna métrica las separa.",
+      "separation": "Frente a {network}, la probabilidad de que sea mejor es de {p}.",
+      "blocks": "Aporte de cada bloque a su puntaje",
+      "weights": "Pesos aplicados a este pago:",
+      "determinantNote": "Ojo con esa métrica en esta red: "
+    },
+    "case": {
+      "title": "Cómo interpretamos tu pago",
+      "sub": "Un pago real rara vez coincide con un escenario: el modelo mezcla sus pesos según el parecido.",
+      "composition": "Composición",
+      "certainty": "Certidumbre de la interpretación",
+      "certaintyNote": "Indica qué tan bien representan los escenarios a tu pago, no la probabilidad de que la recomendación sea correcta.",
+      "level": {
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja"
+      },
+      "lowWarning": "Tu pago queda lejos de los tres escenarios o entre varios: toma la recomendación con cautela.",
+      "attrs": {
+        "m": "Monto",
+        "x": "Frontera",
+        "l": "Espera",
+        "i": "Irreversibilidad"
       }
     },
     "none": {
-      "title": "Ninguna red es recomendable para esta transacción",
-      "body": "Todas las redes quedaron en rojo por las razones de abajo. Revisa el monto, el destinatario o las redes que acepta, y vuelve a intentarlo."
+      "title": "Ninguna red es admisible para este pago",
+      "body": "Todas las redes quedaron fuera por las compuertas o por el destinatario. Revisa las razones abajo y ajusta el pago."
     },
-    "changed": "Al cambiar tus prioridades, la recomendación pasó de {from} a {to}.",
+    "changed": "Al cambiar el pago, la recomendación pasó de {from} a {to}.",
     "adjust": {
-      "title": "Cambia tus prioridades",
+      "title": "Explora otros casos",
       "reset": "Restablecer",
-      "sub": "Mueve los controles y mira en vivo cómo cambia la recomendación. No se guarda."
+      "sub": "Cambia el monto, la espera o la irreversibilidad y mira cómo se mueven las redes. No se guarda."
+    },
+    "bands": {
+      "title": "Bandas de desempeño",
+      "sub": "Dos redes quedan en la misma banda si la probabilidad de que una supere a la otra es menor que 0,85. Las barras muestran el rango entre los percentiles 5 y 95 de 10.000 réplicas.",
+      "band": "Banda {n}",
+      "tie": "Empate técnico",
+      "score": "Puntaje",
+      "range": "Rango p5 – p95",
+      "pi": "{a} supera a {b} con probabilidad {p}"
     },
     "compare": {
       "title": "Comparación de las seis redes",
-      "sub": "El semáforo global resume los cuatro bloques de calificación. Las columnas muestran cinco dimensiones.",
+      "sub": "El punto grande es el semáforo global; las letras son los cuatro bloques de calificación.",
       "network": "Red",
       "global": "Global",
-      "fee": "Comisión",
-      "time": "Tiempo",
+      "fee": "Costo",
+      "time": "Inclusión",
       "best": "Recomendada",
-      "detail": "Ver detalle"
-    },
-    "dimension": {
-      "cost": "Costo",
-      "speed": "Velocidad",
-      "security": "Seguridad",
-      "liquidity": "Liquidez",
-      "destination": "Destinatario"
+      "detail": "Ver detalle",
+      "excludedTag": "Inadmisible"
     },
     "excluded": {
       "title": "Redes que no recomendamos",
-      "sub": "Quedaron en rojo: no lo hagas por aquí. Estas son las razones principales.",
-      "limit": "límite {w}"
-    },
-    "notes": {
-      "depth": "El monto es grande frente a la liquidez de USDT disponible",
-      "softFinality": "La confirmación rápida no es definitiva: la irreversibilidad tarda más",
-      "noMemo": "Esta red no permite adjuntar el memo que necesitas",
-      "privateLedger": "Registro privado: un tercero no puede verificar el pago",
-      "publicLedger": "Registro público: no cumple tu preferencia de privacidad",
-      "firstTime": "Primera vez con este destinatario",
-      "unknownAccepted": "No sabes si el destinatario acepta esta red",
-      "notAccepted": "El destinatario no acepta esta red"
+      "sub": "Quedaron en rojo: no lo hagas por aquí. Estas son las razones.",
+      "recipient": "El destinatario no acepta esta red.",
+      "gate": "Falla la compuerta {gate}: {name}."
     },
     "vs": {
-      "title": "{network} frente a las alternativas",
+      "title": "{network} frente a {other}",
       "winnerAhead": "Gana en:",
       "altAhead": "Pierde en:",
-      "nothing": "ninguna dimensión"
+      "nothing": "ningún bloque"
     },
-    "disclaimer": "Esta recomendación es una simulación basada en datos demostrativos y reglas fijas. No es asesoría financiera ni una decisión infalible, y no refleja datos de redes en tiempo real.",
+    "provenance": {
+      "title": "De dónde salen los datos",
+      "thesis": "Polygon, Celo y Arbitrum: mediciones de la tesis sobre una ventana de 90 días, con un solo proveedor de nodo por red.",
+      "benchmark": "Tempo, Aptos y Canton: pasada preliminar del benchmark, con muestras de minutos o segundos. Sus resultados son menos firmes y sus errores se aproximan con un valor fijo."
+    },
+    "disclaimer": "Esta recomendación es un resultado preliminar de un prototipo académico. No es asesoría financiera, no refleja datos de redes en tiempo real y los costos no incluyen las rampas de entrada y salida a pesos.",
     "actions": {
-      "new": "Nueva transacción",
+      "new": "Nuevo pago",
       "history": "Ver historial",
       "standard": "Cómo calificamos"
     }
   },
   "detail": {
     "back": "Volver al resultado",
-    "score": "Puntaje de ajuste",
-    "scoreNote": "Simulado",
-    "excluded": "Excluida",
+    "score": "Puntaje agregado",
+    "scoreNote": "Rango simulado: {p5} – {p95}",
+    "excluded": "Inadmisible",
+    "band": "Banda {n}",
     "sem1": {
       "title": "Semáforo de la red",
-      "sub": "Cómo se comporta esta red en las cinco dimensiones para tu transacción."
+      "sub": "Resumen para tu pago: depende del puntaje agregado y de las compuertas."
     },
     "sem2": {
-      "title": "Semáforo de tu transacción por bloques",
-      "sub": "La misma operación calificada en los cuatro bloques del estándar. Abre cada bloque para ver sus métricas.",
-      "rule": "Regla: una métrica crítica en rojo pone el bloque en rojo; cualquier otra métrica en rojo lo limita a amarillo. La red queda en rojo si algún bloque lo está."
+      "title": "Tu pago por bloques de calificación",
+      "sub": "Abre cada bloque para ver sus métricas medidas, el objetivo y el límite inaceptable.",
+      "rule": "Un bloque es verde con puntaje de 0,70 o más y rojo por debajo de 0,45. La red es roja si falla una compuerta o su puntaje agregado queda por debajo de 0,45; no puede ser verde si una compuerta no se pudo evaluar."
     },
     "block": {
       "A": "Costo",
       "B": "Tiempo y caudal",
       "C": "Concentración y continuidad",
-      "D": "Primitivas de pago y destinatario"
+      "D": "Primitivas de pago en uso"
     },
     "blockDesc": {
-      "A": "Cuánto cuesta y qué tanto varía la comisión.",
-      "B": "Qué tan rápido confirma, cuándo es irreversible y si tiene capacidad.",
-      "C": "Quién controla la red, si se mantiene en pie y si cambia seguido.",
-      "D": "Qué ofrece para pagar de verdad y qué tan viable es para este destinatario."
+      "A": "Cuánto cuesta una transferencia y qué tan predecible es.",
+      "B": "Qué tan rápido entra, cuándo es irrevocable y si tiene capacidad.",
+      "C": "Quién produce los bloques, si se mantiene en pie y si cambia seguido.",
+      "D": "Qué usan de verdad los pagos: comisión sin token nativo, memo y agregación."
     },
+    "blockMeta": "{n} métricas puntuadas, {excluded} excluidas",
     "col": {
       "metric": "Métrica",
       "value": "Valor",
@@ -421,59 +497,215 @@
       "limit": "Inaceptable",
       "light": "Semáforo"
     },
+    "excludedMetric": "Excluida del puntaje",
     "extension": "Extensión",
-    "critical": "Crítica",
-    "redTitle": "Por qué esta red está en rojo",
+    "redTitle": "Por qué esta red es roja",
+    "recipient": {
+      "title": "El destinatario en esta red",
+      "accepted": "Acepta esta red",
+      "notAccepted": "No acepta esta red",
+      "unknown": "No sabes si acepta esta red",
+      "risk": "Riesgo del destinatario",
+      "riskNote": "Puntaje demostrativo según tipo, país y si es la primera vez; no entra en el puntaje de la tesis."
+    },
     "vsBest": "Frente a {network}"
   },
   "metrics": {
-    "A1": { "name": "Costo sobre el monto", "desc": "Comisión estimada como fracción de lo que envías." },
-    "A2": { "name": "Dispersión de costo", "desc": "Cuánto puede variar la comisión y el efecto del monto sobre la liquidez." },
-    "A3": { "name": "Sensibilidad a congestión", "desc": "Cuánto sube la comisión cuando la red se llena." },
-    "B1": { "name": "Latencia de inclusión", "desc": "Tiempo hasta que la transacción entra en la red." },
-    "B2": { "name": "Tiempo a irreversibilidad", "desc": "Tiempo hasta que ya no puede revertirse." },
-    "B3": { "name": "Margen de capacidad", "desc": "Capacidad de la red frente a 48 transacciones por segundo." },
-    "C1b": { "name": "Concentración del poder", "desc": "Qué tan concentrado está el control de la red (menor es mejor)." },
-    "C2": { "name": "Operadores mínimos", "desc": "Cuántos operadores hacen falta para controlar más de la mitad." },
-    "C3": { "name": "Continuidad", "desc": "Disponibilidad medida en nueves (5 = 99,999 %)." },
-    "C4": { "name": "Tasa de fallo", "desc": "Porcentaje de transacciones que fallan." },
-    "C5": { "name": "Cambios recientes", "desc": "Actualizaciones de la ruta de pago en los últimos 90 días." },
-    "D1": { "name": "Comisión patrocinada", "desc": "Porcentaje de pagos donde el pagador no necesita un activo volátil." },
-    "D2": { "name": "Referencia de conciliación", "desc": "Si el pago puede llevar un memo para conciliarlo." },
-    "D3": { "name": "Pagos compuestos", "desc": "Soporte para varias transferencias en una sola operación." },
-    "E1": { "name": "Verificabilidad por terceros", "desc": "Si alguien ajeno al pago puede verificar monto, partes y resultado." },
-    "X1": { "name": "Riesgo del destinatario", "desc": "Puntaje de riesgo por tipo, país y si es la primera vez (menor es mejor)." },
-    "X2": { "name": "Compatibilidad con el destinatario", "desc": "Si el destinatario puede recibir USDT en esta red." }
+    "A1": {
+      "name": "Costo sobre el monto",
+      "desc": "Costo mediano de una transferencia como fracción de este pago."
+    },
+    "A2": {
+      "name": "Dispersión del costo",
+      "desc": "Percentil 95 del costo dividido por la mediana."
+    },
+    "A3": {
+      "name": "Elasticidad a la congestión",
+      "desc": "Cuánto sube el costo cuando la red se llena."
+    },
+    "A4": {
+      "name": "Costo de anclaje",
+      "desc": "Gas pagado en Ethereum por cada transferencia cubierta."
+    },
+    "B1": {
+      "name": "Latencia de inclusión",
+      "desc": "Tiempo entre bloques consecutivos."
+    },
+    "B2": {
+      "name": "Tiempo hasta la publicación",
+      "desc": "Hasta que el estado queda publicado en Ethereum (o finalizado en redes sin ancla)."
+    },
+    "B2b": {
+      "name": "Tiempo hasta la irrevocabilidad",
+      "desc": "Hasta que el pago ya no puede revertirse, incluida la ventana de disputa."
+    },
+    "B3": {
+      "name": "Margen de capacidad",
+      "desc": "Caudal del percentil 99 frente al requisito de 18 TPS."
+    },
+    "C1": {
+      "name": "Concentración de bloques (HHI)",
+      "desc": "Qué tan concentrada está la producción de bloques; menor es mejor."
+    },
+    "C2": {
+      "name": "Coeficiente de Nakamoto",
+      "desc": "Mínimo de direcciones que producen más de la mitad de los bloques."
+    },
+    "C3": {
+      "name": "Disponibilidad",
+      "desc": "Cota conservadora a partir de incidentes oficiales."
+    },
+    "C4": {
+      "name": "Tasa de fallo",
+      "desc": "Proporción de transacciones con estado fallido."
+    },
+    "C5": {
+      "name": "Mutabilidad de la ruta de pago",
+      "desc": "Cambios de implementación del contrato del activo en la ventana."
+    },
+    "D1": {
+      "name": "Independencia del token nativo",
+      "desc": "Transferencias en que el pagador no gastó el token nativo."
+    },
+    "D2": {
+      "name": "Referencia de conciliación",
+      "desc": "Transferencias directas con un memo agregado."
+    },
+    "D3": {
+      "name": "Agregación y atomicidad",
+      "desc": "Transacciones con más de una transferencia, sin intercambios."
+    },
+    "X1": {
+      "name": "Riesgo del destinatario",
+      "desc": "Puntaje demostrativo por tipo, país y primera vez."
+    },
+    "X2": {
+      "name": "Compatibilidad con el destinatario",
+      "desc": "Si el destinatario puede recibir en esta red."
+    }
   },
   "standard": {
     "title": "Estándar de calificación",
-    "sub": "Las reglas que usamos para pintar cada semáforo. Son públicas, fijas y reproducibles: la misma transacción siempre da el mismo resultado.",
-    "demoNote": "Los umbrales vienen del diseño del benchmark de la tesis, pero los valores de cada red en este prototipo son inventados.",
+    "sub": "Así se califica cada red: el modelo de la tesis con un semáforo encima. Es público, fijo y reproducible: el mismo pago da siempre el mismo resultado.",
+    "demoNote": "Los umbrales y pesos son los de la tesis. Los errores de medición de cada métrica se aproximan en este prototipo con un valor relativo fijo (8% en Polygon, Celo y Arbitrum; 25% en Tempo, Aptos y Canton), mientras se publica el bootstrap por métrica.",
     "lights": {
       "title": "Qué significa cada color",
-      "green": { "name": "Verde", "desc": "De las mejores opciones para esta transacción." },
-      "yellow": { "name": "Amarillo", "desc": "Es una buena opción, pero hay puntos a vigilar." },
-      "red": { "name": "Rojo", "desc": "No lo hagas por esta red. Queda fuera de la recomendación." }
+      "green": {
+        "name": "Verde",
+        "desc": "De las mejores opciones: puntaje de 0,70 o más."
+      },
+      "yellow": {
+        "name": "Amarillo",
+        "desc": "Es una buena opción, con puntos a vigilar."
+      },
+      "red": {
+        "name": "Rojo",
+        "desc": "No lo hagas por esta red: falla una compuerta, el destinatario no la acepta o su puntaje es menor que 0,45."
+      }
     },
-    "rules": {
-      "title": "Cómo se calcula",
-      "metric": "Cada métrica tiene un objetivo y un límite inaceptable. Si cumple el objetivo es verde; si pasa el límite, es roja; en medio, amarilla.",
-      "block": "Las métricas se agrupan en cuatro bloques (A, B, C y D). Un bloque con puntaje medio de 0,8 o más es verde y con 0,4 o menos es rojo. Una métrica crítica en rojo lo pone en rojo; otra métrica en rojo lo limita a amarillo.",
-      "network": "La red es roja si algún bloque lo es; amarilla si dos o más bloques son amarillos; verde en otro caso. Las redes rojas quedan excluidas.",
-      "ranking": "Entre las redes no rojas, el orden sale de una media ponderada de costo, velocidad y seguridad, combinando tu escenario, tus prioridades y tu perfil, ajustada por qué tan bien encaja con el destinatario."
+    "model": {
+      "title": "El modelo en seis pasos",
+      "s1": "Cada métrica se lleva a un puntaje de 0 a 1 con escala logarítmica entre su objetivo (t) y su límite inaceptable (w).",
+      "s2": "Las compuertas G1 a G4 descartan las redes inadmisibles: no reciben puntaje, no un cero.",
+      "s3": "Dentro de cada bloque se promedian las métricas; entre bloques se usa media geométrica ponderada con piso 0,05.",
+      "s4": "El pago se describe con cuatro atributos y sus pesos se interpolan entre los tres escenarios según el parecido.",
+      "s5": "La certidumbre κ dice qué tan bien representan los escenarios al pago: alta desde 0,75, media desde 0,45.",
+      "s6": "10.000 réplicas perturban medidas y pesos; dos redes quedan en bandas distintas solo si una supera a la otra con probabilidad de 0,85 o más."
     },
     "scenarios": {
-      "title": "Escenarios, pesos y umbrales",
+      "title": "Escenarios de referencia",
       "scenario": "Escenario",
-      "range": "Rango en COP",
-      "weights": "Costo / velocidad / seguridad",
-      "fee": "Comisión (objetivo → límite)",
-      "latency": "Inclusión",
-      "finality": "Irreversibilidad",
-      "note": "El escenario se decide por el monto y, entre medias, por el propósito de la transacción. Los cortes son editables en el código."
+      "ticket": "Ticket",
+      "restriction": "Restricción dominante",
+      "weights": "Pesos A / B / C / D",
+      "note": "La tesis define tres escenarios. Los pagos de menos de COP 15.000 se tratan como comercio (E2): el monto se recorta a COP 10.000 para ponderar, pero el costo se calcula sobre el monto real.",
+      "r": {
+        "E1": "Costo",
+        "E2": "Latencia",
+        "E3": "Concentración e irrevocabilidad"
+      }
+    },
+    "catalog": {
+      "title": "Catálogo de métricas",
+      "source": "Fuente",
+      "chain": "Cadena",
+      "doc": "Documental"
     },
     "direction": "Sentido",
-    "perScenario": "según escenario",
-    "dir": { "lower": "Menor es mejor", "higher": "Mayor es mejor" }
+    "dir": {
+      "lower": "Menor es mejor",
+      "higher": "Mayor es mejor"
+    },
+    "ext": "Extensión propia; no entra en el puntaje",
+    "perPayment": "según el pago",
+    "limits": {
+      "title": "Qué no cubre",
+      "body": "No mide la continuidad institucional de cada red, el cumplimiento regulatorio, el costo de entrar y salir de pesos ni la capacidad máxima real. Con un solo proveedor de nodo por red, un error del proveedor pasaría inadvertido."
+    }
+  },
+  "data": {
+    "source": {
+      "thesis": "Tesis · ventana de 90 días",
+      "benchmark": "Benchmark preliminar · muestra reducida"
+    },
+    "status": {
+      "partial": "Parcial",
+      "inconclusive": "No concluyente",
+      "missing": "Sin dato",
+      "computed": "Medida"
+    },
+    "notes": {
+      "noCongestion": "En la ventana no hubo congestión, así que la pendiente no es estimable.",
+      "unreliableRegression": "La regresión sobre la muestra reducida no es confiable; se excluye.",
+      "anchorSplit": "Se reparte el gasto de las publicaciones en Ethereum entre las transferencias que cubren.",
+      "noDisputeWindow": "Sin ventana de disputa: la irrevocabilidad coincide con la publicación.",
+      "disputeWindow": "Irrevocable al vencer la ventana de disputa más el tiempo de confirmación.",
+      "lowerBound": "Cota inferior: mide la demanda observada, no la capacidad máxima.",
+      "documentary": "Cota conservadora a partir de incidentes oficiales (única métrica documental).",
+      "singleSequencer": "Un único secuenciador produce los bloques.",
+      "signedAuth": "Casi todo viene de autorizaciones firmadas y enviadas por un tercero que paga la comisión.",
+      "paymasters": "La mayoría corresponde a paymasters de ERC-4337.",
+      "strictMemo": "Versión estricta: solo memos agregados a transferencias directas del activo.",
+      "roundedSeconds": "Marcas de tiempo en segundos enteros: con bloques de 0,25 s hay error de redondeo.",
+      "reducedSample": "Muestra reducida de minutos, no la ventana completa; sin bootstrap.",
+      "noAnchor": "No ancla su estado en Ethereum: el costo de anclaje no existe.",
+      "liveShortRun": "Sondeo en vivo de 30 segundos, no las 72 horas del plan.",
+      "configuredCapacity": "Capacidad configurada derivada del estado de la red, límite superior optimista; reescalada a 18 TPS.",
+      "permissioned": "Red permisionada: el proponente se elige por VRF aunque el conjunto sea pequeño.",
+      "notComparable": "Se mide de otra forma que en la tesis; no es comparable y se excluye.",
+      "degenerate": "Determinada por la arquitectura (no hay token nativo), no por el comportamiento de los usuarios.",
+      "contaminated": "Probablemente contaminada por reparto de comisiones o rebalanceo de colateral.",
+      "frozenOracle": "Precio de APT congelado desde el 26 de agosto de 2026 en el oráculo.",
+      "finalityNotMeasured": "La finalidad no se pudo medir con sondeo HTTP: el bloque dura ~20 ms.",
+      "memoNotDefined": "Falta fijar qué cuenta como referencia apta en Aptos.",
+      "burstWindow": "La ventana cayó en una ráfaga periódica de reportes, no en tráfico de pagos.",
+      "memberAllocation": "Asignación gratuita por miembro; subestima la capacidad real del sincronizador.",
+      "svWeights": "Calculada sobre los pesos de los super validadores, no sobre bloques.",
+      "stablecoinNotObservable": "Con una stablecoin bajo el estándar de token, un tercero no puede verificar el pago (estimación parcial)."
+    }
+  },
+  "gates": {
+    "title": "Compuertas de admisibilidad",
+    "sub": "Una red que falla una compuerta aplicable queda inadmisible: no recibe puntaje.",
+    "pass": "Pasa",
+    "fail": "Falla",
+    "na": "No evaluable",
+    "notApplicable": "No aplica a este pago",
+    "G1": {
+      "name": "Latencia de inclusión",
+      "desc": "No mayor que 20 s (el pago es sobre todo comercio)."
+    },
+    "G2": {
+      "name": "Firmeza verificable",
+      "desc": "Un tercero puede verificar la inclusión y la irrevocabilidad."
+    },
+    "G3": {
+      "name": "Referencia de conciliación",
+      "desc": "Existe un memo en uso (D2 mayor que cero)."
+    },
+    "G4": {
+      "name": "Capacidad",
+      "desc": "El margen de capacidad no es menor que 1 (solo si B3 mide capacidad)."
+    }
   }
 }

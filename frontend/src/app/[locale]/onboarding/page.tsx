@@ -14,7 +14,6 @@ import type {
   Experience,
   Frequency,
   PriorityKey,
-  PrivacyPref,
   ProfileAnswers,
   Purpose,
   RecipientType,
@@ -35,11 +34,9 @@ const DEFAULTS: ProfileAnswers = {
   recipientTypes: [],
   destinationCountries: [],
   defaultPriority: "balanced",
-  costTolerance: "medium",
   timeTolerance: "medium",
   riskTolerance: "medium",
   needsReconciliation: false,
-  privacyPref: "indifferent",
 };
 
 const OPTIONS = {
@@ -52,7 +49,6 @@ const OPTIONS = {
   recipientTypes: ["person", "business", "exchange", "ownWallet", "unknown"] satisfies RecipientType[],
   defaultPriority: ["cost", "speed", "security", "balanced"] satisfies PriorityKey[],
   tolerance: ["low", "medium", "high"] satisfies Tolerance[],
-  privacyPref: ["auditable", "private", "indifferent"] satisfies PrivacyPref[],
 };
 
 const STEPS = ["identity", "experience", "usage", "amounts", "risk", "summary"] as const;
@@ -146,7 +142,7 @@ function Wizard() {
     </ChoiceGrid>
   );
 
-  const tolerance = (key: "costTolerance" | "timeTolerance" | "riskTolerance", label: string, hint: string) => (
+  const tolerance = (key: "timeTolerance" | "riskTolerance", label: string, hint: string) => (
     <Field label={label} hint={hint}>
       <ChoiceGrid cols={3}>
         {OPTIONS.tolerance.map((v) => (
@@ -246,14 +242,10 @@ function Wizard() {
             <Field label={t("q.defaultPriority")}>
               {radio("defaultPriority", "defaultPriority", OPTIONS.defaultPriority, 4)}
             </Field>
-            {tolerance("costTolerance", t("q.costTolerance"), t("h.costTolerance"))}
             {tolerance("timeTolerance", t("q.timeTolerance"), t("h.timeTolerance"))}
             {tolerance("riskTolerance", t("q.riskTolerance"), t("h.riskTolerance"))}
             <Field label={t("q.needsReconciliation")} hint={t("h.needsReconciliation")}>
               {bool("needsReconciliation")}
-            </Field>
-            <Field label={t("q.privacyPref")} hint={t("h.privacyPref")}>
-              {radio("privacyPref", "privacyPref", OPTIONS.privacyPref, 3)}
             </Field>
           </>
         )}
@@ -273,7 +265,6 @@ function Wizard() {
                 ["recipientTypes", a.recipientTypes.map((p) => opt("recipientTypes", p)).join(", ")],
                 ["destinationCountries", a.destinationCountries.map(fmt.country).join(", ")],
                 ["defaultPriority", opt("defaultPriority", a.defaultPriority)],
-                ["privacyPref", opt("privacyPref", a.privacyPref)],
               ] as const
             ).map(([k, v]) => (
               <div key={k} className="border-b border-line pb-3">

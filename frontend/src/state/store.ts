@@ -28,7 +28,7 @@ export interface StoreState {
   draft: TxInput | null;
 }
 
-const KEY = "netpick.demo.v1";
+const KEY = "redfacil.demo.v2";
 const EMPTY: StoreState = { users: [], activeId: null, history: [], draft: null };
 
 let state: StoreState = EMPTY;

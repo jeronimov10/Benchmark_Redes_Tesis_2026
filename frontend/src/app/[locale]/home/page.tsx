@@ -6,7 +6,7 @@ import { ArrowRight, History, Pencil, ShieldCheck } from "lucide-react";
 import { buttonClass, Card, Container, SectionTitle } from "@/components/ui";
 import { HistoryRow } from "@/components/result/HistoryRow";
 import { Link } from "@/i18n/navigation";
-import { recommend } from "@/engine/scoring";
+import { recommend } from "@/engine/recommend";
 import { NETWORK_LABEL, useFmt } from "@/lib/format";
 import { useRequireUser } from "@/lib/useRequireUser";
 import { useStore } from "@/state/store";
@@ -29,8 +29,8 @@ export default function HomePage() {
   const stats = useMemo(() => {
     const winners: Record<string, number> = {};
     for (const e of entries) {
-      const best = recommend(e.tx, e.answers).best;
-      if (best) winners[best.network.id] = (winners[best.network.id] ?? 0) + 1;
+      const best = recommend(e.tx, e.answers, { replicas: 1000 }).best;
+      if (best) winners[best.data.id] = (winners[best.data.id] ?? 0) + 1;
     }
     const top = Object.entries(winners).sort((a, b) => b[1] - a[1])[0];
     const volume = entries.reduce((s, e) => s + e.tx.amountCop, 0);
@@ -78,7 +78,6 @@ export default function HomePage() {
               to(`opt.experience.${a.experience}`),
               to(`opt.frequency.${a.frequency}`),
               to(`opt.defaultPriority.${a.defaultPriority}`),
-              to(`opt.privacyPref.${a.privacyPref}`),
             ].map((chip) => (
               <li key={chip} className="rounded-full bg-surface px-3.5 py-1.5">
                 {chip}

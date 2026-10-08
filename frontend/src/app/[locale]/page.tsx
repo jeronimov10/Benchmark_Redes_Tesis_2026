@@ -3,24 +3,22 @@
 import { useTranslations } from "next-intl";
 import { ArrowRight, Gauge, ListChecks, Route } from "lucide-react";
 import { ButtonLink, Container, DemoBadge, Semaphore, cx } from "@/components/ui";
-import { SCENARIOS } from "@/engine/scenarios";
-import { NETWORK_IDS, type Light, type ScenarioId } from "@/engine/types";
+import { NETWORK_IDS, SCENARIO_IDS, type Light, type ScenarioId } from "@/engine/types";
 import { NETWORK_LABEL } from "@/lib/format";
 import { useHydrated, useStore } from "@/state/store";
 
 const STEP_ICONS = [ListChecks, Route, Gauge];
 const SCENARIO_TONE: Record<ScenarioId, string> = {
-  micro: "bg-brand text-ink",
-  commerce: "bg-surface text-ink",
-  remittance: "bg-pink text-ink",
-  high_value: "bg-ink text-white",
+  E1: "bg-pink text-ink",
+  E2: "bg-brand text-ink",
+  E3: "bg-ink text-white",
 };
 const SAMPLE: [string, Light][] = [
-  ["Tempo", "green"],
-  ["Aptos", "green"],
-  ["Polygon", "yellow"],
+  ["Polygon", "green"],
+  ["Arbitrum", "yellow"],
   ["Celo", "yellow"],
-  ["Arbitrum", "red"],
+  ["Tempo", "yellow"],
+  ["Canton", "red"],
 ];
 
 export default function LandingPage() {
@@ -56,7 +54,7 @@ export default function LandingPage() {
             <div className="absolute -right-6 -top-6 h-40 w-40 rounded-full bg-pink" />
             <div className="relative rounded-[32px] bg-brand p-7 shadow-lift sm:p-9">
               <p className="text-xs font-bold uppercase tracking-[0.14em]">{t("hero.cardKicker")}</p>
-              <p className="mt-2 text-5xl font-extrabold tracking-tight">Tempo</p>
+              <p className="mt-2 text-5xl font-extrabold tracking-tight">Polygon</p>
               <p className="mt-1 text-sm">{t("hero.cardSub")}</p>
               <ul className="mt-6 space-y-1 rounded-2xl bg-paper p-3">
                 {SAMPLE.map(([name, light]) => (
@@ -95,10 +93,10 @@ export default function LandingPage() {
         <Container>
           <h2 className="mb-3 text-3xl font-extrabold tracking-tight">{t("scenarios.title")}</h2>
           <p className="mb-10 max-w-2xl text-lg text-muted">{t("scenarios.sub")}</p>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {SCENARIOS.map((s) => (
+          <div className="grid gap-5 md:grid-cols-3">
+            {SCENARIO_IDS.map((s) => (
               <div key={s} className={cx("flex min-h-56 flex-col justify-between rounded-card p-7", SCENARIO_TONE[s])}>
-                <p className="text-2xl font-extrabold">{ts(`${s}.name`)}</p>
+                <div><p className="text-2xl font-extrabold">{ts(`${s}.name`)}</p><p className="mt-1 text-sm font-bold opacity-70">{ts(`${s}.ticket`)}</p></div>
                 <p className="text-sm leading-relaxed opacity-80">{ts(`${s}.desc`)}</p>
               </div>
             ))}

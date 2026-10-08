@@ -2,38 +2,26 @@
 
 import { useTranslations } from "next-intl";
 import { Card, Container, DemoBadge, Semaphore, SectionTitle } from "@/components/ui";
-import {
-  COMMERCE_MAX_COP,
-  FEE_THRESHOLDS,
-  FINALITY_THRESHOLDS,
-  HIGH_VALUE_MIN_COP,
-  LATENCY_THRESHOLDS,
-  MICRO_MAX_COP,
-  SCENARIO_WEIGHTS,
-  SCENARIOS,
-} from "@/engine/scenarios";
-import { BLOCKS, METRICS, STATIC_THRESHOLDS } from "@/engine/risk-standard";
+import { BLOCKS, METRICS } from "@/engine/metrics";
+import { SCENARIO_WEIGHTS } from "@/engine/model";
+import { SCENARIO_IDS } from "@/engine/types";
 import { useFmt } from "@/lib/format";
+
+const GATES = ["G1", "G2", "G3", "G4"] as const;
 
 export default function StandardPage() {
   const t = useTranslations("standard");
   const tm = useTranslations("metrics");
   const ts = useTranslations("scenarios");
   const td = useTranslations("detail");
+  const tg = useTranslations("gates");
   const fmt = useFmt();
-
-  const cut: Record<string, string> = {
-    micro: `1 – ${fmt.cop(MICRO_MAX_COP)}`,
-    commerce: `${fmt.cop(MICRO_MAX_COP)} – ${fmt.cop(COMMERCE_MAX_COP)}`,
-    remittance: `${fmt.cop(COMMERCE_MAX_COP)} – ${fmt.cop(HIGH_VALUE_MIN_COP)}`,
-    high_value: `≥ ${fmt.cop(HIGH_VALUE_MIN_COP)}`,
-  };
 
   return (
     <Container className="max-w-5xl py-12">
       <SectionTitle sub={t("sub")}>{t("title")}</SectionTitle>
-      <p className="-mt-3 mb-8 flex items-center gap-2 text-xs text-muted">
-        <DemoBadge /> {t("demoNote")}
+      <p className="-mt-3 mb-8 flex items-start gap-2 text-sm text-muted">
+        <DemoBadge className="mt-0.5" /> {t("demoNote")}
       </p>
 
       <Card className="mb-5">
@@ -51,38 +39,38 @@ export default function StandardPage() {
       </Card>
 
       <Card className="mb-5">
-        <h2 className="mb-4 text-xl font-extrabold">{t("rules.title")}</h2>
-        <ol className="list-decimal space-y-2 pl-5 text-sm">
-          {(["metric", "block", "network", "ranking"] as const).map((r) => (
-            <li key={r}>{t(`rules.${r}`)}</li>
+        <h2 className="mb-4 text-xl font-extrabold">{t("model.title")}</h2>
+        <ol className="space-y-3">
+          {(["s1", "s2", "s3", "s4", "s5", "s6"] as const).map((s, i) => (
+            <li key={s} className="flex gap-4 text-sm leading-relaxed">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand font-extrabold">{i + 1}</span>
+              <span className="pt-1">{t(`model.${s}`)}</span>
+            </li>
           ))}
         </ol>
       </Card>
 
       <Card className="mb-5 overflow-x-auto">
         <h2 className="mb-4 text-xl font-extrabold">{t("scenarios.title")}</h2>
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full min-w-[600px] text-left text-sm">
           <thead>
             <tr className="border-b-2 border-ink text-xs uppercase tracking-[0.1em] text-muted">
               <th className="py-2">{t("scenarios.scenario")}</th>
-              <th>{t("scenarios.range")}</th>
+              <th>{t("scenarios.ticket")}</th>
+              <th>{t("scenarios.restriction")}</th>
               <th>{t("scenarios.weights")}</th>
-              <th>{t("scenarios.fee")}</th>
-              <th>{t("scenarios.latency")}</th>
-              <th>{t("scenarios.finality")}</th>
             </tr>
           </thead>
           <tbody>
-            {SCENARIOS.map((s) => (
-              <tr key={s} className="border-b border-line align-top">
-                <td className="py-2 font-bold">{ts(`${s}.name`)}</td>
-                <td>{cut[s]}</td>
-                <td className="tabular-nums">
-                  {fmt.percent(SCENARIO_WEIGHTS[s].cost)} / {fmt.percent(SCENARIO_WEIGHTS[s].speed)} / {fmt.percent(SCENARIO_WEIGHTS[s].security)}
+            {SCENARIO_IDS.map((e) => (
+              <tr key={e} className="border-b border-line align-top">
+                <td className="py-3 font-extrabold">
+                  <span className="mr-2 rounded-md bg-surface px-1.5 py-0.5 text-xs">{e}</span>
+                  {ts(`${e}.name`)}
                 </td>
-                <td className="tabular-nums">{fmt.percent(FEE_THRESHOLDS[s][0])} → {fmt.percent(FEE_THRESHOLDS[s][1])}</td>
-                <td className="tabular-nums">{fmt.seconds(LATENCY_THRESHOLDS[s][0])} → {fmt.seconds(LATENCY_THRESHOLDS[s][1])}</td>
-                <td className="tabular-nums">{fmt.seconds(FINALITY_THRESHOLDS[s][0])} → {fmt.seconds(FINALITY_THRESHOLDS[s][1])}</td>
+                <td>{ts(`${e}.ticket`)}</td>
+                <td>{t(`scenarios.r.${e}`)}</td>
+                <td className="tabular-nums">{BLOCKS.map((b) => fmt.decimal(SCENARIO_WEIGHTS[e][b], 2)).join(" / ")}</td>
               </tr>
             ))}
           </tbody>
@@ -90,42 +78,63 @@ export default function StandardPage() {
         <p className="mt-3 text-xs text-muted">{t("scenarios.note")}</p>
       </Card>
 
+      <Card className="mb-5">
+        <h2 className="mb-1 text-xl font-extrabold">{tg("title")}</h2>
+        <p className="mb-4 text-sm text-muted">{tg("sub")}</p>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {GATES.map((g) => (
+            <li key={g} className="rounded-2xl bg-surface p-4 text-sm">
+              <p className="font-extrabold">
+                <span className="mr-2 rounded-md bg-paper px-1.5 py-0.5 text-xs">{g}</span>
+                {tg(`${g}.name`)}
+              </p>
+              <p className="mt-1 text-muted">{tg(`${g}.desc`)}</p>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <h2 className="mb-4 mt-10 text-2xl font-extrabold tracking-tight">{t("catalog.title")}</h2>
       {BLOCKS.map((b) => (
-        <Card key={b} className="mb-6 overflow-x-auto">
-          <h2 className="mb-1 flex items-center text-xl font-extrabold">
-            <span className="mr-2 inline-grid h-9 w-9 place-items-center rounded-full bg-brand text-base font-extrabold">{b}</span>
+        <Card key={b} className="mb-5 overflow-x-auto">
+          <h3 className="mb-1 flex items-center text-xl font-extrabold">
+            <span className="mr-3 inline-grid h-9 w-9 place-items-center rounded-full bg-brand text-base">{b}</span>
             {td(`block.${b}`)}
-          </h2>
+          </h3>
           <p className="mb-3 text-sm text-muted">{td(`blockDesc.${b}`)}</p>
-          <table className="w-full min-w-[560px] text-left text-sm">
+          <table className="w-full min-w-[620px] text-left text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-xs uppercase tracking-[0.1em] text-muted">
                 <th className="py-2">{td("col.metric")}</th>
                 <th className="text-right">{td("col.target")}</th>
                 <th className="text-right">{td("col.limit")}</th>
-                <th className="pl-3">{t("direction")}</th>
+                <th className="pl-4">{t("direction")}</th>
+                <th>{t("catalog.source")}</th>
               </tr>
             </thead>
             <tbody>
-              {METRICS.filter((m) => m.block === b).map((m) => {
-                const th = STATIC_THRESHOLDS[m.id];
-                return (
-                  <tr key={m.id} className="border-b border-line align-top">
-                    <td className="py-2">
-                      <span className="font-bold">{m.id}</span> {tm(`${m.id}.name`)}
-                      {m.extension && <span className="ml-1 rounded bg-surface px-1 text-[10px] font-bold uppercase text-muted">{td("extension")}</span>}
-                      <span className="block text-xs text-muted">{tm(`${m.id}.desc`)}</span>
-                    </td>
-                    <td className="text-right tabular-nums">{th ? fmt.metricValue(th[0], m.unit) : t("perScenario")}</td>
-                    <td className="text-right tabular-nums">{th ? fmt.metricValue(th[1], m.unit) : t("perScenario")}</td>
-                    <td className="pl-3 text-xs">{t(`dir.${m.dir}`)}</td>
-                  </tr>
-                );
-              })}
+              {METRICS.filter((m) => m.block === b).map((m) => (
+                <tr key={m.id} className="border-b border-line align-top">
+                  <td className="py-2">
+                    <span className="mr-2 rounded-md bg-surface px-1.5 py-0.5 text-xs font-bold">{m.id}</span>
+                    <span className="font-bold">{tm(`${m.id}.name`)}</span>
+                    <span className="block text-xs text-muted">{tm(`${m.id}.desc`)}</span>
+                  </td>
+                  <td className="text-right tabular-nums">{fmt.metricValue(m.t, m.unit)}</td>
+                  <td className="text-right tabular-nums">{fmt.metricValue(m.w, m.unit)}</td>
+                  <td className="pl-4 text-xs">{t(`dir.${m.dir}`)}</td>
+                  <td className="text-xs">{t(`catalog.${m.source}`)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </Card>
       ))}
+
+      <Card tone="surface" className="mt-5">
+        <h2 className="mb-2 text-lg font-extrabold">{t("limits.title")}</h2>
+        <p className="text-sm leading-relaxed text-muted">{t("limits.body")}</p>
+      </Card>
     </Container>
   );
 }

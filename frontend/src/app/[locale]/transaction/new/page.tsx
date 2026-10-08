@@ -2,30 +2,29 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowRight, ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, ArrowRight } from "lucide-react";
 import { z } from "zod";
-import { Button, Card, Chip, Choice, ChoiceGrid, Container, DemoBadge, Field, inputClass, SectionTitle } from "@/components/ui";
-import { PrioritySliders } from "@/components/result/PrioritySliders";
-import { classifyScenario, MIN_AMOUNT_COP } from "@/engine/scenarios";
-import { defaultPriorities } from "@/engine/scoring";
+import { Button, Card, Chip, Choice, ChoiceGrid, Container, Field, inputClass, SectionTitle } from "@/components/ui";
+import { PaymentAttributes } from "@/components/result/PaymentAttributes";
 import { copToUsdt, DEMO_TRM } from "@/engine/fx";
+import { interpret, paymentVector } from "@/engine/model";
 import { useRouter } from "@/i18n/navigation";
+import { defaultsFor } from "@/lib/attrs";
 import { NETWORK_LABEL, useFmt } from "@/lib/format";
 import { useRequireUser } from "@/lib/useRequireUser";
 import { actions } from "@/state/store";
 import {
   NETWORK_IDS,
+  SCENARIO_IDS,
+  type Irreversibility,
   type NetworkId,
   type Purpose,
   type RecipientType,
   type TxInput,
-  type Urgency,
-  type Weights,
 } from "@/engine/types";
 
 const PURPOSES: Purpose[] = ["p2p", "commerce", "remittance", "payroll", "treasury"];
 const RECIPIENTS: RecipientType[] = ["person", "business", "exchange", "ownWallet", "unknown"];
-const URGENCIES: Urgency[] = ["low", "normal", "urgent"];
 const MAX_COP = 10_000_000_000;
 
 export default function NewTransactionPage() {
@@ -38,32 +37,37 @@ export default function NewTransactionPage() {
 
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState<Purpose>("p2p");
-  const [urgency, setUrgency] = useState<Urgency>("normal");
+  const [attrs, setAttrs] = useState<{ waitSec: number; irreversibility: Irreversibility } | null>(null);
   const [rType, setRType] = useState<RecipientType>("person");
   const [rCountry, setRCountry] = useState("CO");
   const [firstTime, setFirstTime] = useState(false);
-  const [needsMemo, setNeedsMemo] = useState(false);
+  const [needsMemo, setNeedsMemo] = useState<boolean | null>(null);
   const [accepted, setAccepted] = useState<NetworkId[] | "unknown">("unknown");
-  const [priorities, setPriorities] = useState<Weights | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const amountCop = Number(amount.replace(/\D/g, "")) || 0;
-  const prio = priorities ?? defaultPriorities(user?.answers.defaultPriority ?? "balanced");
-  const scenario = amountCop >= MIN_AMOUNT_COP ? classifyScenario(amountCop, purpose) : null;
+  const originCountry = user?.answers.country ?? "CO";
+  const crossBorder = rCountry !== originCountry;
+  const preset = defaultsFor(purpose, user?.answers ?? { timeTolerance: "medium", riskTolerance: "medium" });
+  const current = attrs ?? preset;
+  const memo = needsMemo ?? user?.answers.needsReconciliation ?? false;
+
+  const similar = useMemo(() => {
+    if (amountCop < 1) return null;
+    const i = interpret(paymentVector(amountCop, crossBorder, current.waitSec, current.irreversibility));
+    return SCENARIO_IDS.reduce((a, b) => (i.lambda[a] >= i.lambda[b] ? a : b));
+  }, [amountCop, crossBorder, current.waitSec, current.irreversibility]);
 
   const schema = useMemo(
     () =>
       z.object({
-        amountCop: z
-          .number()
-          .min(MIN_AMOUNT_COP, t("errors.amountMin"))
-          .max(MAX_COP, t("errors.amountMax")),
+        amountCop: z.number().min(1, t("errors.amountMin")).max(MAX_COP, t("errors.amountMax")),
         accepted: z.union([z.literal("unknown"), z.array(z.string()).min(1, t("errors.accepted"))]),
       }),
     [t],
   );
 
-  if (!ready || !user) return <Container className="py-10" />;
+  if (!ready || !user) return <Container className="py-12" />;
 
   function submit() {
     const parsed = schema.safeParse({ amountCop, accepted });
@@ -76,17 +80,17 @@ export default function NewTransactionPage() {
     const tx: TxInput = {
       amountCop,
       purpose,
-      urgency,
-      priorities: prio,
-      recipient: { type: rType, country: rCountry, firstTime, accepted, needsMemo },
+      waitSec: current.waitSec,
+      irreversibility: current.irreversibility,
+      recipient: { type: rType, country: rCountry, firstTime, accepted, needsMemo: memo },
     };
     actions.setDraft(tx);
     router.push("/transaction/analyzing");
   }
 
   const toggleNet = (id: NetworkId) => {
-    const current = accepted === "unknown" ? [] : accepted;
-    setAccepted(current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
+    const list = accepted === "unknown" ? [] : accepted;
+    setAccepted(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   };
 
   return (
@@ -96,30 +100,28 @@ export default function NewTransactionPage() {
       <Card className="mb-5">
         <h2 className="mb-6 text-2xl font-extrabold tracking-tight">{t("sections.operation")}</h2>
         <Field label={t("q.amount")} hint={t("h.amount")} error={errors.amountCop}>
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-extrabold text-muted">COP</span>
-              <input
-                inputMode="numeric"
-                className={`${inputClass} pl-16 text-2xl font-extrabold`}
-                value={amountCop ? new Intl.NumberFormat("es-CO").format(amountCop) : amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0"
-                aria-label={t("q.amount")}
-              />
-            </div>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-extrabold text-muted">
+              COP
+            </span>
+            <input
+              inputMode="numeric"
+              className={`${inputClass} pl-16 text-2xl font-extrabold`}
+              value={amountCop ? new Intl.NumberFormat("es-CO").format(amountCop) : amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+              aria-label={t("q.amount")}
+            />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
             <span className="inline-flex items-center gap-2 font-semibold">
               <ArrowLeftRight size={14} aria-hidden />
               {fmt.usdt(copToUsdt(amountCop))}
             </span>
-            <span className="text-xs text-muted">
-              {t("trmNote", { trm: fmt.cop(DEMO_TRM) })} <DemoBadge className="ml-1" />
-            </span>
-            {scenario && (
+            <span className="text-xs text-muted">{t("trmNote", { trm: fmt.cop(DEMO_TRM) })}</span>
+            {similar && (
               <span className="rounded-full bg-brand px-3.5 py-1.5 text-xs font-extrabold">
-                {t("scenarioDetected", { scenario: ts(`${scenario}.name`) })}
+                {t("scenarioDetected", { scenario: ts(`${similar}.name`) })}
               </span>
             )}
           </div>
@@ -128,15 +130,15 @@ export default function NewTransactionPage() {
         <Field label={t("q.purpose")}>
           <ChoiceGrid cols={3}>
             {PURPOSES.map((p) => (
-              <Choice key={p} selected={purpose === p} onClick={() => setPurpose(p)} title={to(`opt.purposes.${p}`)} />
-            ))}
-          </ChoiceGrid>
-        </Field>
-
-        <Field label={t("q.urgency")}>
-          <ChoiceGrid cols={3}>
-            {URGENCIES.map((u) => (
-              <Choice key={u} selected={urgency === u} onClick={() => setUrgency(u)} title={t(`urgency.${u}`)} desc={t(`urgency.${u}_d`)} />
+              <Choice
+                key={p}
+                selected={purpose === p}
+                onClick={() => {
+                  setPurpose(p);
+                  setAttrs(null);
+                }}
+                title={to(`opt.purposes.${p}`)}
+              />
             ))}
           </ChoiceGrid>
         </Field>
@@ -144,7 +146,7 @@ export default function NewTransactionPage() {
 
       <Card className="mb-5">
         <h2 className="mb-1 text-2xl font-extrabold tracking-tight">{t("sections.recipient")}</h2>
-        <p className="mb-6 text-sm text-muted">{t("originNote")}</p>
+        <p className="mb-6 text-sm text-muted">{t("originNote", { country: fmt.country(originCountry) })}</p>
         <Field label={t("q.recipientType")}>
           <ChoiceGrid cols={3}>
             {RECIPIENTS.map((r) => (
@@ -160,6 +162,9 @@ export default function NewTransactionPage() {
               </option>
             ))}
           </select>
+          <p className="mt-2 text-sm font-semibold">
+            {t("crossBorder.label")}: <span className="font-normal text-muted">{crossBorder ? t("crossBorder.yes") : t("crossBorder.no")}</span>
+          </p>
         </Field>
         <Field label={t("q.firstTime")}>
           <ChoiceGrid cols={2}>
@@ -181,21 +186,25 @@ export default function NewTransactionPage() {
         </Field>
         <Field label={t("q.needsMemo")} hint={t("h.needsMemo")}>
           <ChoiceGrid cols={2}>
-            <Choice selected={needsMemo} onClick={() => setNeedsMemo(true)} title={to("yes")} />
-            <Choice selected={!needsMemo} onClick={() => setNeedsMemo(false)} title={to("no")} />
+            <Choice selected={memo} onClick={() => setNeedsMemo(true)} title={to("yes")} />
+            <Choice selected={!memo} onClick={() => setNeedsMemo(false)} title={to("no")} />
           </ChoiceGrid>
         </Field>
       </Card>
 
       <Card className="mb-8">
-        <h2 className="mb-1 text-2xl font-extrabold tracking-tight">{t("sections.priorities")}</h2>
-        <p className="mb-5 text-sm text-muted">{t("h.priorities")}</p>
-        <PrioritySliders value={prio} onChange={setPriorities} />
+        <h2 className="mb-1 text-2xl font-extrabold tracking-tight">{t("sections.attributes")}</h2>
+        <p className="mb-6 text-sm text-muted">{t("h.attributes")}</p>
+        <PaymentAttributes
+          waitSec={current.waitSec}
+          irreversibility={current.irreversibility}
+          onChange={(next) => setAttrs({ ...current, ...next })}
+        />
       </Card>
 
       <div className="flex justify-end">
         <Button size="lg" onClick={submit}>
-          {t("submit")} <ArrowRight size={16} aria-hidden />
+          {t("submit")} <ArrowRight size={18} aria-hidden />
         </Button>
       </div>
     </Container>
