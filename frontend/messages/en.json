@@ -1,0 +1,479 @@
+{
+  "meta": {
+    "title": "Redfacil · Network recommender for your transaction",
+    "description": "Demo prototype that recommends the most suitable blockchain network for a transaction, with explainable risk traffic lights."
+  },
+  "common": {
+    "demo": "Demo",
+    "otherCountry": "Other country"
+  },
+  "nav": {
+    "brand": "Redfacil",
+    "home": "Home",
+    "history": "History",
+    "standard": "Standard",
+    "switchUser": "Switch user",
+    "start": "Get started",
+    "language": "Language",
+    "main": "Main navigation"
+  },
+  "footer": {
+    "demo": "Demo prototype: all data, fees, times and ratings are simulated. No real networks are queried and no transactions are executed.",
+    "academic": "Academic thesis project. Visually inspired by the Bancolombia palette, with no affiliation to the institution."
+  },
+  "risk": {
+    "light": {
+      "green": "Green",
+      "yellow": "Yellow",
+      "red": "Red",
+      "greenHint": "Green: one of the best options for this transaction",
+      "yellowHint": "Yellow: a good option, with points to watch",
+      "redHint": "Red: do not send through this network"
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "The right network for every transaction, explained.",
+      "sub": "Tell us who you are and what you are sending. We compare six blockchain networks, rate the risk with a clear traffic light and tell you which one to use to send your pesos converted to USDT, and why.",
+      "cta": "Get started",
+      "ctaContinue": "Continue",
+      "ctaStandard": "See how we rate",
+      "cardKicker": "Best network for your operation",
+      "cardSub": "Illustrative example"
+    },
+    "how": {
+      "title": "How it works",
+      "s1": { "title": "1. Create your profile", "desc": "A short onboarding about your experience, usual use and risk tolerance. You can create several users." },
+      "s2": { "title": "2. Describe the transaction", "desc": "Amount in COP (converted to USDT), recipient, urgency and what you prioritize: cost, speed or security." },
+      "s3": { "title": "3. Get the recommendation", "desc": "The best network, the reasoning, a traffic light for every network and the detail by rating block." }
+    },
+    "scenarios": {
+      "title": "Four payment scenarios",
+      "sub": "Depending on amount and purpose, what matters most changes. The system adjusts the evaluation weights automatically."
+    },
+    "networks": {
+      "title": "Six networks evaluated",
+      "sub": "None of them hosts a digital Colombian peso, so every operation is first converted to USDT."
+    },
+    "final": {
+      "title": "Ready to try a hypothetical transaction",
+      "sub": "Everything is a simulation: experiment freely and change your priorities to see how the recommendation changes."
+    }
+  },
+  "scenarios": {
+    "micro": { "name": "Micro", "desc": "Payments from COP 1 up to COP 15,000. Cost rules: the fee cannot eat the payment." },
+    "commerce": { "name": "Commerce", "desc": "Everyday payments to merchants. Confirmation speed rules." },
+    "remittance": { "name": "Remittances", "desc": "Family or person-to-person transfers. Cost rules, with tolerance to wait." },
+    "high_value": { "name": "High value", "desc": "Amounts above COP 100 million. Security and irreversibility rule." }
+  },
+  "networks": {
+    "tempo": { "desc": "New payments-oriented network with fees paid in digital dollars and permissioned validators. Very fast and cheap, but young." },
+    "aptos": { "desc": "General-purpose network with immediate finality and many independent validators. Balanced." },
+    "canton": { "desc": "Institutional network with privacy by design. Third parties may find it hard to audit the counterparty." },
+    "polygon": { "desc": "Mature ecosystem with deep USDT liquidity and broad exchange support." },
+    "arbitrum": { "desc": "Ethereum layer 2 with great liquidity; final settlement is slow and relies on a central sequencer." },
+    "celo": { "desc": "Network focused on mobile payments with low fees and an active Latin American community." }
+  },
+  "start": {
+    "title": "Who is operating?",
+    "sub": "Each user has their own profile and history. Pick one or create a new one.",
+    "empty": "There are no users yet. Create the first one to begin.",
+    "create": "Create new user",
+    "meta": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}} · created on {date}",
+    "enter": "Enter",
+    "delete": "Delete user",
+    "confirmDelete": "Delete {alias} and all their history?",
+    "storage": "Users are stored only in this browser."
+  },
+  "onboarding": {
+    "progress": "Step {current} of {total}",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Create user",
+    "save": "Save changes",
+    "steps": {
+      "identity": { "title": "Who you are", "sub": "The basics to personalize the experience." },
+      "experience": { "title": "Your blockchain experience", "sub": "Adjusts how much explanation you need and which options are viable for you." },
+      "usage": { "title": "Why you send money", "sub": "Purpose and frequency affect which networks make sense." },
+      "amounts": { "title": "Amounts and recipients", "sub": "Helps us seed a coherent history and anticipate scenarios." },
+      "risk": { "title": "Your priorities and risk tolerance", "sub": "They set the weights we use to evaluate each network." },
+      "summary": { "title": "Review your profile", "sub": "You can edit it anytime from the home page." }
+    },
+    "q": {
+      "alias": "What should we call you?",
+      "userType": "What kind of user are you?",
+      "country": "Which country do you live in?",
+      "experience": "How much blockchain experience do you have?",
+      "usedStablecoins": "Have you used stablecoins such as USDT before?",
+      "walletType": "Where do you keep your digital assets today?",
+      "purposes": "What do you make transactions for?",
+      "frequency": "How often do you send money?",
+      "typicalAmount": "What is your usual amount?",
+      "recipientTypes": "Who do you usually send to?",
+      "destinationCountries": "Which countries do you send to?",
+      "defaultPriority": "What do you usually prioritize?",
+      "costTolerance": "Tolerance to paying fees",
+      "timeTolerance": "Tolerance to waiting for confirmation",
+      "riskTolerance": "Risk tolerance",
+      "needsReconciliation": "Do you need to match each payment to an order or invoice?",
+      "privacyPref": "Privacy versus auditability"
+    },
+    "h": {
+      "alias": "Used only to identify your profile in this prototype.",
+      "multi": "You can pick several options.",
+      "typicalAmount": "In Colombian pesos (COP).",
+      "costTolerance": "Low: every peso of fees matters.",
+      "timeTolerance": "Low: I need confirmation in seconds.",
+      "riskTolerance": "Low: I prefer more conservative networks.",
+      "needsReconciliation": "Some networks let you attach a reference (memo) to the payment.",
+      "privacyPref": "Auditable: third parties can verify the payment. Private: the payment is not publicly visible."
+    },
+    "placeholder": { "alias": "E.g. Maria, Corner Shop" },
+    "errors": {
+      "alias": "Enter a name of at least 2 characters.",
+      "pickOne": "Pick at least one option."
+    },
+    "opt": {
+      "userType": {
+        "natural": "Individual",
+        "business": "Business",
+        "institution": "Financial institution"
+      },
+      "experience": {
+        "none": "None",
+        "none_d": "I have never used blockchain",
+        "basic": "Basic",
+        "basic_d": "I have bought or sent crypto once or twice",
+        "intermediate": "Intermediate",
+        "intermediate_d": "I use wallets and exchanges regularly",
+        "advanced": "Advanced",
+        "advanced_d": "I understand networks, fees and bridges"
+      },
+      "walletType": {
+        "none": "I do not have one yet",
+        "exchange": "On an exchange",
+        "selfcustody": "Own wallet"
+      },
+      "purposes": {
+        "remittance": "Remittances",
+        "commerce": "Merchant payments",
+        "payroll": "Payroll or suppliers",
+        "treasury": "Treasury / high value",
+        "p2p": "Person-to-person"
+      },
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "occasional": "Occasional"
+      },
+      "typicalAmount": {
+        "micro": "Up to COP 15,000",
+        "small": "COP 15,000 – 200,000",
+        "medium": "COP 200,000 – 2 million",
+        "large": "COP 2 – 100 million",
+        "xlarge": "Over COP 100 million"
+      },
+      "recipientTypes": {
+        "person": "Person",
+        "business": "Business",
+        "exchange": "Exchange",
+        "ownWallet": "My own wallet",
+        "unknown": "Someone I do not know well"
+      },
+      "defaultPriority": {
+        "cost": "Lowest fee",
+        "speed": "Highest speed",
+        "security": "Highest security",
+        "balanced": "Balanced"
+      },
+      "tolerance": { "low": "Low", "medium": "Medium", "high": "High" },
+      "privacyPref": {
+        "auditable": "Auditable",
+        "private": "Private",
+        "indifferent": "Do not mind"
+      }
+    },
+    "summary": {
+      "alias": "Name",
+      "userType": "User type",
+      "country": "Country",
+      "experience": "Experience",
+      "walletType": "Where assets are kept",
+      "purposes": "Purposes",
+      "frequency": "Frequency",
+      "typicalAmount": "Usual amount",
+      "recipientTypes": "Recipients",
+      "destinationCountries": "Destination countries",
+      "defaultPriority": "Usual priority",
+      "privacyPref": "Privacy"
+    }
+  },
+  "home": {
+    "sub": "Here is what you can do today.",
+    "greeting": "Hi, {name}",
+    "cta": {
+      "kicker": "New transaction",
+      "title": "Which network should you send through?",
+      "sub": "Enter the amount and the recipient. You do not repeat the onboarding.",
+      "action": "Analyze a transaction"
+    },
+    "profile": "Your profile",
+    "edit": "Edit",
+    "stats": {
+      "count": "Analyses run",
+      "volume": "Volume analyzed",
+      "top": "Most recommended network"
+    },
+    "recent": "Recent activity",
+    "seeAll": "See all",
+    "noHistory": "You have not analyzed any transaction yet.",
+    "standardLink": "Learn the standard we use to rate each network"
+  },
+  "history": {
+    "title": "History",
+    "sub": "Entries tagged Demo were seeded from your profile. Open them to see their result again.",
+    "empty": "No transactions yet.",
+    "new": "New transaction",
+    "clear": "Clear history",
+    "confirmClear": "Clear this user's entire history?",
+    "to": "to",
+    "none": "No network"
+  },
+  "tx": {
+    "title": "New transaction",
+    "sub": "Describe the hypothetical operation. You are the origin; the recipient matters to rate the risk.",
+    "sections": {
+      "operation": "The operation",
+      "recipient": "The recipient",
+      "priorities": "What do you prioritize in this operation?"
+    },
+    "q": {
+      "amount": "Amount to send (COP)",
+      "purpose": "What is it for?",
+      "urgency": "How urgent is it?",
+      "recipientType": "Who receives it?",
+      "recipientCountry": "Recipient country",
+      "firstTime": "Is this the first time you send to them?",
+      "accepted": "On which networks can they receive USDT?",
+      "needsMemo": "Do you need to attach a reference (memo)?"
+    },
+    "h": {
+      "amount": "Minimum COP 1. Pesos are converted to USDT before sending.",
+      "accepted": "If the recipient does not accept a network, we mark it red.",
+      "needsMemo": "Useful to match the payment to an order or invoice.",
+      "priorities": "Use a preset or move the controls. They combine with your profile and the scenario."
+    },
+    "trmNote": "Demo rate: 1 USDT = {trm}",
+    "scenarioDetected": "Scenario: {scenario}",
+    "urgency": {
+      "low": "No rush",
+      "low_d": "It can take minutes or hours",
+      "normal": "Normal",
+      "normal_d": "A few seconds or minutes",
+      "urgent": "Urgent",
+      "urgent_d": "I need it almost instantly"
+    },
+    "originNote": "Origin: you (your wallet). The recipient determines which networks are viable and how risky the operation is.",
+    "firstTime": { "yes": "Yes, first time", "no": "No, I have sent before" },
+    "acceptedUnknown": "I do not know",
+    "errors": {
+      "amountMin": "The amount must be at least COP 1.",
+      "amountMax": "The amount is too high for this prototype.",
+      "accepted": "Pick at least one network or choose I do not know."
+    },
+    "submit": "Analyze transaction"
+  },
+  "priorities": {
+    "preset": {
+      "cost": "Lowest fee",
+      "speed": "Highest speed",
+      "security": "Highest security",
+      "balanced": "Balanced"
+    },
+    "axis": { "cost": "Cost", "speed": "Speed", "security": "Security" },
+    "axisHint": {
+      "cost": "Fee as a fraction of what you send.",
+      "speed": "Confirmation time and time to irreversibility.",
+      "security": "Decentralization, continuity and verifiability."
+    }
+  },
+  "analyzing": {
+    "title": "Analyzing your transaction",
+    "sub": "We are comparing the six networks for your case.",
+    "steps": {
+      "scenario": "Classifying the payment scenario",
+      "convert": "Converting COP to USDT",
+      "networks": "Evaluating six networks",
+      "lights": "Computing risk traffic lights",
+      "rank": "Ranking and writing the reasoning"
+    },
+    "disclaimer": "Simulation: no real-time network data is queried."
+  },
+  "result": {
+    "notFound": "We could not find this analysis.",
+    "backHome": "Back to home",
+    "best": {
+      "kicker": "Best network for this transaction",
+      "summary": "{network} is the best option for this {scenario} scenario, based on your profile and priorities.",
+      "fee": "Estimated fee",
+      "time": "Estimated confirmation",
+      "finality": "Final in {time}",
+      "risk": "Transaction risk",
+      "disclaimer": "Simulated figures for the demo. Not a guarantee."
+    },
+    "why": {
+      "title": "Why this network",
+      "weights": "Weights applied: cost {cost}, speed {speed}, security {security}.",
+      "axis": {
+        "cost": "The fee relative to the amount is low and stable on this network.",
+        "speed": "It confirms and makes the operation irreversible quickly.",
+        "security": "It better meets the concentration, continuity and verifiability criteria."
+      }
+    },
+    "none": {
+      "title": "No network is advisable for this transaction",
+      "body": "Every network turned red for the reasons below. Review the amount, the recipient or the networks they accept, and try again."
+    },
+    "changed": "After changing your priorities, the recommendation moved from {from} to {to}.",
+    "adjust": {
+      "title": "Change your priorities",
+      "reset": "Reset",
+      "sub": "Move the controls and watch the recommendation change live. It is not saved."
+    },
+    "compare": {
+      "title": "Comparison of the six networks",
+      "sub": "The global light summarizes the four rating blocks. The columns show five dimensions.",
+      "network": "Network",
+      "global": "Global",
+      "fee": "Fee",
+      "time": "Time",
+      "best": "Recommended",
+      "detail": "View details"
+    },
+    "dimension": {
+      "cost": "Cost",
+      "speed": "Speed",
+      "security": "Security",
+      "liquidity": "Liquidity",
+      "destination": "Recipient"
+    },
+    "excluded": {
+      "title": "Networks we do not recommend",
+      "sub": "They turned red: do not send through them. These are the main reasons.",
+      "limit": "limit {w}"
+    },
+    "notes": {
+      "depth": "The amount is large compared with the available USDT liquidity",
+      "softFinality": "Fast confirmation is not final: irreversibility takes longer",
+      "noMemo": "This network cannot carry the memo you need",
+      "privateLedger": "Private ledger: a third party cannot verify the payment",
+      "publicLedger": "Public ledger: does not match your privacy preference",
+      "firstTime": "First time with this recipient",
+      "unknownAccepted": "You do not know whether the recipient accepts this network",
+      "notAccepted": "The recipient does not accept this network"
+    },
+    "vs": {
+      "title": "{network} against the alternatives",
+      "winnerAhead": "Wins on:",
+      "altAhead": "Loses on:",
+      "nothing": "no dimension"
+    },
+    "disclaimer": "This recommendation is a simulation based on demo data and fixed rules. It is not financial advice nor an infallible decision, and it does not reflect real-time network data.",
+    "actions": {
+      "new": "New transaction",
+      "history": "View history",
+      "standard": "How we rate"
+    }
+  },
+  "detail": {
+    "back": "Back to the result",
+    "score": "Fit score",
+    "scoreNote": "Simulated",
+    "excluded": "Excluded",
+    "sem1": {
+      "title": "Network traffic light",
+      "sub": "How this network behaves across the five dimensions for your transaction."
+    },
+    "sem2": {
+      "title": "Your transaction by block",
+      "sub": "The same operation rated in the four blocks of the standard. Open each block to see its metrics.",
+      "rule": "Rule: a critical metric in red turns the block red; any other red metric caps it at yellow. The network is red if any block is red."
+    },
+    "block": {
+      "A": "Cost",
+      "B": "Time and throughput",
+      "C": "Concentration and continuity",
+      "D": "Payment primitives and recipient"
+    },
+    "blockDesc": {
+      "A": "How much it costs and how much the fee varies.",
+      "B": "How fast it confirms, when it becomes irreversible and whether it has capacity.",
+      "C": "Who controls the network, whether it stays up and whether it changes often.",
+      "D": "What it offers for real payments and how viable it is for this recipient."
+    },
+    "col": {
+      "metric": "Metric",
+      "value": "Value",
+      "target": "Target",
+      "limit": "Unacceptable",
+      "light": "Light"
+    },
+    "extension": "Extension",
+    "critical": "Critical",
+    "redTitle": "Why this network is red",
+    "vsBest": "Compared with {network}"
+  },
+  "metrics": {
+    "A1": { "name": "Cost over amount", "desc": "Estimated fee as a fraction of what you send." },
+    "A2": { "name": "Cost dispersion", "desc": "How much the fee can vary and the effect of the amount on liquidity." },
+    "A3": { "name": "Congestion sensitivity", "desc": "How much the fee rises when the network fills up." },
+    "B1": { "name": "Inclusion latency", "desc": "Time until the transaction enters the network." },
+    "B2": { "name": "Time to irreversibility", "desc": "Time until it can no longer be reverted." },
+    "B3": { "name": "Capacity margin", "desc": "Network capacity against 48 transactions per second." },
+    "C1b": { "name": "Power concentration", "desc": "How concentrated control of the network is (lower is better)." },
+    "C2": { "name": "Minimum operators", "desc": "How many operators are needed to control more than half." },
+    "C3": { "name": "Continuity", "desc": "Availability measured in nines (5 = 99.999%)." },
+    "C4": { "name": "Failure rate", "desc": "Percentage of transactions that fail." },
+    "C5": { "name": "Recent changes", "desc": "Payment path upgrades in the last 90 days." },
+    "D1": { "name": "Sponsored fee", "desc": "Share of payments where the payer needs no volatile asset." },
+    "D2": { "name": "Reconciliation reference", "desc": "Whether the payment can carry a memo to reconcile it." },
+    "D3": { "name": "Composite payments", "desc": "Support for several transfers in a single operation." },
+    "E1": { "name": "Third-party verifiability", "desc": "Whether an outsider can verify amount, parties and result." },
+    "X1": { "name": "Recipient risk", "desc": "Risk score by type, country and whether it is the first time (lower is better)." },
+    "X2": { "name": "Recipient compatibility", "desc": "Whether the recipient can receive USDT on this network." }
+  },
+  "standard": {
+    "title": "Rating standard",
+    "sub": "The rules we use to paint each traffic light. They are public, fixed and reproducible: the same transaction always gives the same result.",
+    "demoNote": "The thresholds come from the thesis benchmark design, but each network's values in this prototype are invented.",
+    "lights": {
+      "title": "What each color means",
+      "green": { "name": "Green", "desc": "One of the best options for this transaction." },
+      "yellow": { "name": "Yellow", "desc": "A good option, but there are points to watch." },
+      "red": { "name": "Red", "desc": "Do not send through this network. It is left out of the recommendation." }
+    },
+    "rules": {
+      "title": "How it is computed",
+      "metric": "Each metric has a target and an unacceptable limit. Meeting the target is green; passing the limit is red; in between is yellow.",
+      "block": "Metrics are grouped into four blocks (A, B, C and D). A block with a mean score of 0.8 or more is green and 0.4 or less is red. A critical metric in red turns it red; any other red metric caps it at yellow.",
+      "network": "The network is red if any block is red; yellow if two or more blocks are yellow; green otherwise. Red networks are excluded.",
+      "ranking": "Among non-red networks, the order comes from a weighted mean of cost, speed and security that combines your scenario, priorities and profile, adjusted by how well it fits the recipient."
+    },
+    "scenarios": {
+      "title": "Scenarios, weights and thresholds",
+      "scenario": "Scenario",
+      "range": "Range in COP",
+      "weights": "Cost / speed / security",
+      "fee": "Fee (target → limit)",
+      "latency": "Inclusion",
+      "finality": "Irreversibility",
+      "note": "The scenario is decided by amount and, in the middle, by the purpose of the transaction. The cut-offs are editable in code."
+    },
+    "direction": "Direction",
+    "perScenario": "per scenario",
+    "dir": { "lower": "Lower is better", "higher": "Higher is better" }
+  }
+}
