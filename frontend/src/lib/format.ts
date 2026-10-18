@@ -14,6 +14,9 @@ export const NETWORK_LABEL: Record<NetworkId, string> = {
   celo: "Celo",
 };
 
+/** Label of a network id coming from the model (falls back to the raw id). */
+export const networkLabel = (id: string) => NETWORK_LABEL[id as NetworkId] ?? id;
+
 export function useFmt() {
   const f = useFormatter();
   const locale = useLocale();

@@ -1,0 +1,126 @@
+{
+  "remesa_usd300": {
+    "entrada": {
+      "monto_cop": 1200000,
+      "transfronterizo": true,
+      "espera_s": 3600,
+      "irrevocabilidad": "baja"
+    },
+    "certidumbre": 0.985,
+    "composicion": {
+      "remesas": 0.998,
+      "comercio doméstico": 0.001,
+      "alto valor": 0.001
+    },
+    "bandas": [
+      [
+        "polygon"
+      ],
+      [
+        "arbitrum"
+      ],
+      [
+        "celo"
+      ]
+    ],
+    "medianas": {
+      "polygon": 0.722,
+      "arbitrum": 0.63,
+      "celo": 0.607
+    },
+    "determinante": "D1"
+  },
+  "tienda_cop15000": {
+    "entrada": {
+      "monto_cop": 15000,
+      "transfronterizo": false,
+      "espera_s": 3,
+      "irrevocabilidad": "media"
+    },
+    "certidumbre": 0.62,
+    "composicion": {
+      "comercio doméstico": 0.932,
+      "alto valor": 0.046,
+      "remesas": 0.022
+    },
+    "bandas": [
+      [
+        "polygon"
+      ],
+      [
+        "arbitrum"
+      ],
+      [
+        "celo"
+      ]
+    ],
+    "medianas": {
+      "polygon": 0.729,
+      "arbitrum": 0.606,
+      "celo": 0.563
+    },
+    "determinante": "B2b"
+  },
+  "domestico_cop1200000": {
+    "entrada": {
+      "monto_cop": 1200000,
+      "transfronterizo": false,
+      "espera_s": 60,
+      "irrevocabilidad": "media"
+    },
+    "certidumbre": 0.403,
+    "composicion": {
+      "comercio doméstico": 0.789,
+      "alto valor": 0.166,
+      "remesas": 0.045
+    },
+    "bandas": [
+      [
+        "polygon"
+      ],
+      [
+        "arbitrum"
+      ],
+      [
+        "celo"
+      ]
+    ],
+    "medianas": {
+      "polygon": 0.735,
+      "arbitrum": 0.628,
+      "celo": 0.556
+    },
+    "determinante": "B2b"
+  },
+  "altovalor_cop80M": {
+    "entrada": {
+      "monto_cop": 80000000,
+      "transfronterizo": false,
+      "espera_s": 600,
+      "irrevocabilidad": "alta"
+    },
+    "certidumbre": 0.948,
+    "composicion": {
+      "alto valor": 0.993,
+      "comercio doméstico": 0.005,
+      "remesas": 0.002
+    },
+    "bandas": [
+      [
+        "polygon"
+      ],
+      [
+        "arbitrum"
+      ],
+      [
+        "celo"
+      ]
+    ],
+    "medianas": {
+      "polygon": 0.732,
+      "arbitrum": 0.57,
+      "celo": 0.504
+    },
+    "determinante": "C1"
+  }
+}

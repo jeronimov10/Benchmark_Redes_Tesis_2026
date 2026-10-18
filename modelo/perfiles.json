@@ -1,0 +1,242 @@
+{
+ "polygon": {
+  "A1": {
+   "valor": 0.0042938909065679265,
+   "sigma": 1.5398095386343844e-05,
+   "nota": "n=17642"
+  },
+  "A2": {
+   "valor": 9.106011307680458,
+   "sigma": 0.11445634931495625,
+   "nota": "p95=3.910e-02 p50=4.294e-03"
+  },
+  "A4": {
+   "valor": 7.012700397975636e-06,
+   "sigma": 8.281526818621165e-08,
+   "nota": "6242 publicaciones, ~68,628 tx por anclaje (cadencia 984s)"
+  },
+  "C4": {
+   "valor": 0.0,
+   "sigma": 0.0,
+   "nota": "0 de 17642"
+  },
+  "D1": {
+   "valor": 0.38607482711744195,
+   "sigma": 0.003742881850628945,
+   "nota": "6532 de 16919 (relayer con autorizacion firmada: 5770, paymaster ERC-4337: 647, delegacion EIP-7702: 115)"
+  },
+  "D2": {
+   "valor": 0.008983982504876175,
+   "sigma": 0.0007254165181766704,
+   "nota": "estricta 152 de 16919; amplia 13049 (77.1 %)"
+  },
+  "D3": {
+   "valor": 0.3013771499497606,
+   "sigma": 0.0035276802090807567,
+   "nota": "5099 de 16919; 1280 intercambios excluidos"
+  },
+  "B1": {
+   "valor": 1.5,
+   "sigma": 0.0010877124753980456,
+   "nota": "n=19508"
+  },
+  "B3": {
+   "valor": 7.827692307692308,
+   "nota": "COTA INFERIOR: 141.3 TPS en el percentil 99 (medio 69.7) / 18 requerido; la red no se saturo en la ventana",
+   "cota_inferior": true
+  },
+  "B2": {
+   "valor": 492.0,
+   "sigma": 4.209587984589466,
+   "nota": "cadencia p50=984s p95=2542s, n=7065"
+  },
+  "B2b": {
+   "valor": 492.0,
+   "sigma": 4.209587984589466,
+   "nota": "checkpoint sin ventana de disputa: irrevocable al publicarse, B2b = B2"
+  },
+  "C1": {
+   "valor": 0.19735822295260372,
+   "sigma": 0.0,
+   "nota": "8 productores en 19509 bloques"
+  },
+  "C2": {
+   "valor": 3,
+   "sigma": 0.0,
+   "nota": "de 8 productores distintos"
+  },
+  "A3": {
+   "valor": null,
+   "nota": "ajuste insuficiente (R2 0.003)"
+  },
+  "C3": {
+   "valor": 99.96488764044943,
+   "nota": "documental; cota al 95 % con 0 incidentes en 356 dias y 1.00 h por incidente; puntual 100.0000 %"
+  },
+  "C5": {
+   "valor": 0.0,
+   "sigma": 0.0,
+   "nota": "ranura zeppelin, 61 lecturas"
+  }
+ },
+ "celo": {
+  "A1": {
+   "valor": 0.0013393297662732,
+   "sigma": 1.3450235354976838e-07,
+   "nota": "n=5533"
+  },
+  "A2": {
+   "valor": 9.775766592006116,
+   "sigma": 0.39863627123453677,
+   "nota": "p95=1.309e-02 p50=1.339e-03"
+  },
+  "A4": {
+   "valor": 3.5017416071592106e-06,
+   "sigma": 7.52603485100581e-08,
+   "nota": "3732 publicaciones, ~25,707 tx por anclaje (cadencia 1920s)"
+  },
+  "C4": {
+   "valor": 0.001623962468422952,
+   "sigma": 0.0005408811018627278,
+   "nota": "9 de 5542"
+  },
+  "D1": {
+   "valor": 0.5252214093184444,
+   "sigma": 0.00692892405404931,
+   "nota": "2728 de 5194 (relayer con autorizacion firmada: 2395, moneda de comision: 332, delegacion EIP-7702: 1)"
+  },
+  "D2": {
+   "valor": 0.005583365421640354,
+   "sigma": 0.0010339064482555815,
+   "nota": "estricta 29 de 5194; amplia 4885 (94.1 %)"
+  },
+  "D3": {
+   "valor": 0.06006931074316519,
+   "sigma": 0.0032970327919262517,
+   "nota": "312 de 5194; 2258 intercambios excluidos"
+  },
+  "B1": {
+   "valor": 1.0,
+   "sigma": 0.0,
+   "nota": "n=19381"
+  },
+  "B3": {
+   "valor": 1.9938461538461536,
+   "nota": "COTA INFERIOR: 36.0 TPS en el percentil 99 (medio 13.4) / 18 requerido; la red no se saturo en la ventana",
+   "cota_inferior": true
+  },
+  "B2": {
+   "valor": 960.0,
+   "sigma": 2.0535410879746236,
+   "nota": "cadencia p50=1920s p95=2304s, n=4343"
+  },
+  "B2b": {
+   "valor": 304000.5,
+   "sigma": 21.753864920974387,
+   "nota": "confirmacion en Ethereum, n=122, p95=3.52 d"
+  },
+  "C1": {
+   "valor": 1.0,
+   "sigma": 0.0,
+   "nota": "1 productores en 19382 bloques; productor unico 0x420000000000... direccion de sistema, no identifica a una organizacion"
+  },
+  "C2": {
+   "valor": 1,
+   "sigma": 0.0,
+   "nota": "de 1 productores distintos"
+  },
+  "A3": {
+   "valor": null,
+   "nota": "ajuste insuficiente (R2 0.046)"
+  },
+  "C3": {
+   "valor": 99.93559782608695,
+   "nota": "documental; cota al 95 % con 1 incidentes en 552 dias y 1.80 h por incidente; puntual 99.9864 %"
+  },
+  "C5": {
+   "valor": 0.0,
+   "sigma": 0.0,
+   "nota": "ranura zeppelin, 61 lecturas"
+  }
+ },
+ "arbitrum": {
+  "A1": {
+   "valor": 0.0070051408,
+   "sigma": 5.297833770604986e-05,
+   "nota": "n=2266"
+  },
+  "A2": {
+   "valor": 10.712358428969765,
+   "sigma": 1.2779117172520553,
+   "nota": "p95=7.504e-02 p50=7.005e-03"
+  },
+  "A4": {
+   "valor": 2.875e-05,
+   "sigma": 1.0344071879532283e-06,
+   "nota": "del recibo, n=2187"
+  },
+  "C4": {
+   "valor": 0.0,
+   "sigma": 0.0,
+   "nota": "0 de 2266"
+  },
+  "D1": {
+   "valor": 0.10105913503971757,
+   "sigma": 0.006331744727222257,
+   "nota": "229 de 2266 (paymaster ERC-4337: 212, delegacion EIP-7702: 16, relayer con autorizacion firmada: 1)"
+  },
+  "D2": {
+   "valor": 0.00706090026478376,
+   "sigma": 0.001758981987165151,
+   "nota": "estricta 16 de 2266; amplia 1213 (53.5 %)"
+  },
+  "D3": {
+   "valor": 0.22550750220653135,
+   "sigma": 0.008779285091311258,
+   "nota": "511 de 2266; 595 intercambios excluidos"
+  },
+  "B1": {
+   "valor": 0.250334672021419,
+   "sigma": 0.0,
+   "nota": "n=19999"
+  },
+  "B3": {
+   "valor": 6.416026326614562,
+   "nota": "COTA INFERIOR: 115.8 TPS en el percentil 99 (medio 23.4) / 18 requerido; la red no se saturo en la ventana",
+   "cota_inferior": true
+  },
+  "B2": {
+   "valor": 60.0,
+   "sigma": 0.0,
+   "nota": "cadencia p50=120s p95=204s, n=64149"
+  },
+  "B2b": {
+   "valor": 556610.5,
+   "sigma": 25.74163397591536,
+   "nota": "confirmacion en Ethereum, n=118, p95=6.45 d"
+  },
+  "C1": {
+   "valor": 0.9939142049999998,
+   "sigma": 0.0,
+   "nota": "16 productores en 20000 bloques"
+  },
+  "C2": {
+   "valor": 1,
+   "sigma": 0.0,
+   "nota": "de 16 productores distintos"
+  },
+  "A3": {
+   "valor": null,
+   "nota": "ocupacion casi constante (rango 0.0000)"
+  },
+  "C3": {
+   "valor": 99.94880073800738,
+   "nota": "documental; cota al 95 % con 0 incidentes en 271 dias y 1.11 h por incidente; puntual 100.0000 %"
+  },
+  "C5": {
+   "valor": 0.0,
+   "sigma": 0.0,
+   "nota": "ranura zeppelin, 10 lecturas"
+  }
+ }
+}

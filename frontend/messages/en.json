@@ -19,7 +19,7 @@
     "main": "Main navigation"
   },
   "footer": {
-    "demo": "Academic prototype. Polygon, Celo and Arbitrum use the thesis measurements (90-day window); Tempo, Aptos and Canton use the preliminary pass of the benchmark. Peso costs use a demo exchange rate and exclude on and off ramps.",
+    "demo": "Academic prototype. Recommendations use the thesis model with the Polygon, Celo and Arbitrum measurements (90-day window, October 2026). Peso costs use a demo exchange rate and exclude on and off ramps.",
     "academic": "Degree project. Visually inspired by the Bancolombia palette, with no affiliation to the institution."
   },
   "risk": {
@@ -35,7 +35,7 @@
   "landing": {
     "hero": {
       "title": "Which network should settle this payment?",
-      "sub": "Describe a payment in pesos: it is converted to USDT and evaluated on six networks using data measured on the chains, not what each network says about itself. You get the recommended network, how reliable the answer is and a risk traffic light per network.",
+      "sub": "Describe a payment in pesos: it is converted to USDT and evaluated using data measured on the chains, not what each network says about itself. You get the recommended network, how reliable the answer is and a risk traffic light per network.",
       "cta": "Get started",
       "ctaContinue": "Continue",
       "ctaStandard": "See how we rate",
@@ -310,7 +310,7 @@
     },
     "h": {
       "amount": "Minimum COP 1. Pesos are converted to USDT before sending. To weigh the evaluation, amounts below COP 10,000 are treated as 10,000.",
-      "accepted": "If the recipient does not accept a network, we leave it out.",
+      "accepted": "If the recipient does not receive on a network, we will warn you in the result.",
       "needsMemo": "Useful to match the payment to an order or invoice.",
       "attributes": "Preselected from the purpose and your profile; adjust it to your case. These four attributes (amount, border, wait and irreversibility) set the weights of the evaluation."
     },
@@ -356,7 +356,7 @@
   },
   "analyzing": {
     "title": "Analyzing your payment",
-    "sub": "We are running the model over the six networks.",
+    "sub": "We are running the thesis model over the measured networks.",
     "steps": {
       "scenario": "Interpreting the payment against the three scenarios",
       "convert": "Converting COP to USDT",
@@ -364,7 +364,9 @@
       "lights": "Simulating 10,000 replicas to form bands",
       "rank": "Computing traffic lights and the determinant metric"
     },
-    "disclaimer": "Local computation over the stored measurements: no real-time network data is queried."
+    "disclaimer": "Computed from the stored measurements: no real-time network data is queried.",
+    "error": "The recommendation could not be computed.",
+    "retry": "Retry"
   },
   "result": {
     "notFound": "We could not find this analysis.",
@@ -378,16 +380,20 @@
       "finality": "Final in {time}",
       "risk": "Payment traffic light",
       "disclaimer": "Values measured on the network; the cost excludes ramps to pesos.",
-      "preliminary": "This network was measured in the preliminary pass of the benchmark (samples of minutes): treat it with more caution than those measured in the thesis."
+      "preliminary": "This network was measured in the preliminary pass of the benchmark (samples of minutes): treat it with more caution than those measured in the thesis.",
+      "kickerTie": "Recommended networks for this payment (tied)",
+      "tied": "These networks share band 1 for your payment, which is most similar to {scenario}: the data are not enough to name a winner.",
+      "notDistinguishable": "Not distinguishable: {detail}"
     },
     "why": {
       "title": "Why this network",
       "determinant": "The metric that most separated it from the next band was {metric}.",
       "noDeterminant": "All admissible networks are in the same band: no metric separates them.",
-      "separation": "Against {network}, the probability that it is better is {p}.",
-      "blocks": "Contribution of each block to its score",
+      "separation": "{a} beats {network} (next band) with probability {p}.",
+      "blocks": "Score of each block on {network} (measured values)",
       "weights": "Weights applied to this payment:",
-      "determinantNote": "Careful with that metric on this network: "
+      "determinantNote": "Careful with that metric on this network: ",
+      "titleTie": "Why these networks"
     },
     "case": {
       "title": "How we interpret your payment",
@@ -410,7 +416,7 @@
     },
     "none": {
       "title": "No network is admissible for this payment",
-      "body": "Every network was left out by the gates or by the recipient. Review the reasons below and adjust the payment."
+      "body": "Every network was left out by the gates. Review the reasons below and adjust the payment."
     },
     "changed": "After changing the payment, the recommendation moved from {from} to {to}.",
     "adjust": {
@@ -428,7 +434,7 @@
       "pi": "{a} beats {b} with probability {p}"
     },
     "compare": {
-      "title": "Comparison of the six networks",
+      "title": "Comparison of the measured networks",
       "sub": "The large dot is the global traffic light; the letters are the four rating blocks.",
       "network": "Network",
       "global": "Global",
@@ -436,7 +442,8 @@
       "time": "Inclusion",
       "best": "Recommended",
       "detail": "View details",
-      "excludedTag": "Inadmissible"
+      "excludedTag": "Inadmissible",
+      "notAcceptedTag": "Not listed by the recipient"
     },
     "excluded": {
       "title": "Networks we do not recommend",
@@ -453,14 +460,22 @@
     "provenance": {
       "title": "Where the data come from",
       "thesis": "Polygon, Celo and Arbitrum: thesis measurements over a 90-day window, with a single node provider per network.",
-      "benchmark": "Tempo, Aptos and Canton: preliminary pass of the benchmark, with samples of minutes or seconds. Their results are less firm and their errors are approximated with a fixed value."
+      "benchmark": "Tempo, Aptos and Canton are not shown: they do not have a measured profile for the recommendation model yet."
     },
     "disclaimer": "This recommendation is a preliminary result of an academic prototype. It is not financial advice, it does not reflect real-time network data and costs exclude the on and off ramps to pesos.",
     "actions": {
       "new": "New payment",
       "history": "View history",
       "standard": "How we rate"
-    }
+    },
+    "model": {
+      "loading": "Running the thesis model…",
+      "error": "The recommendation could not be computed.",
+      "retry": "Retry",
+      "warnings": "Model warnings (in Spanish, as the model returns them)",
+      "measurement": "Measurement: {when}. Results age."
+    },
+    "recipientNotice": "Careful: you said the recipient does not receive on {network}. The model does not take this into account; confirm it before paying."
   },
   "detail": {
     "back": "Back to the result",
@@ -475,7 +490,7 @@
     "sem2": {
       "title": "Your payment by rating block",
       "sub": "Open each block to see its measured metrics, the target and the unacceptable limit.",
-      "rule": "A block is green with a score of 0.70 or more and red below 0.45. The network is red if it fails a gate or its aggregate score is below 0.45; it cannot be green if a gate could not be evaluated."
+      "rule": "A metric is green when it meets the target (score 1), red at or beyond the unacceptable limit (score 0) and yellow in between. A block is green with a score of 0.70 or more and red below 0.45. The network is red if it fails a gate; otherwise its color comes from the median of its score over 10,000 replicas. Scores are those of the thesis model."
     },
     "block": {
       "A": "Cost",
@@ -495,7 +510,8 @@
       "value": "Value",
       "target": "Target",
       "limit": "Unacceptable",
-      "light": "Light"
+      "light": "Light",
+      "score": "Score"
     },
     "excludedMetric": "Excluded from the score",
     "extension": "Extension",
@@ -682,7 +698,9 @@
       "memberAllocation": "Free allocation per member; it underestimates the real capacity of the synchronizer.",
       "svWeights": "Computed on super validator weights, not on blocks.",
       "stablecoinNotObservable": "With a stablecoin under the token standard, a third party cannot verify the payment (partial estimate)."
-    }
+    },
+    "centralScore": "Model score with every metric at its measured value (no simulation): {score}. The band score is the median of 10,000 replicas.",
+    "lowerBoundTag": "Lower bound"
   },
   "gates": {
     "title": "Admissibility gates",
@@ -706,6 +724,7 @@
     "G4": {
       "name": "Capacity",
       "desc": "The capacity margin is not below 1 (only if B3 measures capacity)."
-    }
+    },
+    "allPass": "No gate fails for this payment."
   }
 }

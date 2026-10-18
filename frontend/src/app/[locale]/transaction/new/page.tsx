@@ -7,15 +7,14 @@ import { z } from "zod";
 import { Button, Card, Chip, Choice, ChoiceGrid, Container, Field, inputClass, SectionTitle } from "@/components/ui";
 import { PaymentAttributes } from "@/components/result/PaymentAttributes";
 import { copToUsdt, DEMO_TRM } from "@/engine/fx";
-import { interpret, paymentVector } from "@/engine/model";
 import { useRouter } from "@/i18n/navigation";
 import { defaultsFor } from "@/lib/attrs";
-import { NETWORK_LABEL, useFmt } from "@/lib/format";
+import { networkLabel, useFmt } from "@/lib/format";
+import { useDebounced, useEntrada, useInfoModelo, useInterpretacion } from "@/modelo/cliente";
+import { entradaModelo, escenarioDominante } from "@/modelo/entrada";
 import { useRequireUser } from "@/lib/useRequireUser";
 import { actions } from "@/state/store";
 import {
-  NETWORK_IDS,
-  SCENARIO_IDS,
   type Irreversibility,
   type NetworkId,
   type Purpose,
@@ -52,11 +51,29 @@ export default function NewTransactionPage() {
   const current = attrs ?? preset;
   const memo = needsMemo ?? user?.answers.needsReconciliation ?? false;
 
-  const similar = useMemo(() => {
-    if (amountCop < 1) return null;
-    const i = interpret(paymentVector(amountCop, crossBorder, current.waitSec, current.irreversibility));
-    return SCENARIO_IDS.reduce((a, b) => (i.lambda[a] >= i.lambda[b] ? a : b));
-  }, [amountCop, crossBorder, current.waitSec, current.irreversibility]);
+  // Preview of the dominant scenario: the model's own interpolation, without Monte Carlo.
+  const previewKey = useDebounced(
+    amountCop >= 1 ? `${amountCop}|${rCountry}|${current.waitSec}|${current.irreversibility}` : "",
+    300,
+  );
+  const [pAmount, pCountry, pWait, pIrr] = previewKey.split("|");
+  const preview = useInterpretacion(
+    useEntrada(
+      previewKey
+        ? entradaModelo(
+            {
+              amountCop: Number(pAmount),
+              waitSec: Number(pWait),
+              irreversibility: Number(pIrr) as Irreversibility,
+              recipient: { country: pCountry },
+            },
+            originCountry,
+          )
+        : null,
+    ),
+  );
+  const similar = amountCop >= 1 && preview.data ? escenarioDominante(preview.data.composicion) : null;
+  const info = useInfoModelo();
 
   const schema = useMemo(
     () =>
@@ -177,11 +194,14 @@ export default function NewTransactionPage() {
             <Chip radio selected={accepted === "unknown"} onClick={() => setAccepted("unknown")}>
               {t("acceptedUnknown")}
             </Chip>
-            {NETWORK_IDS.map((id) => (
-              <Chip key={id} selected={accepted !== "unknown" && accepted.includes(id)} onClick={() => toggleNet(id)}>
-                {NETWORK_LABEL[id]}
-              </Chip>
-            ))}
+            {(info?.redes ?? []).map((red) => {
+              const id = red as NetworkId;
+              return (
+                <Chip key={id} selected={accepted !== "unknown" && accepted.includes(id)} onClick={() => toggleNet(id)}>
+                  {networkLabel(id)}
+                </Chip>
+              );
+            })}
           </div>
         </Field>
         <Field label={t("q.needsMemo")} hint={t("h.needsMemo")}>

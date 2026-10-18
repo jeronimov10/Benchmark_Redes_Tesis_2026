@@ -19,7 +19,7 @@
     "main": "Navegación principal"
   },
   "footer": {
-    "demo": "Prototipo académico. Polygon, Celo y Arbitrum usan las mediciones de la tesis (ventana de 90 días); Tempo, Aptos y Canton, la pasada preliminar del benchmark. Los costos en pesos usan una TRM demostrativa y no incluyen rampas de entrada y salida.",
+    "demo": "Prototipo académico. Las recomendaciones usan el modelo de la tesis con las mediciones de Polygon, Celo y Arbitrum (ventana de 90 días, octubre de 2026). Los costos en pesos usan una TRM demostrativa y no incluyen rampas de entrada y salida.",
     "academic": "Proyecto de grado. Inspirado visualmente en la paleta de Bancolombia, sin afiliación alguna con la entidad."
   },
   "risk": {
@@ -35,7 +35,7 @@
   "landing": {
     "hero": {
       "title": "¿En qué red liquidar este pago?",
-      "sub": "Describe un pago en pesos: se convierte a USDT y lo evaluamos en seis redes con datos medidos en las cadenas, no con lo que cada red dice de sí misma. Recibes la red recomendada, qué tan segura es la respuesta y un semáforo de riesgo por red.",
+      "sub": "Describe un pago en pesos: se convierte a USDT y lo evaluamos con datos medidos en las cadenas, no con lo que cada red dice de sí misma. Recibes la red recomendada, qué tan segura es la respuesta y un semáforo de riesgo por red.",
       "cta": "Empezar",
       "ctaContinue": "Continuar",
       "ctaStandard": "Ver cómo calificamos",
@@ -310,7 +310,7 @@
     },
     "h": {
       "amount": "Mínimo COP 1. Los pesos se convierten a USDT antes de enviar. Para ponderar la evaluación, montos menores de COP 10.000 se tratan como 10.000.",
-      "accepted": "Si el destinatario no acepta una red, la dejamos fuera.",
+      "accepted": "Si el destinatario no recibe en una red, te lo avisaremos en el resultado.",
       "needsMemo": "Útil para conciliar el pago con una orden o factura.",
       "attributes": "Se preselecciona según el propósito y tu perfil; ajústalo a tu caso. De estos cuatro atributos (monto, frontera, espera e irreversibilidad) salen los pesos de la evaluación."
     },
@@ -356,7 +356,7 @@
   },
   "analyzing": {
     "title": "Analizando tu pago",
-    "sub": "Estamos corriendo el modelo sobre las seis redes.",
+    "sub": "Estamos corriendo el modelo de la tesis sobre las redes medidas.",
     "steps": {
       "scenario": "Interpretando el pago frente a los tres escenarios",
       "convert": "Convirtiendo COP a USDT",
@@ -364,7 +364,9 @@
       "lights": "Simulando 10.000 réplicas para formar bandas",
       "rank": "Calculando semáforos y la métrica determinante"
     },
-    "disclaimer": "Cálculo local con las mediciones guardadas: no se consultan redes en tiempo real."
+    "disclaimer": "Cálculo con las mediciones guardadas: no se consultan redes en tiempo real.",
+    "error": "No se pudo calcular la recomendación.",
+    "retry": "Reintentar"
   },
   "result": {
     "notFound": "No encontramos este análisis.",
@@ -378,16 +380,20 @@
       "finality": "Definitivo en {time}",
       "risk": "Semáforo del pago",
       "disclaimer": "Valores medidos en la red; el costo no incluye rampas a pesos.",
-      "preliminary": "Esta red se midió en la pasada preliminar del benchmark (muestras de minutos): tómala con más cautela que las medidas en la tesis."
+      "preliminary": "Esta red se midió en la pasada preliminar del benchmark (muestras de minutos): tómala con más cautela que las medidas en la tesis.",
+      "kickerTie": "Redes recomendadas para este pago (empatadas)",
+      "tied": "Estas redes comparten la banda 1 para tu pago, que se parece sobre todo a {scenario}: los datos no alcanzan para declarar una ganadora.",
+      "notDistinguishable": "No distinguibles entre sí: {detail}"
     },
     "why": {
       "title": "Por qué esta red",
       "determinant": "La métrica que más pesó para separarla de la siguiente banda fue {metric}.",
       "noDeterminant": "Todas las redes admisibles están en la misma banda: ninguna métrica las separa.",
-      "separation": "Frente a {network}, la probabilidad de que sea mejor es de {p}.",
-      "blocks": "Aporte de cada bloque a su puntaje",
+      "separation": "{a} supera a {network} (siguiente banda) con probabilidad {p}.",
+      "blocks": "Puntaje de cada bloque en {network} (valores medidos)",
       "weights": "Pesos aplicados a este pago:",
-      "determinantNote": "Ojo con esa métrica en esta red: "
+      "determinantNote": "Ojo con esa métrica en esta red: ",
+      "titleTie": "Por qué estas redes"
     },
     "case": {
       "title": "Cómo interpretamos tu pago",
@@ -410,7 +416,7 @@
     },
     "none": {
       "title": "Ninguna red es admisible para este pago",
-      "body": "Todas las redes quedaron fuera por las compuertas o por el destinatario. Revisa las razones abajo y ajusta el pago."
+      "body": "Todas las redes quedaron fuera por las compuertas. Revisa las razones abajo y ajusta el pago."
     },
     "changed": "Al cambiar el pago, la recomendación pasó de {from} a {to}.",
     "adjust": {
@@ -428,7 +434,7 @@
       "pi": "{a} supera a {b} con probabilidad {p}"
     },
     "compare": {
-      "title": "Comparación de las seis redes",
+      "title": "Comparación de las redes medidas",
       "sub": "El punto grande es el semáforo global; las letras son los cuatro bloques de calificación.",
       "network": "Red",
       "global": "Global",
@@ -436,7 +442,8 @@
       "time": "Inclusión",
       "best": "Recomendada",
       "detail": "Ver detalle",
-      "excludedTag": "Inadmisible"
+      "excludedTag": "Inadmisible",
+      "notAcceptedTag": "El destinatario no la indicó"
     },
     "excluded": {
       "title": "Redes que no recomendamos",
@@ -453,14 +460,22 @@
     "provenance": {
       "title": "De dónde salen los datos",
       "thesis": "Polygon, Celo y Arbitrum: mediciones de la tesis sobre una ventana de 90 días, con un solo proveedor de nodo por red.",
-      "benchmark": "Tempo, Aptos y Canton: pasada preliminar del benchmark, con muestras de minutos o segundos. Sus resultados son menos firmes y sus errores se aproximan con un valor fijo."
+      "benchmark": "Tempo, Aptos y Canton no aparecen: todavía no tienen un perfil medido para el modelo de recomendación."
     },
     "disclaimer": "Esta recomendación es un resultado preliminar de un prototipo académico. No es asesoría financiera, no refleja datos de redes en tiempo real y los costos no incluyen las rampas de entrada y salida a pesos.",
     "actions": {
       "new": "Nuevo pago",
       "history": "Ver historial",
       "standard": "Cómo calificamos"
-    }
+    },
+    "model": {
+      "loading": "Corriendo el modelo de la tesis…",
+      "error": "No se pudo calcular la recomendación.",
+      "retry": "Reintentar",
+      "warnings": "Advertencias del modelo",
+      "measurement": "Medición: {when}. Los resultados envejecen."
+    },
+    "recipientNotice": "Ojo: indicaste que el destinatario no recibe en {network}. El modelo no lo tiene en cuenta; confírmalo antes de pagar."
   },
   "detail": {
     "back": "Volver al resultado",
@@ -475,7 +490,7 @@
     "sem2": {
       "title": "Tu pago por bloques de calificación",
       "sub": "Abre cada bloque para ver sus métricas medidas, el objetivo y el límite inaceptable.",
-      "rule": "Un bloque es verde con puntaje de 0,70 o más y rojo por debajo de 0,45. La red es roja si falla una compuerta o su puntaje agregado queda por debajo de 0,45; no puede ser verde si una compuerta no se pudo evaluar."
+      "rule": "Una métrica es verde si cumple el objetivo (puntaje 1), roja si está en el límite inaceptable o más allá (puntaje 0) y amarilla en medio. Un bloque es verde con puntaje de 0,70 o más y rojo por debajo de 0,45. La red es roja si falla una compuerta; si no, su color sale de la mediana de su puntaje en 10.000 réplicas. Los puntajes son los del modelo de la tesis."
     },
     "block": {
       "A": "Costo",
@@ -495,7 +510,8 @@
       "value": "Valor",
       "target": "Objetivo",
       "limit": "Inaceptable",
-      "light": "Semáforo"
+      "light": "Semáforo",
+      "score": "Puntaje"
     },
     "excludedMetric": "Excluida del puntaje",
     "extension": "Extensión",
@@ -682,7 +698,9 @@
       "memberAllocation": "Asignación gratuita por miembro; subestima la capacidad real del sincronizador.",
       "svWeights": "Calculada sobre los pesos de los super validadores, no sobre bloques.",
       "stablecoinNotObservable": "Con una stablecoin bajo el estándar de token, un tercero no puede verificar el pago (estimación parcial)."
-    }
+    },
+    "centralScore": "Puntaje del modelo con todas las métricas en su valor medido (sin simulación): {score}. El puntaje de la banda es la mediana de 10.000 réplicas.",
+    "lowerBoundTag": "Cota inferior"
   },
   "gates": {
     "title": "Compuertas de admisibilidad",
@@ -706,6 +724,7 @@
     "G4": {
       "name": "Capacidad",
       "desc": "El margen de capacidad no es menor que 1 (solo si B3 mide capacidad)."
-    }
+    },
+    "allPass": "No falla ninguna compuerta para este pago."
   }
 }

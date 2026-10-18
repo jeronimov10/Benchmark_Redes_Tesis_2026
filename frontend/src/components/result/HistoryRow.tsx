@@ -1,22 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { DemoBadge, Semaphore } from "@/components/ui";
 import { Link } from "@/i18n/navigation";
-import { recommend } from "@/engine/recommend";
-import { SCENARIO_IDS } from "@/engine/types";
-import { NETWORK_LABEL, useFmt } from "@/lib/format";
+import { copToUsdt } from "@/engine/fx";
+import { useEntrada, useRecomendacion } from "@/modelo/cliente";
+import { entradaModelo, escenarioDominante, luzRed } from "@/modelo/entrada";
+import { networkLabel, useFmt } from "@/lib/format";
 import type { HistoryEntry } from "@/state/store";
 
 export function HistoryRow({ entry }: { entry: HistoryEntry }) {
   const t = useTranslations("history");
   const ts = useTranslations("scenarios");
   const fmt = useFmt();
-  // A light run (1.000 replicas) is enough for a list; the full run happens on the result page.
-  const rec = useMemo(() => recommend(entry.tx, entry.answers, { replicas: 1000 }), [entry]);
-  const dominant = SCENARIO_IDS.reduce((a, b) => (rec.lambda[a] >= rec.lambda[b] ? a : b));
+  const { data } = useRecomendacion(useEntrada(entradaModelo(entry.tx, entry.answers.country)));
+  const r = data?.resultado;
+  const winners = r?.bandas[0]?.redes ?? [];
 
   return (
     <Link
@@ -24,23 +24,24 @@ export function HistoryRow({ entry }: { entry: HistoryEntry }) {
       className="-mx-3 flex items-center gap-4 rounded-2xl px-3 py-4 transition-colors hover:bg-surface"
     >
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-sm font-extrabold">
-        {rec.best ? NETWORK_LABEL[rec.best.data.id][0] : "—"}
+        {!r ? <Loader2 size={16} className="animate-spin" aria-hidden /> : winners.length ? networkLabel(winners[0])[0] : "—"}
       </span>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 font-extrabold">
           {fmt.cop(entry.tx.amountCop)}
-          <span className="text-xs font-semibold text-muted">≈ {fmt.usdt(rec.amountUsd)}</span>
+          <span className="text-xs font-semibold text-muted">≈ {fmt.usdt(copToUsdt(entry.tx.amountCop))}</span>
           {entry.seeded && <DemoBadge />}
         </p>
         <p className="mt-0.5 text-sm text-muted">
-          {fmt.date(entry.createdAt)} · {ts(`${dominant}.name`)} · {t("to")} {fmt.country(entry.tx.recipient.country)}
+          {fmt.date(entry.createdAt)}
+          {r && ` · ${ts(`${escenarioDominante(r.composicion)}.name`)}`} · {t("to")} {fmt.country(entry.tx.recipient.country)}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <span className="hidden text-sm font-bold sm:block">
-          {rec.best ? NETWORK_LABEL[rec.best.data.id] : t("none")}
+          {r ? (winners.length ? winners.map(networkLabel).join(" · ") : t("none")) : ""}
         </span>
-        {rec.best && <Semaphore light={rec.best.light} />}
+        {r && winners.length > 0 && <Semaphore light={luzRed(r, winners[0])} />}
         <ChevronRight size={18} className="text-grey" aria-hidden />
       </div>
     </Link>

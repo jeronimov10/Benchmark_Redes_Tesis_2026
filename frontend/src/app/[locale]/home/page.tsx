@@ -6,8 +6,9 @@ import { ArrowRight, History, Pencil, ShieldCheck } from "lucide-react";
 import { buttonClass, Card, Container, SectionTitle } from "@/components/ui";
 import { HistoryRow } from "@/components/result/HistoryRow";
 import { Link } from "@/i18n/navigation";
-import { recommend } from "@/engine/recommend";
-import { NETWORK_LABEL, useFmt } from "@/lib/format";
+import { useRecomendaciones } from "@/modelo/cliente";
+import { entradaModelo } from "@/modelo/entrada";
+import { networkLabel, useFmt } from "@/lib/format";
 import { useRequireUser } from "@/lib/useRequireUser";
 import { useStore } from "@/state/store";
 
@@ -26,16 +27,20 @@ export default function HomePage() {
     [store.history, user?.id],
   );
 
+  const entradas = useMemo(() => entries.map((e) => entradaModelo(e.tx, e.answers.country)), [entries]);
+  const results = useRecomendaciones(entradas);
+
   const stats = useMemo(() => {
+    // Every network of band 1 counts: tied networks are not split into a winner and a loser.
     const winners: Record<string, number> = {};
-    for (const e of entries) {
-      const best = recommend(e.tx, e.answers, { replicas: 1000 }).best;
-      if (best) winners[best.data.id] = (winners[best.data.id] ?? 0) + 1;
+    for (const res of results) {
+      for (const red of res?.resultado.bandas[0]?.redes ?? []) winners[red] = (winners[red] ?? 0) + 1;
     }
     const top = Object.entries(winners).sort((a, b) => b[1] - a[1])[0];
     const volume = entries.reduce((s, e) => s + e.tx.amountCop, 0);
-    return { top: top ? (top[0] as keyof typeof NETWORK_LABEL) : null, volume };
-  }, [entries]);
+    const pending = results.some((res) => res === null);
+    return { top: top ? top[0] : null, volume, pending };
+  }, [entries, results]);
 
   if (!ready || !user) return <Container className="py-12" />;
   const a = user.answers;
@@ -91,7 +96,7 @@ export default function HomePage() {
         {[
           [t("stats.count"), String(entries.length)],
           [t("stats.volume"), fmt.cop(stats.volume)],
-          [t("stats.top"), stats.top ? NETWORK_LABEL[stats.top] : "—"],
+          [t("stats.top"), stats.top ? networkLabel(stats.top) : stats.pending ? "…" : "—"],
         ].map(([label, value]) => (
           <Card key={label} tone="surface" className="p-6 sm:p-6">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">{label}</p>

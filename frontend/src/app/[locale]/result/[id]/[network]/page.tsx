@@ -1,16 +1,20 @@
 "use client";
 
-import { Suspense, use, useMemo } from "react";
+import { Suspense, use } from "react";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronDown, Loader2 } from "lucide-react";
 import { ButtonLink, Card, Container, Semaphore, cx } from "@/components/ui";
 import { Link } from "@/i18n/navigation";
-import { recommend } from "@/engine/recommend";
-import { NETWORK_IDS, type BlockId, type GateOutcome, type Light, type MetricResult, type NetworkId } from "@/engine/types";
+import { BLOCKS } from "@/engine/metrics";
+import { recipientRisk } from "@/engine/recommend";
+import type { Light, NetworkId } from "@/engine/types";
+import { useEntrada, useRecomendacion } from "@/modelo/cliente";
+import { bandaDe, blocksAhead, entradaModelo, luzMetrica, luzPuntaje, luzRed, UNIDAD, valueOf } from "@/modelo/entrada";
+import type { MetricaDetalle } from "@/modelo/tipos";
 import { applyQuery } from "@/lib/attrs";
-import { NETWORK_LABEL, useFmt } from "@/lib/format";
+import { networkLabel as label, useFmt } from "@/lib/format";
 import { useRequireUser } from "@/lib/useRequireUser";
 import { useStore } from "@/state/store";
 
@@ -25,37 +29,44 @@ function Detail({ id, network }: { id: string; network: string }) {
   const { ready } = useRequireUser();
   const store = useStore();
   const entry = store.history.find((h) => h.id === id);
-  const qs = params.toString();
-
-  const rec = useMemo(
-    () => (entry ? recommend(applyQuery(entry.tx, new URLSearchParams(qs)), entry.answers) : null),
-    [entry, qs],
-  );
+  const tx = entry ? applyQuery(entry.tx, params) : null;
+  const { data: rec, error } = useRecomendacion(useEntrada(entry && tx ? entradaModelo(tx, entry.answers.country) : null));
 
   if (!ready) return <Container className="py-12" />;
-  const netId = NETWORK_IDS.find((n) => n === network) as NetworkId | undefined;
-  const ev = rec?.evaluations.find((e) => e.data.id === netId);
-  if (!entry || !rec || !ev || !netId) {
+  if (entry && !rec && !error) {
+    return (
+      <Container className="py-20">
+        <p className="flex items-center justify-center gap-3 text-lg font-bold" role="status">
+          <Loader2 size={22} className="animate-spin" aria-hidden /> {tr("model.loading")}
+        </p>
+      </Container>
+    );
+  }
+  const d = rec?.detalle[network];
+  if (!entry || !tx || !rec || !d) {
     return (
       <Container className="py-20 text-center">
-        <p className="mb-6 text-lg text-muted">{tr("notFound")}</p>
+        <p className="mb-6 text-lg text-muted">{error ? `${tr("model.error")} ${error}` : tr("notFound")}</p>
         <ButtonLink href="/home">{tr("backHome")}</ButtonLink>
       </Container>
     );
   }
 
-  const isBest = rec.best?.data.id === netId;
-  const ahead = { mine: [] as BlockId[], best: [] as BlockId[] };
-  if (rec.best && !isBest) {
-    for (const b of ev.blocks) {
-      const other = rec.best.blocks.find((x) => x.id === b.id);
-      if (b.score === null || !other || other.score === null) continue;
-      if (b.score - other.score > 0.02) ahead.mine.push(b.id);
-      else if (other.score - b.score > 0.02) ahead.best.push(b.id);
-    }
-  }
+  const r = rec.resultado;
+  const band = bandaDe(r, network);
+  const score = band !== null ? r.bandas[band - 1].puntajes[network] : null;
+  const winners = r.bandas[0]?.redes ?? [];
+  const isWinner = winners.includes(network);
+  const reference = !isWinner && winners.length === 1 && band !== null ? winners[0] : null;
+  const ahead = reference ? blocksAhead(d, rec.detalle[reference]) : null;
+  const fee = valueOf(d, "A1");
+  const inclusion = valueOf(d, "B1");
+  const finality = valueOf(d, "B2b") ?? valueOf(d, "B2");
+  const accepted = tx.recipient.accepted;
+  const acceptance = accepted === "unknown" ? null : accepted.includes(network as NetworkId);
+  const risk = recipientRisk(tx);
+  const riskLight: Light = risk <= 25 ? "green" : risk >= 60 ? "red" : "yellow";
   const back = `/result/${id}`;
-  const gateName = (g: GateOutcome) => tg(`${g.id}.name`);
 
   return (
     <Container className="max-w-4xl py-12">
@@ -70,37 +81,39 @@ function Detail({ id, network }: { id: string; network: string }) {
         <span aria-hidden className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/30" />
         <div className="relative">
           <div className="flex flex-wrap items-center gap-4">
-            <h1 className="text-5xl font-extrabold tracking-tight">{NETWORK_LABEL[netId]}</h1>
-            <Semaphore light={ev.light} size="lg" ring />
-            {isBest && (
+            <h1 className="text-5xl font-extrabold tracking-tight">{label(network)}</h1>
+            <Semaphore light={luzRed(r, network)} size="lg" ring />
+            {isWinner && (
               <span className="rounded-full bg-ink px-3.5 py-1 text-xs font-extrabold uppercase tracking-wider text-brand">
-                {tr("compare.best")}
+                {winners.length > 1 ? tr("bands.tie") : tr("compare.best")}
               </span>
             )}
-            {ev.band && (
+            {band !== null && (
               <span className="rounded-full bg-paper px-3.5 py-1 text-xs font-extrabold uppercase tracking-wider">
-                {t("band", { n: ev.band })}
+                {t("band", { n: band })}
               </span>
             )}
           </div>
-          <p className="mt-3 max-w-2xl leading-relaxed">{tn(`${netId}.desc`)}</p>
-          <p className="mt-2 text-xs font-bold uppercase tracking-[0.12em]">{td(`source.${ev.data.source}`)}</p>
+          <p className="mt-3 max-w-2xl leading-relaxed">{tn(`${network}.desc`)}</p>
+          <p className="mt-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em]">
+            <CalendarDays size={14} aria-hidden /> {tr("model.measurement", { when: rec.medicion })}
+          </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <Tile
               label={tr("best.fee")}
-              value={ev.feeUsd !== null ? fmt.usdt(ev.feeUsd) : "—"}
-              sub={ev.feeUsd !== null ? `≈ ${fmt.copSmall(ev.feeUsd * rec.trm)}` : ""}
+              value={fee !== null ? fmt.usdt(fee) : "—"}
+              sub={fee !== null ? `≈ ${fmt.copSmall(fee * rec.trm)}` : ""}
             />
             <Tile
               label={tr("best.time")}
-              value={ev.inclusionSec !== null ? fmt.seconds(ev.inclusionSec) : "—"}
-              sub={ev.finalitySec !== null ? tr("best.finality", { time: fmt.seconds(ev.finalitySec) }) : ""}
+              value={inclusion !== null ? fmt.seconds(inclusion) : "—"}
+              sub={finality !== null ? tr("best.finality", { time: fmt.seconds(finality) }) : ""}
             />
             <Tile
               label={t("score")}
-              value={ev.score !== null && ev.admissible ? fmt.decimal(ev.score, 3) : t("excluded")}
-              sub={ev.p5 !== null && ev.p95 !== null ? t("scoreNote", { p5: fmt.decimal(ev.p5, 2), p95: fmt.decimal(ev.p95, 2) }) : ""}
+              value={score ? fmt.decimal(score.mediana, 3) : t("excluded")}
+              sub={score ? t("scoreNote", { p5: fmt.decimal(score.p05, 3), p95: fmt.decimal(score.p95, 3) }) : ""}
             />
           </div>
         </div>
@@ -109,47 +122,77 @@ function Detail({ id, network }: { id: string; network: string }) {
       <section className="mt-12">
         <h2 className="text-2xl font-extrabold tracking-tight">{tg("title")}</h2>
         <p className="mb-5 mt-1 text-muted">{tg("sub")}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {ev.gates.map((g) => (
-            <GateCard key={g.id} g={g} name={gateName(g)} />
-          ))}
-        </div>
+        {d.compuertas_falladas.length === 0 ? (
+          <Card className="flex items-center gap-3 p-5 sm:p-5">
+            <Semaphore light="green" size="md" />
+            <p className="font-bold">{tg("allPass")}</p>
+          </Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {d.compuertas_falladas.map((g) => (
+              <div key={g.compuerta} className="rounded-card border-[1.5px] border-line bg-paper p-5">
+                <div className="flex items-start gap-3">
+                  <Semaphore light="red" size="md" />
+                  <div className="min-w-0">
+                    <p className="font-extrabold">
+                      <span className="mr-2 rounded-md bg-surface px-1.5 py-0.5 text-xs">{g.compuerta}</span>
+                      {tg(`${g.compuerta}.name`)}
+                    </p>
+                    <p className="mt-0.5 text-sm text-muted">{tg(`${g.compuerta}.desc`)}</p>
+                    <p className="mt-2 text-sm font-bold">
+                      {tg("fail")} <span className="font-normal text-muted" lang="es">{g.motivo}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="mt-12">
         <h2 className="text-2xl font-extrabold tracking-tight">{t("sem2.title")}</h2>
         <p className="mb-5 mt-1 text-muted">{t("sem2.sub")}</p>
         <div className="space-y-3">
-          {ev.blocks.map((b) => (
-            <details
-              key={b.id}
-              className="group overflow-hidden rounded-card border-[1.5px] border-line bg-paper open:shadow-card"
-              open={b.light !== "green"}
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-4 p-5 sm:p-6">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-lg font-extrabold">
-                  {b.id}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-lg font-extrabold">{t(`block.${b.id}`)}</span>
-                  <span className="block text-sm text-muted">{t(`blockDesc.${b.id}`)}</span>
-                  <span className="mt-1 block text-xs font-semibold text-muted">
-                    {b.score !== null ? `${fmt.decimal(b.score, 2)} · ` : ""}
-                    {t("blockMeta", { n: b.n, excluded: b.excluded })}
+          {BLOCKS.map((b) => {
+            const metrics = d.metricas.filter((m) => m.bloque === b);
+            const blockScore = d.bloques[b];
+            const light = luzPuntaje(blockScore);
+            const n = metrics.filter((m) => m.puntaje !== null).length;
+            return (
+              <details
+                key={b}
+                className="group overflow-hidden rounded-card border-[1.5px] border-line bg-paper open:shadow-card"
+                open={light !== "green"}
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-4 p-5 sm:p-6">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-lg font-extrabold">
+                    {b}
                   </span>
-                </span>
-                {b.light ? <Semaphore light={b.light} size="lg" /> : null}
-                <ChevronDown size={20} className="shrink-0 text-grey transition-transform group-open:rotate-180" aria-hidden />
-              </summary>
-              <ul className="divide-y divide-line/70 border-t border-line/70 px-5 sm:px-6">
-                {b.metrics.map((m) => (
-                  <MetricRow key={m.def.id} m={m} />
-                ))}
-              </ul>
-            </details>
-          ))}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-lg font-extrabold">{t(`block.${b}`)}</span>
+                    <span className="block text-sm text-muted">{t(`blockDesc.${b}`)}</span>
+                    <span className="mt-1 block text-xs font-semibold text-muted">
+                      {blockScore !== null ? `${fmt.decimal(blockScore, 2)} · ` : ""}
+                      {t("blockMeta", { n, excluded: metrics.length - n })}
+                    </span>
+                  </span>
+                  {light ? <Semaphore light={light} size="lg" /> : null}
+                  <ChevronDown size={20} className="shrink-0 text-grey transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <ul className="divide-y divide-line/70 border-t border-line/70 px-5 sm:px-6">
+                  {metrics.map((m) => (
+                    <MetricRow key={m.id} m={m} />
+                  ))}
+                </ul>
+              </details>
+            );
+          })}
         </div>
         <p className="mt-4 text-sm text-muted">{t("sem2.rule")}</p>
+        <p className="mt-1 text-sm text-muted">
+          {td("centralScore", { score: fmt.decimal(d.puntaje_central, 3) })}
+        </p>
       </section>
 
       <section className="mt-12">
@@ -157,57 +200,50 @@ function Detail({ id, network }: { id: string; network: string }) {
         <Card className="mt-4 p-6 sm:p-6">
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="flex items-center gap-3">
-              <Semaphore
-                light={ev.recipient.accepted === true ? "green" : ev.recipient.accepted === false ? "red" : "yellow"}
-                size="lg"
-              />
+              <Semaphore light={acceptance === true ? "green" : acceptance === false ? "red" : "yellow"} size="lg" />
               <p className="font-bold">
-                {ev.recipient.accepted === true
+                {acceptance === true
                   ? t("recipient.accepted")
-                  : ev.recipient.accepted === false
+                  : acceptance === false
                     ? t("recipient.notAccepted")
                     : t("recipient.unknown")}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Semaphore light={ev.recipient.riskLight} size="lg" />
-              <div>
-                <p className="font-bold">
-                  {t("recipient.risk")}: {fmt.decimal(ev.recipient.risk, 0)}/100
-                </p>
-              </div>
+              <Semaphore light={riskLight} size="lg" />
+              <p className="font-bold">
+                {t("recipient.risk")}: {fmt.decimal(risk, 0)}/100
+              </p>
             </div>
           </div>
           <p className="mt-4 text-xs text-muted">{t("recipient.riskNote")}</p>
         </Card>
       </section>
 
-      {!ev.admissible && (
+      {r.inadmisibles[network] && (
         <Card tone="surface" className="mt-10">
           <h2 className="mb-3 flex items-center gap-3 text-xl font-extrabold">
             <Semaphore light="red" /> {t("redTitle")}
           </h2>
           <ul className="space-y-2 text-sm">
-            {ev.excludedBy.map((by) => (
-              <li key={by}>
-                {by === "recipient"
-                  ? tr("excluded.recipient")
-                  : tr("excluded.gate", { gate: by, name: tg(`${by}.name`) })}
+            {r.inadmisibles[network].map(([gate, motivo]) => (
+              <li key={gate}>
+                {tr("excluded.gate", { gate, name: tg(`${gate}.name`) })} <span lang="es">{motivo}</span>
               </li>
             ))}
           </ul>
         </Card>
       )}
-      {rec.best && !isBest && ev.admissible && (
+      {reference && ahead && (
         <Card className="mt-10">
-          <h2 className="mb-4 text-xl font-extrabold">{t("vsBest", { network: NETWORK_LABEL[rec.best.data.id] })}</h2>
+          <h2 className="mb-4 text-xl font-extrabold">{t("vsBest", { network: label(reference) })}</h2>
           <p className="text-sm">
             <span className="font-bold text-ok">{tr("vs.winnerAhead")}</span>{" "}
-            {ahead.mine.length ? ahead.mine.map((b) => `${b} · ${t(`block.${b}`)}`).join(", ") : tr("vs.nothing")}
+            {ahead.a.length ? ahead.a.map((b) => `${b} · ${t(`block.${b}`)}`).join(", ") : tr("vs.nothing")}
           </p>
           <p className="mt-2 text-sm">
             <span className="font-bold text-warn">{tr("vs.altAhead")}</span>{" "}
-            {ahead.best.length ? ahead.best.map((b) => `${b} · ${t(`block.${b}`)}`).join(", ") : tr("vs.nothing")}
+            {ahead.b.length ? ahead.b.map((b) => `${b} · ${t(`block.${b}`)}`).join(", ") : tr("vs.nothing")}
           </p>
         </Card>
       )}
@@ -234,61 +270,32 @@ function Tile({ label, value, sub }: { label: string; value: string; sub: ReactN
   );
 }
 
-function GateCard({ g, name }: { g: GateOutcome; name: string }) {
-  const tg = useTranslations("gates");
-  const td = useTranslations("data.notes");
-  const fmt = useFmt();
-  const light: Light = !g.applies || g.result === "na" ? "yellow" : g.result === "pass" ? "green" : "red";
-  const label = !g.applies ? tg("notApplicable") : tg(g.result);
-  return (
-    <div className="rounded-card border-[1.5px] border-line bg-paper p-5">
-      <div className="flex items-start gap-3">
-        {g.applies ? (
-          <Semaphore light={light} size="md" />
-        ) : (
-          <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-dashed border-grey" />
-        )}
-        <div className="min-w-0">
-          <p className="font-extrabold">
-            <span className="mr-2 rounded-md bg-surface px-1.5 py-0.5 text-xs">{g.id}</span>
-            {name}
-          </p>
-          <p className="mt-0.5 text-sm text-muted">{tg(`${g.id}.desc`)}</p>
-          <p className="mt-2 text-sm font-bold">
-            {label}
-            {g.applies && g.measured !== null && g.measured !== undefined && (
-              <span className="ml-2 font-normal text-muted tabular-nums">
-                {g.id === "G3" ? `${fmt.decimal(g.measured, 2)} %` : g.id === "G4" ? `${fmt.decimal(g.measured, 2)}×` : fmt.seconds(g.measured)}
-              </span>
-            )}
-          </p>
-          {g.note && <p className="mt-1 text-xs text-muted">{td(g.note)}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetricRow({ m }: { m: MetricResult }) {
+function MetricRow({ m }: { m: MetricaDetalle }) {
   const t = useTranslations("detail");
   const tm = useTranslations("metrics");
   const td = useTranslations("data");
   const fmt = useFmt();
-  const excluded = m.value === null;
+  const excluded = m.valor === null;
+  const light = luzMetrica(m.puntaje);
+  const unit = UNIDAD[m.id];
   return (
     <li className="grid items-center gap-x-6 gap-y-2 py-4 sm:grid-cols-[1fr_auto_auto]">
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-2 font-bold">
-          <span className="rounded-md bg-surface px-1.5 py-0.5 text-xs">{m.def.id}</span>
-          {tm(`${m.def.id}.name`)}
-          {m.status !== "computed" && (
+          <span className="rounded-md bg-surface px-1.5 py-0.5 text-xs">{m.id}</span>
+          {tm(`${m.id}.name`)}
+          {m.cota_inferior && (
             <span className="rounded-full border border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
-              {td(`status.${m.status}`)}
+              {td("lowerBoundTag")}
             </span>
           )}
         </p>
-        <p className="mt-0.5 text-sm text-muted">{tm(`${m.def.id}.desc`)}</p>
-        {m.note && <p className="mt-1 text-sm font-semibold">{td(`notes.${m.note}`)}</p>}
+        <p className="mt-0.5 text-sm text-muted">{tm(`${m.id}.desc`)}</p>
+        {m.nota && (
+          <p className="mt-1 text-xs text-muted" lang="es">
+            {m.nota}
+          </p>
+        )}
         {excluded && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-muted">{t("excludedMetric")}</p>}
       </div>
       <div className="sm:text-right">
@@ -296,17 +303,22 @@ function MetricRow({ m }: { m: MetricResult }) {
           <p className="text-xl font-extrabold text-grey">—</p>
         ) : (
           <>
-            <p className={cx("text-xl font-extrabold tabular-nums", m.light === "red" && "text-bad")}>
-              {fmt.metricValue(m.value as number, m.def.unit)}
+            <p className={cx("text-xl font-extrabold tabular-nums", light === "red" && "text-bad")}>
+              {fmt.metricValue(m.valor as number, unit)}
             </p>
             <p className="text-xs text-muted">
-              {t("col.target")} {fmt.metricValue(m.def.t, m.def.unit)} · {t("col.limit")} {fmt.metricValue(m.def.w, m.def.unit)}
+              {t("col.target")} {fmt.metricValue(m.objetivo, unit)} · {t("col.limit")} {fmt.metricValue(m.inaceptable, unit)}
             </p>
+            {m.puntaje !== null && (
+              <p className="text-xs text-muted">
+                {t("col.score")} {fmt.decimal(m.puntaje, 2)}
+              </p>
+            )}
           </>
         )}
       </div>
       <div className="justify-self-start sm:justify-self-end">
-        {m.light ? <Semaphore light={m.light} size="md" /> : <span className="inline-block h-5 w-5 rounded-full border-2 border-dashed border-grey" />}
+        {light ? <Semaphore light={light} size="md" /> : <span className="inline-block h-5 w-5 rounded-full border-2 border-dashed border-grey" />}
       </div>
     </li>
   );
