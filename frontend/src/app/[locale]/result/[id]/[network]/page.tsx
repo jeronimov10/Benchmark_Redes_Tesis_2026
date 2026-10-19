@@ -8,11 +8,12 @@ import { ArrowLeft, CalendarDays, ChevronDown, Loader2 } from "lucide-react";
 import { ButtonLink, Card, Container, Semaphore, cx } from "@/components/ui";
 import { Link } from "@/i18n/navigation";
 import { BLOCKS } from "@/engine/metrics";
-import { recipientRisk } from "@/engine/recommend";
+import { recipientRisk } from "@/lib/recipient";
 import type { Light, NetworkId } from "@/engine/types";
 import { useEntrada, useRecomendacion } from "@/modelo/cliente";
 import { bandaDe, blocksAhead, entradaModelo, luzMetrica, luzPuntaje, luzRed, UNIDAD, valueOf } from "@/modelo/entrada";
-import type { MetricaDetalle } from "@/modelo/tipos";
+import { esCompleta, type MetricaDetalle } from "@/modelo/tipos";
+import { AvisoDatos, EtiquetaProcedencia, SinRecomendacion } from "@/components/result/EstadoDatos";
 import { applyQuery } from "@/lib/attrs";
 import { networkLabel as label, useFmt } from "@/lib/format";
 import { useRequireUser } from "@/lib/useRequireUser";
@@ -30,7 +31,7 @@ function Detail({ id, network }: { id: string; network: string }) {
   const store = useStore();
   const entry = store.history.find((h) => h.id === id);
   const tx = entry ? applyQuery(entry.tx, params) : null;
-  const { data: rec, error } = useRecomendacion(useEntrada(entry && tx ? entradaModelo(tx, entry.answers.country) : null));
+  const { data: rec, error, stale } = useRecomendacion(useEntrada(entry && tx ? entradaModelo(tx, entry.answers.country) : null));
 
   if (!ready) return <Container className="py-12" />;
   if (entry && !rec && !error) {
@@ -51,6 +52,8 @@ function Detail({ id, network }: { id: string; network: string }) {
       </Container>
     );
   }
+
+  if (!esCompleta(rec)) return <SinRecomendacion rec={rec} />;
 
   const r = rec.resultado;
   const band = bandaDe(r, network);
@@ -76,6 +79,8 @@ function Detail({ id, network }: { id: string; network: string }) {
       >
         <ArrowLeft size={16} aria-hidden /> {t("back")}
       </Link>
+
+      <AvisoDatos rec={rec} obsoleto={stale} />
 
       <section className="animate-fade-up relative overflow-hidden rounded-[28px] bg-brand p-8 sm:p-10">
         <span aria-hidden className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/30" />
@@ -284,6 +289,7 @@ function MetricRow({ m }: { m: MetricaDetalle }) {
         <p className="flex flex-wrap items-center gap-2 font-bold">
           <span className="rounded-md bg-surface px-1.5 py-0.5 text-xs">{m.id}</span>
           {tm(`${m.id}.name`)}
+          <EtiquetaProcedencia p={m.procedencia} />
           {m.cota_inferior && (
             <span className="rounded-full border border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
               {td("lowerBoundTag")}

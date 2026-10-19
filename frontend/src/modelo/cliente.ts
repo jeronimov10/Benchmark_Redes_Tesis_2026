@@ -1,41 +1,63 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { EntradaModelo, RespuestaInfo, RespuestaInterpretar, RespuestaRecomendar } from "./tipos";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  EntradaModelo,
+  EstadoRecalibracion,
+  Instantanea,
+  RespuestaInfo,
+  RespuestaInterpretar,
+  RespuestaRecomendar,
+} from "./tipos";
 
 /**
- * Browser side of the bridge to the model. Every call goes to /api/modelo; results
- * are kept in memory by input, so a page that asks again (result, detail, history)
- * gets the same answer without running the model twice.
+ * Browser side of the bridge to the FastAPI backend (proxied at /api/*).
+ * Model answers are cached per input for TTL_MS and refreshed on a timer, so a page that
+ * stays open picks up new live measurements: the answer carries `version_perfil`, which
+ * changes whenever a live metric or the baseline changes.
  */
+
+export const TTL_MS = 30_000;
+export const REFRESCO_MEDICIONES_MS = 15_000;
+export const REFRESCO_RECALIBRACION_MS = 3_000;
 
 type Accion = "recomendar" | "interpretar";
 
+interface Entrada<T> {
+  data: T;
+  at: number;
+}
+
 const pending = new Map<string, Promise<unknown>>();
-const done = new Map<string, unknown>();
+const done = new Map<string, Entrada<unknown>>();
 
 export const keyOf = (accion: Accion, e: EntradaModelo) =>
-  JSON.stringify([accion, e.monto_cop, e.transfronterizo, e.espera_s, e.irrevocabilidad, e.trm]);
+  JSON.stringify([accion, e.monto_cop, e.transfronterizo, e.espera_s, e.irrevocabilidad, e.trm, e.modo ?? "vivo"]);
 
-async function post(accion: Accion, e: EntradaModelo): Promise<unknown> {
-  const res = await fetch("/api/modelo", {
+export async function pedirJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  return body as T;
+}
+
+function post(accion: Accion, e: EntradaModelo): Promise<unknown> {
+  return pedirJson("/api/modelo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accion, ...e }),
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  return body;
 }
 
-function request<T>(accion: Accion, e: EntradaModelo): Promise<T> {
+function request<T>(accion: Accion, e: EntradaModelo, forzar = false): Promise<T> {
   const key = keyOf(accion, e);
-  if (done.has(key)) return Promise.resolve(done.get(key) as T);
+  const hit = done.get(key);
+  if (hit && !forzar && Date.now() - hit.at < TTL_MS) return Promise.resolve(hit.data as T);
   let p = pending.get(key);
   if (!p) {
     p = post(accion, e).then(
       (r) => {
-        done.set(key, r);
+        done.set(key, { data: r, at: Date.now() });
         pending.delete(key);
         return r;
       },
@@ -55,16 +77,39 @@ export interface Estado<T> {
   data: T | null;
   error: string | null;
   loading: boolean;
+  /** True when the last refresh failed or the data is older than twice the refresh period. */
+  stale: boolean;
+  /** Epoch ms of the last successful answer, or null. */
+  actualizado: number | null;
 }
+
+const VACIO: Estado<never> = { data: null, error: null, loading: false, stale: false, actualizado: null };
+
+/** Counter and wall-clock time that advance every `ms`; keeps render pure. */
+function useReloj(ms: number): { n: number; ahora: number } {
+  const [estado, setEstado] = useState(() => ({ n: 0, ahora: Date.now() }));
+  useEffect(() => {
+    const id = setInterval(() => setEstado((x) => ({ n: x.n + 1, ahora: Date.now() })), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+  return estado;
+}
+
+/** Current time in epoch ms, refreshed every `ms`. */
+export const useAhora = (ms: number): number => useReloj(ms).ahora;
 
 function useModel<T>(accion: Accion, e: EntradaModelo | null): Estado<T> {
   const key = e ? keyOf(accion, e) : null;
+  const { n: tick, ahora } = useReloj(TTL_MS);
   const [settled, setSettled] = useState<{ key: string; error: string | null } | null>(null);
+  const ultimoTick = useRef(0);
 
   useEffect(() => {
-    if (!e || !key || done.has(key)) return;
+    if (!e || !key) return;
     let alive = true;
-    request<T>(accion, e).then(
+    const forzar = tick !== ultimoTick.current;
+    ultimoTick.current = tick;
+    request<T>(accion, e, forzar).then(
       () => alive && setSettled({ key, error: null }),
       (err: Error) => alive && setSettled({ key, error: err.message }),
     );
@@ -73,12 +118,14 @@ function useModel<T>(accion: Accion, e: EntradaModelo | null): Estado<T> {
     };
     // `key` covers every field of `e`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accion, key]);
+  }, [accion, key, tick]);
 
-  if (!key) return { data: null, error: null, loading: false };
-  const data = (done.get(key) as T | undefined) ?? null;
+  if (!key) return VACIO;
+  const hit = done.get(key);
+  const data = (hit?.data as T | undefined) ?? null;
   const error = settled?.key === key ? settled.error : null;
-  return { data, error, loading: data === null && error === null };
+  const stale = data !== null && (error !== null || ahora - (hit?.at ?? 0) > 2 * TTL_MS);
+  return { data, error: data === null ? error : null, loading: data === null && error === null, stale, actualizado: hit?.at ?? null };
 }
 
 export const useRecomendacion = (e: EntradaModelo | null) => useModel<RespuestaRecomendar>("recomendar", e);
@@ -88,13 +135,13 @@ export const useInterpretacion = (e: EntradaModelo | null) => useModel<Respuesta
 export function useRecomendaciones(entradas: EntradaModelo[]): (RespuestaRecomendar | null)[] {
   const keys = entradas.map((e) => keyOf("recomendar", e));
   const joined = keys.join("|");
+  const { n: tick } = useReloj(TTL_MS);
   const [, bump] = useState(0);
 
   useEffect(() => {
     let alive = true;
     for (const e of entradas) {
-      if (done.has(keyOf("recomendar", e))) continue;
-      request("recomendar", e).then(
+      request("recomendar", e, tick > 0).then(
         () => alive && bump((n) => n + 1),
         () => alive && bump((n) => n + 1),
       );
@@ -104,31 +151,54 @@ export function useRecomendaciones(entradas: EntradaModelo[]): (RespuestaRecomen
     };
     // `joined` covers every entry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [joined]);
+  }, [joined, tick]);
 
-  return keys.map((k) => (done.get(k) as RespuestaRecomendar | undefined) ?? null);
+  return keys.map((k) => (done.get(k)?.data as RespuestaRecomendar | undefined) ?? null);
 }
 
-let infoPromise: Promise<RespuestaInfo> | null = null;
+/** Polls a JSON endpoint. Keeps the last good answer and flags it stale when a refresh fails. */
+export function usePolling<T>(url: string, cadaMs: number, activo = true): Estado<T> & { recargar: () => void } {
+  const [estado, setEstado] = useState<Estado<T>>({ ...VACIO, loading: true });
+  const [version, setVersion] = useState(0);
+  const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
-/** Networks that have a measured profile in perfiles.json, and the date of the measurement. */
-export function useInfoModelo(): RespuestaInfo | null {
-  const [info, setInfo] = useState<RespuestaInfo | null>(null);
   useEffect(() => {
+    if (!activo) return;
     let alive = true;
-    infoPromise ??= fetch("/api/modelo")
-      .then((r) => (r.ok ? (r.json() as Promise<RespuestaInfo>) : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .catch((err) => {
-        infoPromise = null;
-        throw err;
-      });
-    infoPromise.then((i) => alive && setInfo(i)).catch(() => {});
+    const cargar = () =>
+      pedirJson<T>(url).then(
+        (data) => alive && setEstado({ data, error: null, loading: false, stale: false, actualizado: Date.now() }),
+        (err: Error) =>
+          alive &&
+          setEstado((prev) => ({ ...prev, error: err.message, loading: false, stale: prev.data !== null })),
+      );
+    cargar();
+    const id = setInterval(cargar, cadaMs);
     return () => {
       alive = false;
+      clearInterval(id);
     };
-  }, []);
-  return info;
+  }, [url, cadaMs, activo, version]);
+
+  return { ...estado, recargar };
 }
+
+/** Description of the model (thresholds, scenarios) and the freshness of the live data. */
+export const useInfoModelo = (): RespuestaInfo | null => usePolling<RespuestaInfo>("/api/modelo", 60_000).data;
+
+export const useMediciones = () => usePolling<Instantanea>("/api/mediciones", REFRESCO_MEDICIONES_MS);
+
+export const useRecalibracion = (rapido: boolean) =>
+  usePolling<EstadoRecalibracion>("/api/recalibracion", rapido ? REFRESCO_RECALIBRACION_MS : 20_000);
+
+export const iniciarRecalibracion = () =>
+  pedirJson<{ id: string }>("/api/recalibracion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+
+export const cancelarRecalibracion = () => pedirJson<{ cancelando: boolean }>("/api/recalibracion", { method: "DELETE" });
 
 /** Value that follows `value` after it stops changing for `ms`. */
 export function useDebounced<T>(value: T, ms: number): T {

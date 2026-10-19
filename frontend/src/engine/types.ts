@@ -63,141 +63,15 @@ export interface TxInput {
   };
 }
 
-/* ---------------- measured network data ---------------- */
-
-export type MetricStatus = "computed" | "partial" | "inconclusive" | "missing";
-
-export interface MetricValue {
-  /** Null when the metric could not be computed. */
-  value: number | null;
-  status: MetricStatus;
-  /** Relative standard error used by the Monte Carlo (demo assumption, see standard page). */
-  sigmaRel?: number;
-  /** i18n key under `data.notes` explaining a caveat. */
-  note?: string;
-}
-
 export type GateId = "G1" | "G2" | "G3" | "G4";
-export type GateResult = "pass" | "fail" | "na";
 
-export interface NetworkData {
-  id: NetworkId;
-  /** Which part of the study measured it. */
-  set: 1 | 2;
-  source: "thesis" | "benchmark";
-  /** Measured values per metric, in the units of the thesis catalog (see metrics.ts). */
-  metrics: Partial<Record<MetricId, MetricValue>>;
-  /** Gate outcomes that do not depend on the payment. */
-  observability: { result: GateResult; note?: string };
-  capacityIsLowerBound: boolean;
-  /** Whether the metrics describe the payment asset used in the app (a stablecoin). */
-  assetNote?: string;
-}
-
-/* ---------------- evaluation results ---------------- */
-
-export interface MetricDef {
+/** Static facts about a metric. Targets, limits and direction come from the backend (GET /api/modelo). */
+export interface MetricMeta {
   id: MetricId;
   block: BlockId;
-  dir: "lower" | "higher";
   unit: "fraction" | "ratio" | "seconds" | "usd" | "count" | "nines" | "percent" | "index";
-  /** Thesis threshold pair [target t, unacceptable w]. A1 is replaced per payment. */
-  t: number;
-  w: number;
   /** Source of the metric: chain or documentation. */
   source: "chain" | "doc";
 }
 
-export type Unit = MetricDef["unit"];
-
-export interface MetricResult {
-  def: MetricDef;
-  /** Value on the metric scale (A1 as fraction of the ticket). Null when excluded. */
-  value: number | null;
-  score: number | null;
-  light: Light | null;
-  status: MetricStatus;
-  note?: string;
-}
-
-export interface BlockResult {
-  id: BlockId;
-  score: number | null;
-  light: Light | null;
-  /** Number of metrics that entered the block average. */
-  n: number;
-  /** Metrics of the block that were excluded for lack of data. */
-  excluded: number;
-  metrics: MetricResult[];
-}
-
-export interface GateOutcome {
-  id: GateId;
-  result: GateResult;
-  /** Measured value behind the verdict (seconds, margin...). */
-  measured?: number | null;
-  applies: boolean;
-  note?: string;
-}
-
-export interface RecipientCheck {
-  /** Recipient accepts this network: true, false, or null when unknown. */
-  accepted: boolean | null;
-  /** Demo risk score 0-100 (lower is better), same for all networks. */
-  risk: number;
-  riskLight: Light;
-}
-
-export interface NetworkEvaluation {
-  data: NetworkData;
-  metrics: MetricResult[];
-  blocks: BlockResult[];
-  gates: GateOutcome[];
-  recipient: RecipientCheck;
-  admissible: boolean;
-  /** Why it is not admissible: gate ids and/or "recipient". */
-  excludedBy: string[];
-  /** Deterministic score at central values. */
-  score: number | null;
-  /** Monte Carlo median and 5th/95th percentiles. */
-  median: number | null;
-  p5: number | null;
-  p95: number | null;
-  light: Light;
-  /** 1-based band, or null when not admissible. */
-  band: number | null;
-  /** Median cost in USD, inclusion time and irreversibility time in seconds. */
-  feeUsd: number | null;
-  inclusionSec: number | null;
-  finalitySec: number | null;
-  excludedMetrics: number;
-}
-
-export type Certainty = "high" | "medium" | "low";
-
-export interface Recommendation {
-  amountUsd: number;
-  trm: number;
-  /** Payment vector (normalized amount, crosses border, normalized wait, irreversibility). */
-  vector: [number, number, number, number];
-  crossBorder: boolean;
-  /** Composition of the case over E1, E2, E3. */
-  lambda: Record<ScenarioId, number>;
-  dMin: number;
-  kappa: number;
-  certainty: Certainty;
-  /** Weights per block for this payment. */
-  weights: Record<BlockId, number>;
-  evaluations: NetworkEvaluation[];
-  /** Admissible networks, best median first. */
-  ranking: NetworkEvaluation[];
-  bands: NetworkEvaluation[][];
-  /** pi[i][j] = P(score_i > score_j) keyed by network ids. */
-  pi: Record<string, Record<string, number>>;
-  excluded: NetworkEvaluation[];
-  best: NetworkEvaluation | null;
-  /** Metric that most separates band 1 from band 2. */
-  determinant: { metric: MetricId; delta: number } | null;
-  /** Probability that the best network beats the runner-up. */
-  separation: number | null;
-}
+export type Unit = MetricMeta["unit"];

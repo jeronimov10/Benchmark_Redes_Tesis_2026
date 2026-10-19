@@ -1,38 +1,34 @@
 # Redfacil (frontend)
 
-Interactive prototype that recommends in which network to settle a payment in
-Colombia (COP converted to USDT), using the model of the thesis
-(`docs/tesis-apa7.pdf`, section 5.4) and traffic lights on top.
+Interfaz Next.js 16 (React 19, next-intl es/en, Tailwind 4) de la aplicación de recomendación de red de liquidación. **No contiene el modelo ni datos de redes:** todo viene del backend FastAPI (`../backend`), al que Next reenvía `/api/*` (variable `BACKEND_URL`, por defecto `http://127.0.0.1:8000`).
 
-```
+## Ejecutar
+
+```bash
 npm install
-npm run dev     # http://localhost:3000 (language follows the browser; /es, /en)
-npm test        # reproduces thesis Tables 11 and 13 + i18n key parity
+npm run dev        # http://localhost:3000 (el backend debe estar en :8000)
+npm test           # vitest
+npx tsc --noEmit
+npm run lint
 npm run build
 ```
 
-## Data
+## Qué muestra
 
-- `src/data/profiles.ts` holds the **measured** values.
-  - Polygon, Celo, Arbitrum: Table 12 of the thesis (90-day window).
-  - Tempo, Aptos, Canton: preliminary pass of the benchmark in this repo
-    (`resultados/metrics.csv`), reduced samples. Metrics not comparable with the
-    thesis definition are left out (value `null`) and flagged.
-- The Monte Carlo error of each metric is a fixed relative value (8% / 25%)
-  until the per-metric bootstrap is published. Everything else is the thesis model.
-- COP to USDT uses a demo rate (`src/engine/fx.ts`).
+- `/[locale]/monitor`: salud de cada colector, valor, origen (vivo/base), edad y ventana de cada métrica, y el botón Recalibrar.
+- `/[locale]/result/[id]`: recomendación por bandas, certidumbre, advertencias, banner de frescura de datos y detalle por red con procedencia por métrica.
+- `/[locale]/standard`: umbrales, pesos y compuertas leídos de `GET /api/modelo`.
+- Estados distintos para cargando, éxito, dato obsoleto (refresco fallido), vacío, datos insuficientes y error.
 
-## Engine (`src/engine/`, no React)
+## Estructura
 
-`model.ts` normalization, aggregation, interpolation of weights, certainty;
-`montecarlo.ts` 10,000 replicas, bands, pairwise probabilities;
-`recommend.ts` gates, determinant metric, traffic lights; `explain.ts` structured
-reasons (the UI translates them). `thesis.test.ts` checks the engine against the
-thesis tables.
+- `src/modelo/cliente.ts`: acceso a la API (caché por entrada con TTL de 30 s, refresco periódico, sondeo de `/api/mediciones` y `/api/recalibracion`). `tipos.ts`: forma de las respuestas.
+- `src/lib/monitor.ts`: utilidades de presentación del monitoreo (edad, etiquetas, razones).
+- `src/components/result/EstadoDatos.tsx`: aviso de frescura, etiqueta de procedencia y pantalla de datos insuficientes.
+- `src/engine/`: solo tipos y constantes de presentación (ids de redes, bloques, TRM demostrativa); el motor de cálculo vive en el backend.
+- `src/state/`: usuarios e historial de pagos del prototipo en `localStorage` (sin backend de usuarios).
+- `messages/{es,en}.json`: textos; una prueba exige las mismas claves en ambos.
 
-## i18n
+## Datos
 
-`messages/{es,en}.json`, `next-intl`, locale from the browser (`Accept-Language`).
-Add a language: new JSON + one line in `src/i18n/routing.ts`.
-
-State (users, history) lives in `localStorage`; there is no backend.
+La TRM (4000 COP/USDT) es demostrativa. El historial sembrado de cada usuario (`src/state/seed.ts`) es ficticio y está marcado como demo; las recomendaciones de esos pagos sí se calculan con el backend.

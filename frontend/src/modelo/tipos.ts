@@ -1,12 +1,13 @@
 import type { BlockId, GateId, MetricId } from "@/engine/types";
 
 /**
- * Shapes of what servicio_modelo/recomendar.py returns. `resultado` is the dict of
- * modelo.recomendar() unchanged (see modelo/INTEGRACION.md, "Qué devuelve").
+ * Shapes returned by the FastAPI backend (backend/app). `resultado` is the dict of
+ * modelo.recomendar() unchanged (see backend/modelo/INTEGRACION.md, "Qué devuelve").
  */
 
 export type Irrevocabilidad = "baja" | "media" | "alta";
 export type NivelCertidumbre = "alta" | "media" | "baja";
+export type ModoDatos = "vivo" | "medicion";
 
 /** Parameters of modelo.recomendar(), except `replicas`, which the server fixes at 10.000. */
 export interface EntradaModelo {
@@ -15,6 +16,8 @@ export interface EntradaModelo {
   espera_s: number;
   irrevocabilidad: Irrevocabilidad;
   trm: number;
+  /** "vivo" (default): baseline overridden by fresh live metrics. "medicion": baseline only (thesis). */
+  modo?: ModoDatos;
 }
 
 export interface PuntajeRed {
@@ -32,7 +35,7 @@ export interface Banda {
 }
 
 export interface ResultadoModelo {
-  caso: EntradaModelo & { ticket_usd: number };
+  caso: Omit<EntradaModelo, "trm" | "modo"> & { ticket_usd: number };
   /** Keyed by the model's scenario labels: "remesas", "comercio doméstico", "alto valor". */
   composicion: Record<string, number>;
   pesos: Record<BlockId, number>;
@@ -43,6 +46,17 @@ export interface ResultadoModelo {
   bandas: Banda[];
   /** Absent when no network is admissible; null when there is a single band. */
   determinante?: { metrica: MetricId; contribucion: number } | null;
+}
+
+export interface Procedencia {
+  origen: "vivo" | "base";
+  fuente: string;
+  ts: number;
+  edad_s: number;
+  estado: string;
+  n: number | null;
+  ventana_s: number | null;
+  vivo_descartado?: { estado: string; ts: number; edad_s: number; nota: string | null };
 }
 
 export interface MetricaDetalle {
@@ -58,6 +72,7 @@ export interface MetricaDetalle {
   cota_inferior: boolean;
   /** modelo.normalizar() at the measured value; null when the metric is not conclusive. */
   puntaje: number | null;
+  procedencia: Procedencia | null;
 }
 
 export interface DetalleRed {
@@ -68,13 +83,37 @@ export interface DetalleRed {
   compuertas_falladas: { compuerta: GateId; motivo: string }[];
 }
 
+export interface Frescura {
+  metricas_vivo: number;
+  metricas_total: number;
+  edad_vivo_max_s: number | null;
+  edad_vivo_min_s: number | null;
+}
+
+export type EstadoRecomendacion = "ok" | "datos_insuficientes" | "sin_redes_admisibles";
+
 export interface RespuestaRecomendar {
-  resultado: ResultadoModelo;
-  nivel_certidumbre: NivelCertidumbre;
+  estado: EstadoRecomendacion;
+  motivo: string | null;
+  resultado: ResultadoModelo | null;
+  nivel_certidumbre: NivelCertidumbre | null;
   detalle: Record<string, DetalleRed>;
-  /** "perfiles medidos en 90 días, octubre de 2026" */
+  /** Description of the baseline measurement. */
   medicion: string;
   trm: number;
+  modo: ModoDatos;
+  version_perfil: string;
+  decidido_en: string;
+  decidido_ts: number;
+  frescura: Frescura;
+  procedencia: Record<string, Record<string, Procedencia>>;
+  redes_sin_datos?: string[];
+}
+
+export type RespuestaCompleta = RespuestaRecomendar & { resultado: ResultadoModelo; nivel_certidumbre: NivelCertidumbre };
+
+export function esCompleta(r: RespuestaRecomendar | null | undefined): r is RespuestaCompleta {
+  return !!r && r.resultado !== null && r.nivel_certidumbre !== null;
 }
 
 export interface RespuestaInterpretar {
@@ -84,9 +123,98 @@ export interface RespuestaInterpretar {
   certidumbre: number;
   nivel_certidumbre: NivelCertidumbre;
   ticket_usd: number;
+  version_perfil: string;
+}
+
+export interface UmbralModelo {
+  bloque: BlockId;
+  direccion: "menor" | "mayor" | "nueves";
+  objetivo: number | { fraccion_ticket: number };
+  inaceptable: number | { fraccion_ticket: number };
 }
 
 export interface RespuestaInfo {
   redes: string[];
   medicion: string;
+  version_perfil: string;
+  frescura: Frescura;
+  metricas: Record<MetricId, UmbralModelo>;
+  escenarios: Record<"remesas" | "comercio" | "altovalor", { punto: number[]; pesos: Record<BlockId, number> }>;
+  gamma: number[];
+}
+
+export type EstadoMetricaVivo = "valida" | "insuficiente" | "obsoleta" | "fallida" | "no_computable";
+
+export interface MetricaMedicion {
+  id: MetricId;
+  bloque: BlockId;
+  valor: number | null;
+  sigma: number | null;
+  cota_inferior: boolean;
+  origen: "vivo" | "base" | null;
+  fuente: string | null;
+  ts: string | null;
+  edad_s: number | null;
+  n: number | null;
+  ventana_s: number | null;
+  nota: string | null;
+  vivo: { estado: EstadoMetricaVivo; valor: number | null; n: number; ts: string; edad_s: number; nota: string; unidad: string } | null;
+  razon_solo_base: string | null;
+  estado_vivo_esperado: boolean;
+}
+
+export interface ComponenteSalud {
+  componente: string;
+  ultimo_ok: string | null;
+  edad_ok_s: number | null;
+  ultimo_error: string | null;
+  error: string | null;
+  fallos_consecutivos: number;
+  latencia_ms: number | null;
+}
+
+export interface SaludRed {
+  estado: "ok" | "degradada" | "caida" | "sin_datos";
+  componentes: ComponenteSalud[];
+}
+
+export interface RedMedicion {
+  id: string;
+  nombre: string;
+  responsable: string;
+  fuente: string;
+  salud: SaludRed;
+  muestras: Record<string, number>;
+  metricas: MetricaMedicion[];
+  metricas_vivo_activas: number;
+}
+
+export interface Instantanea {
+  generado_en: string;
+  version_perfil: string;
+  frescura: Frescura;
+  obsolescencia_s: number;
+  redes: RedMedicion[];
+}
+
+export interface TrabajoRecalibracion {
+  id: string;
+  estado: "en_curso" | "completado" | "fallido" | "cancelado" | "interrumpido";
+  redes: string[];
+  inicio: number;
+  fin: number | null;
+  progreso: number;
+  etapa: string | null;
+  log_tail: string | null;
+}
+
+export interface EstadoRecalibracion {
+  trabajo: TrabajoRecalibracion | null;
+  ocupado: boolean;
+  alcance: {
+    recalibra: string[];
+    no_disponible: string[];
+    motivo_no_disponible: string;
+    no_resuelve: string[];
+  };
 }

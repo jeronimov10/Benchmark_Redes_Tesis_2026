@@ -16,10 +16,11 @@
     "switchUser": "Switch user",
     "start": "Get started",
     "language": "Language",
-    "main": "Main navigation"
+    "main": "Main navigation",
+    "monitor": "Monitor"
   },
   "footer": {
-    "demo": "Academic prototype. Recommendations use the thesis model with the Polygon, Celo and Arbitrum measurements (90-day window, October 2026). Peso costs use a demo exchange rate and exclude on and off ramps.",
+    "demo": "Academic prototype. Recommendations use the thesis model with baseline measurements (Polygon, Celo and Arbitrum: 90 days, October 2026; Tempo, Aptos and Canton: preliminary benchmark) and override them with live metrics when they are current. Peso costs use a demo exchange rate and exclude on and off ramps.",
     "academic": "Degree project. Visually inspired by the Bancolombia palette, with no affiliation to the institution."
   },
   "risk": {
@@ -40,7 +41,9 @@
       "ctaContinue": "Continue",
       "ctaStandard": "See how we rate",
       "cardKicker": "Recommended network",
-      "cardSub": "Illustrative example"
+      "cardSub": "Example with current data: a COP 1,200,000 remittance",
+      "cardError": "The model could not be reached",
+      "cardLoading": "Computing with current data…"
     },
     "how": {
       "title": "How it works",
@@ -459,8 +462,8 @@
     },
     "provenance": {
       "title": "Where the data come from",
-      "thesis": "Polygon, Celo and Arbitrum: thesis measurements over a 90-day window, with a single node provider per network.",
-      "benchmark": "Tempo, Aptos and Canton are not shown: they do not have a measured profile for the recommendation model yet."
+      "thesis": "Each metric says whether its value is live (a recent query to the network) or from the baseline measurement: Polygon, Celo and Arbitrum, the thesis 90-day window; Tempo, Aptos and Canton, the preliminary reduced-sample benchmark.",
+      "benchmark": "What cannot be computed live (for example finality on Ethereum or 72-hour windows that are still filling) keeps the baseline measurement and is tagged as such. See the Monitor for details."
     },
     "disclaimer": "This recommendation is a preliminary result of an academic prototype. It is not financial advice, it does not reflect real-time network data and costs exclude the on and off ramps to pesos.",
     "actions": {
@@ -603,7 +606,7 @@
   "standard": {
     "title": "Rating standard",
     "sub": "How each network is rated: the thesis model with a traffic light on top. It is public, fixed and reproducible: the same payment always gives the same result.",
-    "demoNote": "Thresholds and weights are those of the thesis. The measurement error of each metric is approximated in this prototype with a fixed relative value (8% for Polygon, Celo and Arbitrum; 25% for Tempo, Aptos and Canton) while the per-metric bootstrap is published.",
+    "demoNote": "Thresholds and weights are those of the thesis model and are read from the backend. The uncertainty of each metric is the measured one when it exists (standard error of the live sample or of the thesis); Tempo, Aptos and Canton baseline measurements have no estimate and are treated as exact.",
     "lights": {
       "title": "What each color means",
       "green": {
@@ -726,5 +729,90 @@
       "desc": "The capacity margin is not below 1 (only if B3 measures capacity)."
     },
     "allPass": "No gate fails for this payment."
+  },
+  "liveData": {
+    "title": "Network monitor",
+    "sub": "Live metrics per network, where each value comes from and what is missing. Metrics that cannot be measured live stay on the baseline until you recalibrate.",
+    "loading": "Querying the backend…",
+    "error": "The backend could not be reached.",
+    "empty": "No networks configured.",
+    "versionLine": "Profile version {version} · {live} of {total} metrics live",
+    "updated": "updated {age} ago",
+    "staleAfter": "a live metric expires after {time}",
+    "staleBackend": "No connection to the backend: showing the last known data.",
+    "legend": "Live: value computed from recent queries to the network. Base: stored long measurement (thesis or benchmark). No data: neither live nor in the baseline.",
+    "owner": "Owner: {name}",
+    "liveCount": "{n} of {total} live",
+    "health": {
+      "ok": "Collector healthy",
+      "degradada": "Collector degraded",
+      "caida": "Collector down",
+      "sin_datos": "No readings yet"
+    },
+    "noCollector": "This collector has not reported yet.",
+    "component": {
+      "bloques": "Blocks and payments",
+      "estado": "Network state",
+      "finalidad": "Finality",
+      "metricas": "Metric computation",
+      "precio": "Token price"
+    },
+    "lastOk": "last success {age} ago",
+    "neverOk": "no success yet",
+    "failures": "{n} failures in a row:",
+    "samples": "Stored samples: {blocks} blocks, {txs} transactions, {finality} finality readings",
+    "coverage": "{live} live, {base} baseline, {none} without data",
+    "lowerBound": "lower bound",
+    "meta": {
+      "live": "Live · {age} ago · n={n} · window {window}",
+      "base": "Baseline measurement ({source}) · {age} ago"
+    },
+    "why": {
+      "valida": "the live value is not current",
+      "insuficiente": "not enough samples yet; using the baseline",
+      "obsoleta": "the live value expired; using the baseline",
+      "fallida": "the live read failed; using the baseline",
+      "no_computable": "cannot be computed live",
+      "solo_base": "only exists in the baseline measurement",
+      "sin_intento": "no live computation yet"
+    },
+    "tag": {
+      "live": "Live",
+      "base": "Base",
+      "none": "No data",
+      "liveTitle": "Computed live {age} ago from {n} samples over a {window} window",
+      "baseTitle": "Baseline measurement (no current live value)",
+      "baseWhy": "Baseline measurement: the live value is {state}"
+    },
+    "banner": {
+      "baseMode": "Measurement mode: baseline measurements only, no live data.",
+      "live": "{n} of {total} metrics updated live (oldest {age} ago).",
+      "baseOnly": "No current live metrics: this recommendation uses baseline measurements only.",
+      "stale": "Could not refresh: showing the last known result.",
+      "monitor": "See monitor"
+    },
+    "insufficient": {
+      "title": "Not enough data to recommend",
+      "body": "The model needs at least two networks with measurements. No recommendation is shown so none is made up.",
+      "monitor": "See monitor",
+      "home": "Back to home"
+    },
+    "recalibrate": {
+      "title": "Recalibrate baseline measurements",
+      "desc": "Re-runs the batch benchmark (collection, computation and deliverables) and rebuilds the baseline measurements of Tempo, Aptos and Canton. Everything that can be measured in near real time already updates by itself; this only renews the fallback.",
+      "scopeDoes": "Recalibrates: {nets}.",
+      "scopeNot": "Not available: {nets}.",
+      "scopeCannot": "Does not resolve:",
+      "run": "Recalibrate now",
+      "running": "Recalibrating…",
+      "cancel": "Cancel",
+      "state": {
+        "en_curso": "Running",
+        "completado": "Completed",
+        "fallido": "Failed",
+        "cancelado": "Cancelled",
+        "interrumpido": "Interrupted"
+      }
+    }
   }
 }

@@ -34,7 +34,7 @@ export default function HomePage() {
     // Every network of band 1 counts: tied networks are not split into a winner and a loser.
     const winners: Record<string, number> = {};
     for (const res of results) {
-      for (const red of res?.resultado.bandas[0]?.redes ?? []) winners[red] = (winners[red] ?? 0) + 1;
+      for (const red of res?.resultado?.bandas[0]?.redes ?? []) winners[red] = (winners[red] ?? 0) + 1;
     }
     const top = Object.entries(winners).sort((a, b) => b[1] - a[1])[0];
     const volume = entries.reduce((s, e) => s + e.tx.amountCop, 0);

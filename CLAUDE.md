@@ -5,6 +5,67 @@ liquidación de pagos en Colombia (remesas, comercio, alto valor), siguiendo
 `docs/plan_medicion_tempo_aptos_canton.md` (adaptación de un benchmark previo
 sobre Polygon/Celo/Arbitrum, en `docs/benchmark-medible-polygon-celo-arbitrum.pdf`).
 
+## La aplicación (monorepo MVC)
+
+Aplicación web que monitorea seis redes casi en tiempo real y recomienda dónde liquidar un pago en COP con el modelo de la tesis. **Solo recomienda; no ejecuta transferencias.** Las seis redes: Polygon, Celo, Arbitrum (Dilan) y Tempo, Aptos, Canton (Jerónimo).
+
+```
+backend/app/        FastAPI. routes/ -> controllers/ -> services/ ; pipelines/{collectors,processors,validators,scheduler} ; db/ ; models/ ; utils/
+backend/modelo/     modelo de la tesis (modelo.py, perfiles.json, casos_referencia.json). NO se edita
+backend/benchmark/  pipeline por lotes de Tempo/Aptos/Canton (main.py, collect_*, compute_*, score_engine)
+backend/tests/      pytest
+frontend/src/       Next.js: app/[locale]/*, components/, modelo/ (cliente + tipos del backend), lib/, engine/ (tipos y constantes de display)
+resultados/         salidas del benchmark (fuente de la línea base de T/A/C)
+```
+
+Puntos de entrada: `backend/app/main.py` (ciclo de vida), `backend/app/container.py` (ensamblado), `backend/app/pipelines/scheduler.py` (sondeo), `backend/app/services/decision/recomendador.py` (modelo), `frontend/src/modelo/cliente.ts` (consumo de la API).
+
+Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `services/analytics/metricas.py` (ventanas móviles) -> `ServicioPerfiles.construir()` (línea base + métricas vivas válidas y frescas, con procedencia) -> `modelo.recomendar` en un pool de procesos -> `/api/modelo` -> frontend. Detalle en `docs/ARCHITECTURE.md`, `docs/DATA_PIPELINE.md`, `docs/DECISION_MODEL.md`, `docs/NETWORK_INTEGRATIONS.md`, `docs/API.md`.
+
+### Comandos
+
+```
+pip install -r backend/requirements.txt
+cd backend && python -m uvicorn app.main:app --port 8000      # API + colectores (crea backend/data/redes.db)
+cd frontend && npm run dev                                     # UI; /api/* se reenvía a BACKEND_URL
+cd backend && python -m pytest tests                           # 55 pruebas
+cd frontend && npm test && npx tsc --noEmit && npm run lint && npm run build
+python backend/benchmark/main.py [--collect]                   # benchmark por lotes, desde la raíz
+```
+
+### Decisiones que no son obvias
+
+- **Línea base + vivo**: una métrica en vivo reemplaza a la base solo si es `valida` (n mínimo, ventana completa en B2/C3/C5) y fresca (15 min; 2 h para lecturas de estado). Si no, cae a la base y la respuesta marca la procedencia. El modo `medicion` usa solo la base y reproduce los casos de referencia de la tesis.
+- **Conversión de la línea base de T/A/C** (`services/analytics/baseline.py`): A2 = p95/mediana; B3 x 48/18; C3 en %; **C1 del modelo = C1b**; `sigma=0`; no computable -> null; Canton B3 es `cota_inferior`.
+- Los precios USD se leen del registro de cada red (Chainlink en cadena, Pyth en Aptos). Hermes de Pyth ya no sirve precios sin clave y el Pyth on-chain de EVM está obsoleto; no los uses.
+- Cada identificador (USDC, feeds, selectores, topics) se verifica en vivo o se calcula con keccak. Misma regla de oro que abajo.
+- Canton B2 en vivo es la **mediana**; la base de `metrics.csv` usa el p95 (discrepancia heredada del benchmark).
+- Los RPC públicos son inestables (Polygon cambió de proveedor). Se configuran con `RPC_*`.
+- Python/httpx: se usa `ssl.create_default_context()` porque el bundle de certifi falla en esta máquina Windows.
+
+### Cómo añadir una red
+
+1. Procesador en `pipelines/processors/` (payload -> muestra con los campos de `muestras_bloque` / `muestras_tx` / `muestras_finalidad`).
+2. Colector en `pipelines/collectors/` (subclase de `Colector`; `ciclo_bloques`, opcional `ciclo_estado`/`ciclo_finalidad`); regístralo en `Contenedor._construir_colectores`.
+3. Una función `calcular_<red>` en `services/analytics/metricas.py` y su rama en `calcular_metricas`.
+4. Entrada en `services/network/registry.py` (métricas vivas y razón de cada solo-base) y en `Settings` (endpoint).
+5. Línea base: perfil en `perfiles.json`/`metrics.csv` o una conversión en `baseline.py`.
+6. Etiqueta en `frontend/src/lib/format.ts` (`NETWORK_LABEL`), `networks.<id>.desc` en `messages/{es,en}.json` y el id en `engine/types.ts` (`NETWORK_IDS`). El modelo y las páginas no cambian.
+
+### Cómo extender el modelo
+
+No se edita `modelo.py` (contrato en `backend/modelo/INTEGRACION.md`). Se cambian los datos (perfiles) o se añade lógica alrededor en `services/decision/`. Cualquier cambio de pesos/umbrales/fórmulas es una decisión de tesis, no de código.
+
+### Convenciones
+
+- Cada archivo lleva solo un comentario o docstring de cabecera; no se comenta línea a línea.
+- Nada de lógica en controladores ni en rutas. Sin microservicios.
+- No hay datos simulados en la aplicación: lo que falta se muestra como falta (`null`, `insuficiente`, `no_computable`).
+
+### Limitaciones conocidas
+
+Ver `README.md` (Aptos B2/D2, colector por lotes de P/C/A inexistente, ventanas largas, precio de APT congelado, Canton B3, RPC públicos).
+
 ## La regla de oro (no negociable)
 
 > Ninguna métrica se puntúa si su valor no puede derivarse de una consulta
@@ -55,31 +116,27 @@ encontraron `transfer_with_memo.rs`, `fork_schedule.rs` y
 `execution_config.rs` en esta pasada) — no asumas que el 401 de code search
 también bloquea esto.
 
-## Cómo correr esto
+## Cómo correr el benchmark por lotes
 
 ```
-python main.py              # rápido: usa resultados/raw/ ya descargado
-python main.py --collect    # lento: vuelve a consultar las 3 APIs en vivo primero
+python backend/benchmark/main.py              # rápido: usa resultados/raw/ ya descargado (desde la raíz del repo)
+python backend/benchmark/main.py --collect    # lento: vuelve a consultar las 3 APIs en vivo primero
 ```
 
-En cualquier caso corre `compute_*_metrics.py` → `build_deliverables.py` →
-`score_engine.py`, imprime un reporte diferenciado en consola y deja todo en
-`resultados/`. El entregable final para citar es `resultados/benchmark_final.csv`
-(una fila por red × escenario: puntaje, admisibilidad, y cuántas métricas de
-esa red son históricas / en vivo / sin computar).
+En cualquier caso corre `compute_*_metrics.py` -> `build_deliverables.py` -> `score_engine.py`, imprime un reporte diferenciado en consola y deja todo en `resultados/`. El entregable final para citar es `resultados/benchmark_final.csv`. Desde la app, el botón **Recalibrar** lo corre en un directorio aislado (`backend/data/recalibracion/<id>/`) sin tocar `resultados/`. Los scripts leen `resultados/...` relativo al directorio actual; `main.py` localiza sus scripts por su propia ubicación. Parámetros por entorno: `N_BLOCKS_TEMPO`, `N_BLOCKS_APTOS`, `MAX_PAGES`, `CANTON_START_AFTER`, `CANTON_MIGRATION_ID`.
 
 ## Arquitectura del pipeline
 
 ```
-scripts/collect_{tempo,aptos,canton}.py   -> resultados/raw/<red>/*.json (crudo)
-scripts/compute_{tempo,aptos,canton}_metrics.py -> resultados/raw/<red>_metrics.json
-scripts/build_deliverables.py             -> resultados/metrics.csv, limitaciones.md, run_manifest.json
-scripts/score_engine.py                   -> resultados/{gates,scores,sensitivity,discrimination}.csv
-main.py                                   -> reporte en consola + resultados/benchmark_final.csv
+backend/benchmark/collect_{tempo,aptos,canton}.py   -> resultados/raw/<red>/*.json (crudo)
+backend/benchmark/compute_{tempo,aptos,canton}_metrics.py -> resultados/raw/<red>_metrics.json
+backend/benchmark/build_deliverables.py             -> resultados/metrics.csv, limitaciones.md, run_manifest.json
+backend/benchmark/score_engine.py                   -> resultados/{gates,scores,sensitivity,discrimination}.csv
+backend/benchmark/main.py                 -> reporte en consola + resultados/benchmark_final.csv
 ```
 
 Los tres `collect_*.py` **no comparten código** (a propósito, el plan lo pide
-así: cada red expone un registro distinto). `poll_finality.py` es aparte: es
+así: cada red expone un registro distinto). `backend/benchmark/poll_finality.py` es aparte (la app lo reemplaza para Tempo con un sondeo continuo propio): es
 el único mecanismo de sondeo en vivo (W_L), pensado para correr horas en
 background, no dentro de una sesión corta.
 
@@ -94,7 +151,7 @@ plan:
   nodo, **lo que se mide ya ocurrió**. Es la inmensa mayoría de las métricas.
 - **`tiempo_real` (W_L)** — requiere sondeo continuo mientras el evento
   ocurre. Hoy eso es **únicamente B2 en Tempo y Aptos** (`τF − τ1`, vía
-  `scripts/poll_finality.py`): ninguna de las dos redes deja un evento
+  `backend/benchmark/poll_finality.py`): ninguna de las dos redes deja un evento
   posterior que registre cuándo algo quedó finalizado, así que no es
   reconstruible con datos históricos por diseño (Sec. D1 del plan). En
   Canton, B2 **sí** es histórico porque el verdict trae su propio
@@ -184,7 +241,7 @@ de lo que discriminaba antes.
 
 ## Quirk conocido del motor de puntajes (no es un bug que yo haya metido, pero lo vas a ver)
 
-`score_engine.py::normaliza()` usa una transformación logarítmica. Para
+`backend/benchmark/score_engine.py::normaliza()` usa una transformación logarítmica. Para
 métricas "mayor es mejor" (D1, D2, D3), un valor de **exactamente 0**
 produce `math.log(0)` → excepción capturada → la métrica se excluye
 silenciosamente del bloque (no cuenta como 0 puntos, simplemente no cuenta).
@@ -199,7 +256,7 @@ efecto colateral de otra tarea.
 
 Solo quedan 3 huecos reales (ver "Estado actual"), y dos no son de datos:
 
-- **`aptos.B2` en vivo** necesita `scripts/poll_finality.py` corriendo 72h en
+- **`aptos.B2` en vivo** necesita `backend/benchmark/poll_finality.py` corriendo 72h en
   background, no una sesión interactiva corta.
 - **`aptos.D2`** necesita una recolección dirigida a transferencias de pago
   reales (no la muestra actual, dominada por trading de derivados) para
@@ -207,7 +264,7 @@ Solo quedan 3 huecos reales (ver "Estado actual"), y dos no son de datos:
 - **Ventana W_H de 14 días completos**: todo lo de arriba sigue corriendo
   sobre una muestra reducida de minutos/segundos, no la ventana del plan.
   Si se decide correr la recolección completa, aumentar `N_BLOCKS` en
-  `collect_tempo.py`/`collect_aptos.py` y `MAX_PAGES` en `collect_canton.py`
+  `N_BLOCKS_TEMPO`/`N_BLOCKS_APTOS` y `MAX_PAGES` (variables de entorno de los `collect_*.py`)
   (y paginar más allá si hace falta) — el resto del pipeline ya sabe qué
   hacer con más datos, no hace falta tocar los `compute_*` ni
   `build_deliverables.py`.
@@ -218,7 +275,9 @@ Solo quedan 3 huecos reales (ver "Estado actual"), y dos no son de datos:
   sección anterior antes de asumir que un bloque D con una métrica en 0 está
   usando las tres métricas en el promedio.
 
-## Mapa de archivos
+## Mapa de archivos (documentos del benchmark)
+
+Los scripts del benchmark están ahora en `backend/benchmark/` (antes `scripts/` y `main.py` en la raíz); los documentos de `docs/` conservan las rutas antiguas.
 
 - `docs/plan_medicion_tempo_aptos_canton.md` — la especificación completa
   (qué medir, cómo, compuertas, pesos, reglas de honestidad). Léelo antes de

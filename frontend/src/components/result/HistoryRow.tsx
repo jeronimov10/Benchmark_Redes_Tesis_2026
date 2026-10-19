@@ -15,7 +15,7 @@ export function HistoryRow({ entry }: { entry: HistoryEntry }) {
   const ts = useTranslations("scenarios");
   const fmt = useFmt();
   const { data } = useRecomendacion(useEntrada(entradaModelo(entry.tx, entry.answers.country)));
-  const r = data?.resultado;
+  const r = data?.resultado ?? null;
   const winners = r?.bandas[0]?.redes ?? [];
 
   return (
@@ -24,7 +24,7 @@ export function HistoryRow({ entry }: { entry: HistoryEntry }) {
       className="-mx-3 flex items-center gap-4 rounded-2xl px-3 py-4 transition-colors hover:bg-surface"
     >
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-sm font-extrabold">
-        {!r ? <Loader2 size={16} className="animate-spin" aria-hidden /> : winners.length ? networkLabel(winners[0])[0] : "—"}
+        {!data ? <Loader2 size={16} className="animate-spin" aria-hidden /> : winners.length ? networkLabel(winners[0])[0] : "—"}
       </span>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 font-extrabold">

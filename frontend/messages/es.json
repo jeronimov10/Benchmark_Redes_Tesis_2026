@@ -16,10 +16,11 @@
     "switchUser": "Cambiar de usuario",
     "start": "Empezar",
     "language": "Idioma",
-    "main": "Navegación principal"
+    "main": "Navegación principal",
+    "monitor": "Monitoreo"
   },
   "footer": {
-    "demo": "Prototipo académico. Las recomendaciones usan el modelo de la tesis con las mediciones de Polygon, Celo y Arbitrum (ventana de 90 días, octubre de 2026). Los costos en pesos usan una TRM demostrativa y no incluyen rampas de entrada y salida.",
+    "demo": "Prototipo académico. Las recomendaciones usan el modelo de la tesis con mediciones base (Polygon, Celo y Arbitrum: 90 días, octubre de 2026; Tempo, Aptos y Canton: benchmark preliminar) y las sobrescriben con métricas en vivo cuando están vigentes. Los costos en pesos usan una TRM demostrativa y no incluyen rampas de entrada y salida.",
     "academic": "Proyecto de grado. Inspirado visualmente en la paleta de Bancolombia, sin afiliación alguna con la entidad."
   },
   "risk": {
@@ -40,7 +41,9 @@
       "ctaContinue": "Continuar",
       "ctaStandard": "Ver cómo calificamos",
       "cardKicker": "Red recomendada",
-      "cardSub": "Ejemplo ilustrativo"
+      "cardSub": "Ejemplo con datos actuales: remesa de 1.200.000 COP",
+      "cardError": "No se pudo consultar el modelo",
+      "cardLoading": "Calculando con datos actuales…"
     },
     "how": {
       "title": "Cómo funciona",
@@ -459,8 +462,8 @@
     },
     "provenance": {
       "title": "De dónde salen los datos",
-      "thesis": "Polygon, Celo y Arbitrum: mediciones de la tesis sobre una ventana de 90 días, con un solo proveedor de nodo por red.",
-      "benchmark": "Tempo, Aptos y Canton no aparecen: todavía no tienen un perfil medido para el modelo de recomendación."
+      "thesis": "Cada métrica indica si su valor es en vivo (consulta reciente a la red) o de la medición base: Polygon, Celo y Arbitrum, ventana de 90 días de la tesis; Tempo, Aptos y Canton, benchmark preliminar de muestra reducida.",
+      "benchmark": "Lo que no se puede calcular en vivo (por ejemplo la finalidad en Ethereum o ventanas de 72 horas aún sin completar) conserva la medición base y se marca como tal. Ver el detalle en Monitoreo."
     },
     "disclaimer": "Esta recomendación es un resultado preliminar de un prototipo académico. No es asesoría financiera, no refleja datos de redes en tiempo real y los costos no incluyen las rampas de entrada y salida a pesos.",
     "actions": {
@@ -603,7 +606,7 @@
   "standard": {
     "title": "Estándar de calificación",
     "sub": "Así se califica cada red: el modelo de la tesis con un semáforo encima. Es público, fijo y reproducible: el mismo pago da siempre el mismo resultado.",
-    "demoNote": "Los umbrales y pesos son los de la tesis. Los errores de medición de cada métrica se aproximan en este prototipo con un valor relativo fijo (8% en Polygon, Celo y Arbitrum; 25% en Tempo, Aptos y Canton), mientras se publica el bootstrap por métrica.",
+    "demoNote": "Umbrales y pesos son los del modelo de la tesis y se leen del backend. La incertidumbre de cada métrica es la medida cuando existe (error estándar de la muestra en vivo o de la tesis); Tempo, Aptos y Canton en su medición base no tienen estimación y se tratan sin incertidumbre.",
     "lights": {
       "title": "Qué significa cada color",
       "green": {
@@ -726,5 +729,90 @@
       "desc": "El margen de capacidad no es menor que 1 (solo si B3 mide capacidad)."
     },
     "allPass": "No falla ninguna compuerta para este pago."
+  },
+  "liveData": {
+    "title": "Monitoreo de redes",
+    "sub": "Métricas en vivo por red, de dónde sale cada valor y qué falta. Las que no se pueden medir en vivo siguen en la medición base hasta recalibrar.",
+    "loading": "Consultando el backend…",
+    "error": "No se pudo consultar el backend.",
+    "empty": "No hay redes configuradas.",
+    "versionLine": "Versión de perfil {version} · {live} de {total} métricas en vivo",
+    "updated": "actualizado hace {age}",
+    "staleAfter": "una métrica en vivo caduca a los {time}",
+    "staleBackend": "Sin conexión con el backend: se muestra el último dato conocido.",
+    "legend": "En vivo: valor calculado de consultas recientes a la red. Base: medición larga guardada (tesis o benchmark). Sin dato: ni en vivo ni en la base.",
+    "owner": "Responsable: {name}",
+    "liveCount": "{n} de {total} en vivo",
+    "health": {
+      "ok": "Colector sano",
+      "degradada": "Colector degradado",
+      "caida": "Colector caído",
+      "sin_datos": "Sin lecturas todavía"
+    },
+    "noCollector": "Este colector aún no ha reportado.",
+    "component": {
+      "bloques": "Bloques y pagos",
+      "estado": "Estado de la red",
+      "finalidad": "Finalidad",
+      "metricas": "Cálculo de métricas",
+      "precio": "Precio del token"
+    },
+    "lastOk": "último éxito hace {age}",
+    "neverOk": "sin éxito todavía",
+    "failures": "{n} fallos seguidos:",
+    "samples": "Muestras guardadas: {blocks} bloques, {txs} transacciones, {finality} finalidades",
+    "coverage": "{live} en vivo, {base} en base, {none} sin dato",
+    "lowerBound": "cota inferior",
+    "meta": {
+      "live": "En vivo · hace {age} · n={n} · ventana {window}",
+      "base": "Medición base ({source}) · hace {age}"
+    },
+    "why": {
+      "valida": "el valor en vivo no está vigente",
+      "insuficiente": "muestras insuficientes aún; usa la base",
+      "obsoleta": "el dato en vivo caducó; usa la base",
+      "fallida": "la lectura en vivo falló; usa la base",
+      "no_computable": "no se puede calcular en vivo",
+      "solo_base": "solo existe en la medición base",
+      "sin_intento": "aún no hay cálculo en vivo"
+    },
+    "tag": {
+      "live": "En vivo",
+      "base": "Base",
+      "none": "Sin dato",
+      "liveTitle": "Calculado en vivo hace {age} con {n} muestras en una ventana de {window}",
+      "baseTitle": "Medición base (no hay valor en vivo vigente)",
+      "baseWhy": "Medición base: el valor en vivo está {state}"
+    },
+    "banner": {
+      "baseMode": "Modo medición: solo mediciones base, sin datos en vivo.",
+      "live": "{n} de {total} métricas actualizadas en vivo (la más antigua hace {age}).",
+      "baseOnly": "Sin métricas en vivo vigentes: esta recomendación usa solo las mediciones base.",
+      "stale": "No se pudo refrescar: se muestra el último resultado conocido.",
+      "monitor": "Ver monitoreo"
+    },
+    "insufficient": {
+      "title": "No hay datos suficientes para recomendar",
+      "body": "El modelo necesita al menos dos redes con mediciones. No se muestra ninguna recomendación para no inventarla.",
+      "monitor": "Ver monitoreo",
+      "home": "Volver al inicio"
+    },
+    "recalibrate": {
+      "title": "Recalibrar mediciones base",
+      "desc": "Vuelve a correr el benchmark por lotes (recolección, cálculo y entregables) y reconstruye las mediciones base de Tempo, Aptos y Canton. Todo lo que sí se puede medir casi en tiempo real ya se actualiza solo; esto solo renueva lo que sirve de respaldo.",
+      "scopeDoes": "Recalibra: {nets}.",
+      "scopeNot": "No disponible: {nets}.",
+      "scopeCannot": "No resuelve:",
+      "run": "Recalibrar ahora",
+      "running": "Recalibrando…",
+      "cancel": "Cancelar",
+      "state": {
+        "en_curso": "En curso",
+        "completado": "Completado",
+        "fallido": "Falló",
+        "cancelado": "Cancelado",
+        "interrumpido": "Interrumpido"
+      }
+    }
   }
 }

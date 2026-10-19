@@ -3,8 +3,12 @@
 import { useTranslations } from "next-intl";
 import { ArrowRight, Gauge, ListChecks, Route } from "lucide-react";
 import { ButtonLink, Container, DemoBadge, Semaphore, cx } from "@/components/ui";
-import { NETWORK_IDS, SCENARIO_IDS, type Light, type ScenarioId } from "@/engine/types";
-import { NETWORK_LABEL } from "@/lib/format";
+import { DEMO_TRM } from "@/engine/fx";
+import { NETWORK_IDS, SCENARIO_IDS, type ScenarioId } from "@/engine/types";
+import { NETWORK_LABEL, networkLabel } from "@/lib/format";
+import { useRecomendacion } from "@/modelo/cliente";
+import { luzRed, redesEnOrden } from "@/modelo/entrada";
+import { esCompleta, type EntradaModelo } from "@/modelo/tipos";
 import { useHydrated, useStore } from "@/state/store";
 
 const STEP_ICONS = [ListChecks, Route, Gauge];
@@ -13,13 +17,13 @@ const SCENARIO_TONE: Record<ScenarioId, string> = {
   E2: "bg-brand text-ink",
   E3: "bg-ink text-white",
 };
-const SAMPLE: [string, Light][] = [
-  ["Polygon", "green"],
-  ["Arbitrum", "yellow"],
-  ["Celo", "yellow"],
-  ["Tempo", "yellow"],
-  ["Canton", "red"],
-];
+const CASO_ILUSTRATIVO: EntradaModelo = {
+  monto_cop: 1_200_000,
+  transfronterizo: true,
+  espera_s: 3600,
+  irrevocabilidad: "baja",
+  trm: DEMO_TRM,
+};
 
 export default function LandingPage() {
   const t = useTranslations("landing");
@@ -29,6 +33,10 @@ export default function LandingPage() {
   const { users, activeId } = useStore();
   const hasUsers = hydrated && users.length > 0;
   const ctaHref = hydrated && activeId ? "/home" : "/start";
+  const { data: ejemplo, error: errorEjemplo } = useRecomendacion(CASO_ILUSTRATIVO);
+  const r = esCompleta(ejemplo) ? ejemplo.resultado : null;
+  const filas = r ? [...redesEnOrden(r), ...Object.keys(r.inadmisibles)].map((red) => [networkLabel(red), luzRed(r, red)] as const) : [];
+  const ganadores = r?.bandas[0]?.redes.map(networkLabel).join(" · ") ?? "—";
 
   return (
     <>
@@ -54,15 +62,18 @@ export default function LandingPage() {
             <div className="absolute -right-6 -top-6 h-40 w-40 rounded-full bg-pink" />
             <div className="relative rounded-[32px] bg-brand p-7 shadow-lift sm:p-9">
               <p className="text-xs font-bold uppercase tracking-[0.14em]">{t("hero.cardKicker")}</p>
-              <p className="mt-2 text-5xl font-extrabold tracking-tight">Polygon</p>
+              <p className="mt-2 text-5xl font-extrabold tracking-tight">{ganadores}</p>
               <p className="mt-1 text-sm">{t("hero.cardSub")}</p>
               <ul className="mt-6 space-y-1 rounded-2xl bg-paper p-3">
-                {SAMPLE.map(([name, light]) => (
+                {filas.map(([name, light]) => (
                   <li key={name} className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold odd:bg-surface">
                     {name}
                     <Semaphore light={light} />
                   </li>
                 ))}
+                {filas.length === 0 && (
+                  <li className="px-3 py-2.5 text-sm text-muted">{errorEjemplo ? t("hero.cardError") : t("hero.cardLoading")}</li>
+                )}
               </ul>
             </div>
           </div>

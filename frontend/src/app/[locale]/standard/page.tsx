@@ -3,9 +3,13 @@
 import { useTranslations } from "next-intl";
 import { Card, Container, DemoBadge, Semaphore, SectionTitle } from "@/components/ui";
 import { BLOCKS, METRICS } from "@/engine/metrics";
-import { SCENARIO_WEIGHTS } from "@/engine/model";
-import { SCENARIO_IDS } from "@/engine/types";
+import { SCENARIO_IDS, type ScenarioId } from "@/engine/types";
 import { useFmt } from "@/lib/format";
+import { UNIDAD } from "@/modelo/entrada";
+import { useInfoModelo } from "@/modelo/cliente";
+
+const ESCENARIO_MODELO = { E1: "remesas", E2: "comercio", E3: "altovalor" } as const satisfies Record<ScenarioId, string>;
+const DIRECCION = { menor: "lower", mayor: "higher", nueves: "higher" } as const;
 
 const GATES = ["G1", "G2", "G3", "G4"] as const;
 
@@ -16,6 +20,9 @@ export default function StandardPage() {
   const td = useTranslations("detail");
   const tg = useTranslations("gates");
   const fmt = useFmt();
+  const info = useInfoModelo();
+  const umbral = (v: number | { fraccion_ticket: number }) =>
+    typeof v === "number" ? null : fmt.percent(v.fraccion_ticket);
 
   return (
     <Container className="max-w-5xl py-12">
@@ -70,7 +77,9 @@ export default function StandardPage() {
                 </td>
                 <td>{ts(`${e}.ticket`)}</td>
                 <td>{t(`scenarios.r.${e}`)}</td>
-                <td className="tabular-nums">{BLOCKS.map((b) => fmt.decimal(SCENARIO_WEIGHTS[e][b], 2)).join(" / ")}</td>
+                <td className="tabular-nums">
+                  {info ? BLOCKS.map((b) => fmt.decimal(info.escenarios[ESCENARIO_MODELO[e]].pesos[b], 2)).join(" / ") : "—"}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -120,9 +129,13 @@ export default function StandardPage() {
                     <span className="font-bold">{tm(`${m.id}.name`)}</span>
                     <span className="block text-xs text-muted">{tm(`${m.id}.desc`)}</span>
                   </td>
-                  <td className="text-right tabular-nums">{fmt.metricValue(m.t, m.unit)}</td>
-                  <td className="text-right tabular-nums">{fmt.metricValue(m.w, m.unit)}</td>
-                  <td className="pl-4 text-xs">{t(`dir.${m.dir}`)}</td>
+                  <td className="text-right tabular-nums">
+                    {info ? (umbral(info.metricas[m.id].objetivo) ?? fmt.metricValue(info.metricas[m.id].objetivo as number, UNIDAD[m.id])) : "—"}
+                  </td>
+                  <td className="text-right tabular-nums">
+                    {info ? (umbral(info.metricas[m.id].inaceptable) ?? fmt.metricValue(info.metricas[m.id].inaceptable as number, UNIDAD[m.id])) : "—"}
+                  </td>
+                  <td className="pl-4 text-xs">{info ? t(`dir.${DIRECCION[info.metricas[m.id].direccion]}`) : "—"}</td>
                   <td className="text-xs">{t(`catalog.${m.source}`)}</td>
                 </tr>
               ))}

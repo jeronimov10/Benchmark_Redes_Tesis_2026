@@ -21,6 +21,7 @@ import { Link } from "@/i18n/navigation";
 import { BLOCKS } from "@/engine/metrics";
 import { SCENARIO_IDS, type BlockId, type Irreversibility, type NetworkId, type TxInput } from "@/engine/types";
 import { useDebounced, useEntrada, useRecomendacion } from "@/modelo/cliente";
+import { AvisoDatos, SinRecomendacion } from "@/components/result/EstadoDatos";
 import {
   blocksAhead,
   composicionPorEscenario,
@@ -31,7 +32,7 @@ import {
   redesEnOrden,
   valueOf,
 } from "@/modelo/entrada";
-import type { DetalleRed, RespuestaRecomendar } from "@/modelo/tipos";
+import { esCompleta, type DetalleRed, type RespuestaCompleta, type RespuestaRecomendar } from "@/modelo/tipos";
 import { txQuery } from "@/lib/attrs";
 import { networkLabel as label, useFmt } from "@/lib/format";
 import { useRequireUser } from "@/lib/useRequireUser";
@@ -96,6 +97,8 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
     );
   }
 
+  if (!esCompleta(rec)) return <SinRecomendacion rec={rec} />;
+
   const r = rec.resultado;
   const band1 = r.bandas[0];
   const winners = band1?.redes ?? [];
@@ -104,7 +107,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
   const dominant = escenarioDominante(r.composicion);
   const composition = composicionPorEscenario(r.composicion);
   const ordered = [...redesEnOrden(r), ...Object.keys(r.inadmisibles)];
-  const originalWinners = original.data?.resultado.bandas[0]?.redes ?? [];
+  const originalWinners = original.data?.resultado?.bandas[0]?.redes ?? [];
   const changed = override && original.data && winners.join() !== originalWinners.join();
   const accepted = tx.recipient.accepted;
   const notAccepted = (red: string) => accepted !== "unknown" && !accepted.includes(red as NetworkId);
@@ -118,6 +121,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
         {fmt.cop(r.caso.monto_cop)} ≈ {fmt.usdt(r.caso.ticket_usd)} · {ts(`${dominant}.name`)}
         {stale && <Loader2 size={14} className="animate-spin" aria-label={t("model.loading")} />}
       </p>
+      <AvisoDatos rec={rec} obsoleto={current.stale} />
 
       {band1 ? (
         <section className="animate-fade-up grid gap-5 lg:grid-cols-5">
@@ -454,7 +458,7 @@ function BlockBars({ d }: { d: DetalleRed | undefined }) {
   );
 }
 
-function ScoreBar({ red, rec }: { red: string; rec: RespuestaRecomendar }) {
+function ScoreBar({ red, rec }: { red: string; rec: RespuestaCompleta }) {
   const t = useTranslations("result.bands");
   const fmt = useFmt();
   const p = rec.resultado.bandas.find((b) => b.redes.includes(red))?.puntajes[red];
@@ -494,7 +498,7 @@ function NetworkRow({
   notAccepted,
 }: {
   red: string;
-  rec: RespuestaRecomendar;
+  rec: RespuestaCompleta;
   q: string;
   id: string;
   isWinner: boolean;
@@ -589,7 +593,7 @@ function VsCard({
 }: {
   a: string;
   b: string;
-  rec: RespuestaRecomendar;
+  rec: RespuestaCompleta;
   title: string;
   tb: (k: BlockId) => string;
 }) {
