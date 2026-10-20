@@ -2,14 +2,14 @@
 
 ## Requisitos
 
-Python 3.11+ y Node 22+. Sin claves de API.
+Python 3.11+, Node 22+ y pnpm 12 (`npm install -g pnpm` o `corepack enable`). Sin claves de API.
 
 ## Ejecutar
 
 ```bash
 pip install -r backend/requirements.txt
 cd backend && python -m uvicorn app.main:app --reload --port 8000     # API + colectores
-cd frontend && npm install && npm run dev                              # UI en :3000
+cd frontend && pnpm install && pnpm dev                              # UI en :3000
 ```
 
 Para ver la UI sin red: `COLECTORES_ACTIVOS=false` (usa solo la línea base). Para una base nueva, borra `backend/data/redes.db*`.
@@ -18,7 +18,7 @@ Para ver la UI sin red: `COLECTORES_ACTIVOS=false` (usa solo la línea base). Pa
 
 ```bash
 cd backend && python -m pytest tests
-cd frontend && npm test && npx tsc --noEmit && npm run lint && npm run build
+cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py     # benchmark con resultados/raw/ (sin red); `--collect` vuelve a consultar las redes
 ```
 
@@ -44,4 +44,4 @@ Qué cubre cada archivo de `backend/tests/`:
 
 - Los scripts de `backend/benchmark/` resuelven sus rutas relativas al directorio actual (`resultados/...`); ejecútalos desde la raíz del repositorio. `main.py` localiza sus scripts por su propia ubicación.
 - Documentos históricos (`docs/plan_*.md`, `docs/matriz_requerimientos.md`, `docs/fase4_verificacion.md`) mencionan las rutas antiguas `scripts/` y `main.py`; ahora están en `backend/benchmark/`.
-- En Windows, si el puerto 3000 está ocupado por otro proyecto, usa `npx next dev -p 3100`.
+- En Windows, si el puerto 3000 está ocupado por otro proyecto, usa `pnpm exec next dev -p 3100`.

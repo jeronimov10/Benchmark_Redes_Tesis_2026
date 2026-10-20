@@ -36,7 +36,7 @@ Elegir una red para liquidar un pago depende de costo, tiempo, concentración, c
 |---|---|
 | Backend | Python 3.11, FastAPI, uvicorn, httpx, SQLite (stdlib), pycryptodome (keccak) |
 | Modelo | `backend/modelo/modelo.py` (stdlib), ejecutado en un pool de procesos |
-| Frontend | Next.js 16, React 19, next-intl (es/en), Tailwind 4, vitest |
+| Frontend | Next.js 16, React 19, next-intl (es/en), Tailwind 4, vitest, pnpm |
 | Pruebas | pytest (backend), vitest (frontend) |
 
 ## Arquitectura (monorepo monolítico, MVC)
@@ -189,16 +189,16 @@ Si el puerto 3000 u 8000 está ocupado, cámbialo sin editar archivos: `FRONTEND
 ### Sin Docker (desarrollo)
 
 ```bash
-pip install -r backend/requirements.txt && cd frontend && npm install && cd ..
+pip install -r backend/requirements.txt && cd frontend && pnpm install && cd ..
 cd backend && python -m uvicorn app.main:app --port 8000     # terminal 1
-cd frontend && npm run dev                                    # terminal 2 -> http://localhost:3000
+cd frontend && pnpm dev                                        # terminal 2 -> http://localhost:3000
 ```
 
 ## Pruebas
 
 ```bash
 cd backend && python -m pytest tests        # 55 pruebas
-cd frontend && npm test && npx tsc --noEmit && npm run lint && npm run build
+cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py            # benchmark por lotes con resultados/raw/ (sin red)
 ```
 

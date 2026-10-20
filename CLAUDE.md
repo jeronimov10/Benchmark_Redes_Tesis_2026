@@ -27,9 +27,9 @@ Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `servi
 ```
 pip install -r backend/requirements.txt
 cd backend && python -m uvicorn app.main:app --port 8000      # API + colectores (crea backend/data/redes.db)
-cd frontend && npm run dev                                     # UI; /api/* se reenvía a BACKEND_URL
+cd frontend && pnpm dev                                     # UI; /api/* se reenvía a BACKEND_URL
 cd backend && python -m pytest tests                           # 55 pruebas
-cd frontend && npm test && npx tsc --noEmit && npm run lint && npm run build
+cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py [--collect]                   # benchmark por lotes, desde la raíz
 ```
 

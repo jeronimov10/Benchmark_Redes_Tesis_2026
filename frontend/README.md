@@ -5,12 +5,12 @@ Interfaz Next.js 16 (React 19, next-intl es/en, Tailwind 4) de la aplicación de
 ## Ejecutar
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000 (el backend debe estar en :8000)
-npm test           # vitest
-npx tsc --noEmit
-npm run lint
-npm run build
+pnpm install
+pnpm dev           # http://localhost:3000 (el backend debe estar en :8000)
+pnpm test          # vitest
+pnpm exec tsc --noEmit
+pnpm lint
+pnpm build
 ```
 
 ## Qué muestra
