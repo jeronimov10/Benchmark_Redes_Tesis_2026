@@ -2,6 +2,16 @@
 
 Proyecto de grado. Aplicación web que monitorea seis redes casi en tiempo real y recomienda en cuál liquidar un pago en pesos colombianos (remesas, comercio, alto valor), usando el modelo de decisión de la tesis. **Recomienda; no mueve fondos ni ejecuta transferencias.**
 
+## Arranque rápido
+
+```bash
+docker compose up --build
+```
+
+Frontend en http://localhost:3000 y backend en http://localhost:8000. Es el único comando necesario (Docker con Compose); detalles, puertos y solución de problemas en [Cómo correr el proyecto (Docker)](#cómo-correr-el-proyecto-docker).
+
+Diagrama completo de arquitectura y funcionamiento (qué métricas son en vivo, cuáles no, cómo se calculan y cómo decide el modelo): [docs/arquitectura_y_funcionamiento.mmd](docs/arquitectura_y_funcionamiento.mmd). Se abre en <https://mermaid.live> o con la extensión Mermaid de VS Code.
+
 ## Problema y objetivos
 
 Elegir una red para liquidar un pago depende de costo, tiempo, concentración, continuidad y primitivas de pago, y esas propiedades cambian. El sistema:
@@ -137,44 +147,52 @@ Metodología de la tesis (§5.4), sin cambios: interpolación de pesos entre tre
 
 Todas opcionales (no se requieren claves). Lista completa en [.env.example](.env.example). Las más relevantes: `DB_PATH`, `RPC_POLYGON` (los RPC públicos de Polygon son inestables; usa un proveedor propio si hace falta), `OBSOLESCENCIA_S`, `VENTANA_*`, `BACKEND_URL` (frontend).
 
-## Cómo correr el backend y el frontend
+## Cómo correr el proyecto (Docker)
 
-Requisitos: Python 3.11+ y Node 22+. No se necesitan claves de API.
-
-**1. Instalar (una sola vez)**
+Requisito único: Docker con Compose. No se necesitan claves de API.
 
 ```bash
-pip install -r backend/requirements.txt
-cd frontend && npm install
+docker compose up --build
 ```
 
-**2. Backend** (terminal 1, desde la raíz del repo)
+Ese comando construye las dos imágenes y levanta todo:
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend (API y `/docs`) | http://localhost:8000 |
+
+Probado: las dos imágenes compilan, el backend queda `healthy`, las seis redes responden `ok` y el frontend recomienda con datos en vivo. El backend crea su base SQLite en un volumen (`datos`), siembra la línea base y empieza a sondear las seis redes; el frontend espera a que el backend esté sano. Los datos en vivo se conservan entre reinicios.
+
+Uso diario:
 
 ```bash
-cd backend
-python -m uvicorn app.main:app --port 8000
+docker compose up -d --build     # en segundo plano
+docker compose logs -f backend   # ver el sondeo
+docker compose down              # detener (conserva los datos)
+docker compose down -v           # detener y borrar la base de datos
 ```
 
-Al iniciar crea `backend/data/redes.db`, siembra la línea base y empieza a sondear las seis redes. Comprueba en `http://localhost:8000/api/salud` (todas las redes deben aparecer `ok`) y en `http://localhost:8000/docs`.
+Qué ver: `http://localhost:3000/es/start` (crea un usuario) → `/es/monitor` (estado de colectores y métricas en vivo/base; tras ~1 minuto ya hay datos) → `/es/transaction/new` (describe un pago y mira el resultado).
 
-**3. Frontend** (terminal 2)
+**Si `docker compose up --build` falla con `invalid file request ...` o `failed to execute bake`:** el repositorio está en OneDrive y algunos archivos son marcadores "solo en la nube" que Docker no puede leer. Fuerza su descarga local (PowerShell, desde la raíz del repo) y reintenta:
+
+```powershell
+attrib +P -U "*" /s /d
+docker compose up --build
+```
+
+Si persiste el error de `bake`: `$env:COMPOSE_BAKE="false"; docker compose up --build`. Lo más estable es mover el repo fuera de OneDrive.
+
+Si el puerto 3000 u 8000 está ocupado, cámbialo sin editar archivos: `FRONTEND_PORT=3100 BACKEND_PORT=8001 docker compose up --build` (PowerShell: `$env:FRONTEND_PORT="3100"; docker compose up --build`). Para usar otro RPC: `RPC_POLYGON=https://tu-proveedor docker compose up --build`. Sin internet: `COLECTORES_ACTIVOS=false docker compose up --build` (solo línea base).
+
+### Sin Docker (desarrollo)
 
 ```bash
-cd frontend
-npm run dev                 # http://localhost:3000
+pip install -r backend/requirements.txt && cd frontend && npm install && cd ..
+cd backend && python -m uvicorn app.main:app --port 8000     # terminal 1
+cd frontend && npm run dev                                    # terminal 2 -> http://localhost:3000
 ```
-
-Si el puerto 3000 está ocupado: `npx next dev -p 3100` y abre `http://localhost:3100`. Si el backend no está en el puerto 8000: `BACKEND_URL=http://127.0.0.1:PUERTO npm run dev`.
-
-**4. Ver el proyecto**
-
-1. Abre `/es/start`, crea un usuario (onboarding) y entra.
-2. `/es/monitor`: estado de cada colector y de cada métrica (en vivo / base / sin dato). Tras ~1 minuto ya hay métricas en vivo; las de ventana larga tardan horas.
-3. `/es/transaction/new`: describe un pago y mira el resultado y el detalle por red (con etiqueta En vivo / Base por métrica).
-
-**Para detener todo:** `Ctrl+C` en cada terminal. Variante de producción del frontend: `npm run build && npx next start -p 3100`.
-
-Sin conexión a internet: `COLECTORES_ACTIVOS=false` arranca el backend solo con la línea base (todo sale como `base`).
 
 ## Pruebas
 

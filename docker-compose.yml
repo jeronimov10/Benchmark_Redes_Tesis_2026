@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      CORS_ORIGINS: http://localhost:3000
+      RPC_POLYGON: ${RPC_POLYGON:-https://polygon.publicnode.com}
+      RPC_CELO: ${RPC_CELO:-https://forno.celo.org}
+      RPC_ARBITRUM: ${RPC_ARBITRUM:-https://arb1.arbitrum.io/rpc}
+      RPC_TEMPO: ${RPC_TEMPO:-https://rpc.tempo.xyz}
+      COLECTORES_ACTIVOS: ${COLECTORES_ACTIVOS:-true}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - datos:/app/backend/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  datos:
