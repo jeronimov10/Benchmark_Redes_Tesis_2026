@@ -586,7 +586,7 @@ Totales de métricas en vivo: Polygon/Celo/Arbitrum **9** · Tempo **14** · Apt
 
 Convenciones: **Lectura** = cada cuánto se obtiene el dato crudo. **Ventana** = sobre qué periodo se calcula. **n mín.** = muestras mínimas para ser `valida`. **Válida desde** = cuándo la métrica puede entrar al perfil. Las métricas con "al juntar n" dependen del tráfico de pagos de la red: no se garantiza un tiempo fijo. Las métricas se recalculan cada 30 s en todos los casos.
 
-### 15.1 Polygon, Celo y Arbitrum (Dilan)
+### 15.1 Polygon, Celo y Arbitrum
 
 Fuente: JSON-RPC (`RPC_POLYGON`, `RPC_CELO`, `RPC_ARBITRUM`); precios Chainlink en cadena.
 
@@ -603,7 +603,7 @@ Fuente: JSON-RPC (`RPC_POLYGON`, `RPC_CELO`, `RPC_ARBITRUM`); precios Chainlink 
 | D1 | tipo de tx (EIP-7702), destino (EntryPoint 4337), selector EIP-3009, `feeCurrency` | 20 s | 24 h | 30 | al juntar n |
 | A3, A4, B2, B2b, B3, D2, D3 | — | — | — | — | solo base (ver [§5](#nivel-d-solo-línea-base)) |
 
-### 15.2 Tempo (Jerónimo)
+### 15.2 Tempo
 
 Fuente: JSON-RPC `rpc.tempo.xyz`.
 
@@ -624,7 +624,7 @@ Fuente: JSON-RPC `rpc.tempo.xyz`.
 | D2 | evento `TransferWithMemo` sobre transferencias | 20 s | 24 h | 30 | al juntar n |
 | D3 | más de una transferencia por transacción | 20 s | 24 h | 30 | al juntar n |
 
-### 15.3 Aptos (Jerónimo)
+### 15.3 Aptos
 
 Fuente: REST `api.mainnet.aptoslabs.com/v1`; precio Pyth on-chain (congelado). Se muestrean **6 bloques por ciclo**.
 
@@ -642,7 +642,7 @@ Fuente: REST `api.mainnet.aptoslabs.com/v1`; precio Pyth on-chain (congelado). S
 | D3 | más de un evento `fungible_asset::Deposit/Withdraw` | 20 s | 24 h | 30 | al juntar n (n pequeño) |
 | B2, C3, C5, D2 | — | — | — | — | solo base (ver [§5](#nivel-d-solo-línea-base)) |
 
-### 15.4 Canton (Jerónimo)
+### 15.4 Canton
 
 Fuente: Scan API `api.cantonnodes.com` (`POST /v0/events` con cursor, `GET /v0/dso`). Se conserva 1 de cada 4 veredictos.
 

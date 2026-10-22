@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animación del pipeline de datos</title>
+<style>
+:root{
+  --brand:#fdda24;--brand-deep:#f2c900;--brand-soft:#fff3a6;
+  --ink:#2c2a29;--muted:#5e5c5a;--grey:#97999b;--line:#d1d2d4;--surface:#f7f7f7;--paper:#ffffff;
+  --pink:#f9d3e1;--orange:#ff7f41;--green:#00c389;
+  --shadow:0 1px 2px rgb(44 42 41 / .06),0 4px 16px rgb(44 42 41 / .04);
+  --A:#fdda24;--B:#00c389;--C:#ff7f41;--D:#f9d3e1;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper)}
+body{color:var(--ink);font:15px/1.5 "Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1440px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:24px;margin:0 0 14px;font-weight:700}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tab{padding:8px 18px;border:1.5px solid var(--ink);border-radius:100px;background:var(--paper);color:var(--ink);cursor:pointer;font:inherit;font-weight:600}
+.tab:hover{background:var(--surface)}
+.tab[aria-selected="true"]{background:var(--brand);}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:6px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.timers{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:8px;flex:1 1 560px}
+.timer{background:var(--surface);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--muted)}
+.timer b{display:block;color:var(--ink);font-size:12.5px}
+.timer .bar{height:5px;border-radius:3px;background:var(--line);margin:5px 0 2px;overflow:hidden}
+.timer .bar i{display:block;height:100%;width:0;background:var(--ink)}
+.timer.off{opacity:.4}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn,select.btn{font:inherit;font-weight:600;padding:6px 16px;border:1.5px solid var(--ink);border-radius:100px;background:var(--ink);color:#fff;cursor:pointer}
+.btn.out,select.btn{background:var(--paper);color:var(--ink)}
+.clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin:0 0 10px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;border:1px solid var(--ink);display:inline-block}
+svg{width:100%;height:auto;display:block}
+.tablecard{margin-top:16px}
+.tablecard h2{font-size:18px;margin:0 0 10px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:820px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:700;font-size:12.5px;background:var(--surface)}
+td.id{font-weight:700;white-space:nowrap}
+td.id span{display:inline-block;min-width:34px;text-align:center;border:1px solid var(--ink);border-radius:6px;padding:0 6px;margin-right:6px}
+td.per{white-space:nowrap}
+tr.pulse td{animation:pl 1s ease-out}
+@keyframes pl{0%{background:var(--brand-soft)}100%{background:transparent}}
+.flash{animation:fl .7s ease-out}
+@keyframes fl{0%{stroke-width:5}100%{stroke-width:1.5}}
+@media (prefers-reduced-motion:reduce){.flash,tr.pulse td{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cómo llega la información de cada bloque, red por red</h1>
+  <div class="tabs" role="tablist" id="tabs" aria-label="Redes"></div>
+
+  <section class="card" aria-label="Animación">
+    <div class="top">
+      <div class="timers" id="timers"></div>
+      <div class="ctrl">
+        <button class="btn" id="pause">Pausar</button>
+        <label>Velocidad
+          <select class="btn" id="speed"><option value="1">×1</option><option value="10" selected>×10</option><option value="60">×60</option></select>
+        </label>
+        <span class="clock" id="clock"></span>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--A)"></i>A · Costo</span>
+      <span><i style="background:var(--B)"></i>B · Tiempo y caudal</span>
+      <span><i style="background:var(--C)"></i>C · Concentración y continuidad</span>
+      <span><i style="background:var(--D)"></i>D · Primitivas de pago en uso</span>
+      <span><i style="background:var(--paper);border-style:dashed;border-color:var(--grey)"></i>Solo línea base</span>
+    </div>
+    <svg id="svg" role="img" aria-label="Diagrama animado de cómo llega la información de cada bloque de métricas"></svg>
+  </section>
+
+  <section class="card tablecard">
+    <h2>De dónde sale cada métrica y cada cuánto</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Métrica</th><th>De dónde se obtiene</th><th>Periodicidad</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+const BLK={A:{name:'Costo',lines:['Costo'],col:'var(--A)'},B:{name:'Tiempo y caudal',lines:['Tiempo','y caudal'],col:'var(--B)'},C:{name:'Concentración y continuidad',lines:['Concentración','y','continuidad'],col:'var(--C)'},D:{name:'Primitivas de pago en uso',lines:['Primitivas','de pago','en uso'],col:'var(--D)'}};
+const NAMES={A1:'Costo mediano (USD)',A2:'Dispersión del costo p95/mediana',A3:'Pendiente costo–ocupación',A4:'Anclaje a L1',B1:'Latencia de inclusión p95',B2:'Finalidad',B2b:'B2b',B3:'Capacidad',C1:'Concentración HHI',C2:'Mín. operadores para mayoría',C3:'Continuidad',C4:'Tasa de fallo',C5:'Cambios',D1:'Independencia del token nativo',D2:'Referencia de conciliación',D3:'Multi-transferencia'};
+const PER={b:{t:'cada 20 s',p:20},e:{t:'cada 300 s',p:300},f:{t:'cada 0,3 s',p:0.3}};
+const DAY=86400;
+
+const L=(blk,pl,label,call,extract,tables,ids,pk)=>({blk,pl,label,call,extract,tables,ids,pk});
+const m=(id,src,per)=>({id,src,per,live:true});
+const base=(id,ori)=>({id,src:ori,per:'—',live:false});
+const B20='cada 20 s';
+
+function evm(o){
+  const H=o.host,rpc=`JSON-RPC ${H}`;
+  const chain=`${rpc} · eth_getLogs (Transfer del USDC) + eth_getTransactionReceipt → gasUsed, effectiveGasPrice, l1Fee · precio ${o.pair}: Chainlink latestRoundData (${o.feedAddr})`;
+  return {
+    id:o.id,nombre:o.nombre,
+    fuente:o.fuente,
+    lanes:[
+      L('A','b','Recibos de pagos USDC',['eth_getLogs Transfer (USDC)','getTransactionReceipt ×25','Chainlink latestRoundData'],['fee = (gas × precio + L1)','× precio USD del nativo'],['muestras_tx'],['A1','A2','A3','A4'],'recibos'),
+      L('B','b','Bloques',['eth_blockNumber','getBlockByNumber ×10'],['timestamp de cada bloque','pares consecutivos'],['muestras_bloque'],['B1','B2','B2b','B3'],'bloques'),
+      L('C','b','Bloques y recibos',['getBlockByNumber → miner','getTransactionReceipt → status'],['productor por bloque','estado de cada pago','resumen c3_ciclo'],['muestras_bloque','muestras_tx'],['C1','C2','C3','C4'],'bloques'),
+      L('C','e','Proxy de USDC',['eth_getStorageAt','ranuras zeppelinos y eip1967'],['dirección de la','implementación'],['lecturas_estado'],['C5'],'estado'),
+      L('D','b','Recibos de pagos USDC',['getTransactionReceipt + tx','type, to, input, feeCurrency'],['patrocinio: 7702, 4337,','EIP-3009, feeCurrency'],['muestras_tx'],['D1','D2','D3'],'recibos')
+    ],
+    metrics:[
+      m('A1',chain,'cada 20 s · ventana 24 h'),m('A2',chain,'cada 20 s · ventana 24 h'),
+      base('A3','Línea base · perfiles.json'),base('A4','Línea base · perfiles.json'),
+      m('B1',`${rpc} · eth_getBlockByNumber → timestamp de bloques consecutivos`,'cada 20 s · ventana 15 min'),
+      base('B2','Línea base · perfiles.json'),base('B2b','Línea base · perfiles.json'),base('B3','Línea base · perfiles.json'),
+      m('C1',`${rpc} · eth_getBlockByNumber → campo miner`,'cada 20 s · ventana 24 h'),
+      m('C2',`${rpc} · eth_getBlockByNumber → campo miner`,'cada 20 s · ventana 24 h'),
+      m('C3',`${rpc} · eth_getBlockByNumber → número y timestamp (resumen por ciclo)`,'cada 20 s · ventana 14 d'),
+      m('C4',`${rpc} · eth_getTransactionReceipt → status`,'cada 20 s · ventana 24 h'),
+      m('C5',`${rpc} · eth_getStorageAt del proxy de USDC (ranuras zeppelinos y eip1967)`,'cada 300 s · ventana 14 d'),
+      m('D1',`${rpc} · eth_getTransactionReceipt + transacción: type 0x4, destino EntryPoint, selector EIP-3009, feeCurrency`,'cada 20 s · ventana 24 h'),
+      base('D2','Línea base · perfiles.json'),base('D3','Línea base · perfiles.json')
+    ]
+  };
+}
+
+const NETS=[
+  evm({id:'polygon',nombre:'Polygon PoS',host:'polygon.publicnode.com',pair:'MATIC / USD',feedAddr:'0xAB594600376Ec9fD91F8e885dADF0CE036862dE0',fuente:['JSON-RPC público','polygon.publicnode.com']}),
+  evm({id:'celo',nombre:'Celo',host:'forno.celo.org',pair:'CELO / USD',feedAddr:'0x0568fD19986748cEfF3301e55c0eb1E729E0Ab7e',fuente:['JSON-RPC público','forno.celo.org']}),
+  evm({id:'arbitrum',nombre:'Arbitrum One',host:'arb1.arbitrum.io/rpc',pair:'ETH / USD',feedAddr:'0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612',fuente:['JSON-RPC público','arb1.arbitrum.io/rpc']}),
+
+  {id:'tempo',nombre:'Tempo',fuente:['JSON-RPC','rpc.tempo.xyz'],
+   lanes:[
+     L('A','b','Recibos de todas las tx',['getBlockByNumber ×25','getTransactionReceipt ×25','eth_call decimals() del feeToken'],['fee = gas × precio / 1e18','ocupación = gasUsed / gasLimit'],['muestras_tx'],['A1','A2','A3'],'recibos'),
+     L('B','b','Bloques',['eth_blockNumber','getBlockByNumber ×25'],['timestamp + milisegundos','gasLimit ÷ gas por tx'],['muestras_bloque'],['B1','B3'],'bloques'),
+     L('B','f','Finalidad',['eth_getBlockByNumber','("finalized")'],['τ1 = timestamp del bloque','τF = hora de la consulta'],['muestras_finalidad'],['B2'],'τF'),
+     L('C','b','Bloques y recibos',['getBlockByNumber → proposer','getTransactionReceipt → status'],['productor por bloque','estado de cada tx','resumen c3_ciclo'],['muestras_bloque','muestras_tx'],['C3','C4'],'bloques'),
+     L('C','e','Validadores y forks',['getActiveValidators()','tempo_forkSchedule'],['N validadores activos','activationTime de cada fork'],['lecturas_estado'],['C1','C2','C5'],'estado'),
+     L('D','b','Recibos de todas las tx',['getTransactionReceipt','feePayer · logs'],['feePayer, TransferWithMemo,','más de un Transfer'],['muestras_tx'],['D1','D2','D3'],'recibos')
+   ],
+   metrics:[
+     m('A1','JSON-RPC rpc.tempo.xyz · eth_getTransactionReceipt → gasUsed, effectiveGasPrice, feeToken (decimals() por eth_call)','cada 20 s · ventana 24 h'),
+     m('A2','JSON-RPC rpc.tempo.xyz · eth_getTransactionReceipt → gasUsed, effectiveGasPrice, feeToken','cada 20 s · ventana 24 h'),
+     m('A3','JSON-RPC rpc.tempo.xyz · eth_getBlockByNumber → gasUsed y gasLimit del bloque; recibos → costo','cada 20 s · ventana 24 h'),
+     m('B1','JSON-RPC rpc.tempo.xyz · eth_getBlockByNumber → timestamp + timestampMillisPart','cada 20 s · ventana 15 min'),
+     m('B2','JSON-RPC rpc.tempo.xyz · eth_getBlockByNumber("finalized") → número y timestamp (τ1); τF = hora de la consulta','cada 0,3 s · ventana 72 h'),
+     m('B3','JSON-RPC rpc.tempo.xyz · eth_getBlockByNumber → gasLimit; recibos → gasUsed; cadencia entre bloques','cada 20 s · ventana 24 h'),
+     m('C1','JSON-RPC rpc.tempo.xyz · eth_call getActiveValidators() al precompilado 0xCCCCCCCC00000000000000000000000000000001','cada 300 s · lectura vigente'),
+     m('C2','JSON-RPC rpc.tempo.xyz · eth_call getActiveValidators() al precompilado 0xCCCCCCCC00000000000000000000000000000001','cada 300 s · lectura vigente'),
+     m('C3','JSON-RPC rpc.tempo.xyz · eth_getBlockByNumber → número y timestamp (resumen por ciclo)','cada 20 s · ventana 14 d'),
+     m('C4','JSON-RPC rpc.tempo.xyz · eth_getTransactionReceipt → status','cada 20 s · ventana 24 h'),
+     m('C5','JSON-RPC rpc.tempo.xyz · tempo_forkSchedule → activationTime de cada fork','cada 300 s · ventana 14 d'),
+     m('D1','JSON-RPC rpc.tempo.xyz · eth_getTransactionReceipt → feePayer','cada 20 s · ventana 24 h'),
+     m('D2','JSON-RPC rpc.tempo.xyz · eth_getTransactionReceipt → logs con topic TransferWithMemo(address,address,uint256,bytes32)','cada 20 s · ventana 24 h'),
+     m('D3','JSON-RPC rpc.tempo.xyz · eth_getTransactionReceipt → logs Transfer (más de uno por transacción)','cada 20 s · ventana 24 h')
+   ]},
+
+  {id:'aptos',nombre:'Aptos',fuente:['REST','api.mainnet.','aptoslabs.com/v1'],
+   lanes:[
+     L('A','b','Bloques con transacciones',['GET /blocks/by_height/{h}','?with_transactions=true ×6','Pyth APT/USD on-chain'],['fee = gas × precio ÷ 1e8','× precio APT en USD','ocupación = gas / límite'],['muestras_tx'],['A1','A2','A3'],'bloques'),
+     L('B','b','Bloques',['GET / (altura)','GET /blocks/by_height/{h}'],['block_timestamp','de alturas consecutivas'],['muestras_bloque'],['B1'],'bloques'),
+     L('B','e','Configuración de ejecución',['GET /accounts/0x1/resource/','0x1::execution_config::','ExecutionConfig (BCS)'],['límite efectivo de gas','del bloque'],['lecturas_estado'],['B2','B3'],'estado'),
+     L('C','b','Transacciones',['GET /blocks/by_height/{h}','campo success'],['estado de éxito','de cada transacción'],['muestras_tx'],['C3','C4','C5'],'bloques'),
+     L('C','e','Conjunto de validadores',['GET /accounts/0x1/resource/','0x1::stake::ValidatorSet'],['voting_power de cada','validador activo'],['lecturas_estado'],['C1','C2'],'estado'),
+     L('D','b','Transacciones y eventos',['GET /blocks/by_height/{h}','events Deposit / Withdraw'],['fee_payer_signature','eventos de Fungible Asset'],['muestras_tx'],['D1','D2','D3'],'bloques')
+   ],
+   metrics:[
+     m('A1','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h}?with_transactions=true → gas_used, gas_unit_price · precio: tabla Pyth on-chain (state::LatestPriceInfo, feed APT/USD)','cada 20 s · ventana 24 h'),
+     m('A2','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h}?with_transactions=true → gas_used, gas_unit_price · precio Pyth APT/USD','cada 20 s · ventana 24 h'),
+     m('A3','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h} → gas_used del bloque ÷ límite de ExecutionConfig; costo por transacción','cada 20 s · ventana 24 h'),
+     m('B1','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h} → block_timestamp','cada 20 s · ventana 15 min'),
+     base('B2','Línea base · resultados/metrics.csv'),
+     m('B3','REST api.mainnet.aptoslabs.com/v1 · GET /accounts/0x1/resource/0x1::execution_config::ExecutionConfig (BCS) + gas_used por transacción','cada 300 s (config) y 20 s (muestra) · ventana 24 h'),
+     base('C3','Línea base · resultados/metrics.csv'),
+     m('C1','REST api.mainnet.aptoslabs.com/v1 · GET /accounts/0x1/resource/0x1::stake::ValidatorSet → voting_power','cada 300 s · lectura vigente'),
+     m('C2','REST api.mainnet.aptoslabs.com/v1 · GET /accounts/0x1/resource/0x1::stake::ValidatorSet → voting_power','cada 300 s · lectura vigente'),
+     m('C4','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h} → success de cada transacción','cada 20 s · ventana 24 h'),
+     base('C5','Línea base · resultados/metrics.csv'),
+     m('D1','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h} → signature.type fee_payer_signature','cada 20 s · ventana 24 h'),
+     base('D2','Línea base · resultados/metrics.csv'),
+     m('D3','REST api.mainnet.aptoslabs.com/v1 · GET /blocks/by_height/{h} → events 0x1::fungible_asset::Deposit/Withdraw; GET /accounts/{store}/resource/0x1::fungible_asset::FungibleStore → metadata','cada 20 s · ventana 24 h')
+   ]},
+
+  {id:'canton',nombre:'Canton',fuente:['Scan API','api.cantonnodes.com'],
+   lanes:[
+     L('A','b','Veredictos y tráfico',['POST /v0/events (cursor)','traffic_summary.','total_traffic_cost'],['fee = bytes ÷ 1e6','× extraTrafficPrice (DSO)','1 de cada 4 veredictos'],['muestras_tx'],['A1','A2','A3'],'eventos'),
+     L('B','b','Veredictos',['POST /v0/events (cursor)','verdict.record_time y','verdict.finalization_time'],['Δ = finalization_time','− record_time'],['muestras_finalidad'],['B1','B2'],'eventos'),
+     L('B','e','Estado del DSO',['GET /v0/dso','baseRateTrafficLimits'],['burstAmount y burstWindow','de la asignación base'],['lecturas_estado'],['B3'],'estado'),
+     L('C','b','Eventos',['POST /v0/events (cursor)','verdict_result · latidos ·','choices DsoRules_*'],['rechazados, latidos y','cambios estructurales','resumen c3_ciclo y c5_cambios'],['muestras_tx','lecturas_estado'],['C3','C4','C5'],'eventos'),
+     L('C','e','Super Validators',['GET /v0/dso','dso_rules.svs[]'],['svRewardWeight de cada','Super Validator'],['lecturas_estado'],['C1','C2'],'estado'),
+     L('D','b','Transferencias',['POST /v0/events (cursor)','TransferFactory_Transfer','AmuletRules_Transfer'],['meta de la transferencia','salidas (outputs)'],['muestras_tx'],['D1','D2','D3'],'eventos')
+   ],
+   metrics:[
+     m('A1','Scan API api.cantonnodes.com · POST /v0/events → traffic_summary.total_traffic_cost del veredicto · precio: GET /v0/dso → extraTrafficPrice','cada 20 s · ventana 24 h'),
+     m('A2','Scan API api.cantonnodes.com · POST /v0/events → total_traffic_cost del veredicto · GET /v0/dso → extraTrafficPrice','cada 20 s · ventana 24 h'),
+     m('A3','Scan API api.cantonnodes.com · POST /v0/events → total_traffic_cost agrupado en cubetas de 10 s','cada 20 s · ventana 24 h'),
+     m('B1','Scan API api.cantonnodes.com · POST /v0/events → verdict.finalization_time − verdict.record_time','cada 20 s · ventana 24 h'),
+     m('B2','Scan API api.cantonnodes.com · POST /v0/events → verdict.finalization_time − verdict.record_time','cada 20 s · ventana 24 h'),
+     m('B3','Scan API api.cantonnodes.com · GET /v0/dso → baseRateTrafficLimits (burstAmount, burstWindow) + POST /v0/events → bytes por transferencia','cada 300 s (DSO) y 20 s (muestra) · ventana 24 h'),
+     m('C1','Scan API api.cantonnodes.com · GET /v0/dso → dso_rules.svs[].svRewardWeight','cada 300 s · lectura vigente'),
+     m('C2','Scan API api.cantonnodes.com · GET /v0/dso → dso_rules.svs[].svRewardWeight','cada 300 s · lectura vigente'),
+     m('C3','Scan API api.cantonnodes.com · POST /v0/events → choice ValidatorLicense_ReportActive (latidos)','cada 20 s · ventana 14 d'),
+     m('C4','Scan API api.cantonnodes.com · POST /v0/events → verdict.verdict_result (VERDICT_RESULT_REJECTED)','cada 20 s · ventana 24 h'),
+     m('C5','Scan API api.cantonnodes.com · POST /v0/events → choices DsoRules_* no rutinarias','cada 20 s · ventana 14 d'),
+     base('D1','Línea base · resultados/metrics.csv'),
+     m('D2','Scan API api.cantonnodes.com · POST /v0/events → choice TransferFactory_Transfer / AmuletRules_Transfer: meta','cada 20 s · ventana 24 h'),
+     m('D3','Scan API api.cantonnodes.com · POST /v0/events → choice TransferFactory_Transfer / AmuletRules_Transfer: outputs','cada 20 s · ventana 24 h')
+   ]}
+];
+
+const X={band:0,bw:70,src:84,sw:140,call:264,cw:250,proc:554,pw:230,db:824,dw:140,met:1004,mw:256,right:1274};
+const LH=88,GAP=10,BGAP=18,Y0=64;
+const NS='http://www.w3.org/2000/svg';
+const $=s=>document.querySelector(s);
+function se(tag,a,p){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function txt(p,x,y,s,o={}){const t=se('text',{x,y,'font-size':o.size||11,'font-weight':o.w||400,fill:o.fill||'var(--ink)','text-anchor':o.anchor||'start'},p);t.textContent=s;return t;}
+
+const S={net:null,vt:0,speed:10,paused:false,timers:[],cnt:{b:0,e:0,f:0,c:0,u:0},packets:[],lanes:[],footer:null,rows:{},lastUi:0};
+
+function buildTabs(){
+  const t=$('#tabs');
+  NETS.forEach((n,i)=>{
+    const b=document.createElement('button');b.className='tab';b.setAttribute('role','tab');b.setAttribute('aria-selected','false');
+    b.textContent=n.nombre;b.addEventListener('click',()=>selectNet(i));t.appendChild(b);
+  });
+}
+
+function box(g,x,y,w,h,stroke,fill,dash){
+  return se('rect',{x,y,width:w,height:h,rx:12,fill:fill||'var(--paper)',stroke:stroke||'var(--ink)','stroke-width':1.5,'stroke-dasharray':dash||'0'},g);
+}
+function arrow(g,x1,y1,x2,y2){se('line',{x1,y1,x2,y2,stroke:'var(--grey)','stroke-width':1.6,'marker-end':'url(#ah)'},g);}
+
+function draw(){
+  const svg=$('#svg');svg.innerHTML='';
+  const net=S.net;
+  let y=Y0,prev=null;
+  S.lanes=net.lanes.map((l,i)=>{
+    if(prev&&prev!==l.blk)y+=BGAP-GAP;
+    const o={...l,i,y,cy:y+LH/2};
+    y+=LH+GAP;prev=l.blk;return o;
+  });
+  const bottom=y-GAP;
+  const railY=bottom+16;
+  const fy=bottom+38;
+  const H=fy+56+14;
+  svg.setAttribute('viewBox',`0 0 1290 ${H}`);
+  const defs=se('defs',{},svg);
+  const mk=se('marker',{id:'ah',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);
+  se('path',{d:'M0 0L10 5L0 10z',fill:'var(--grey)'},mk);
+
+  const heads=[[X.src,'Fuente'],[X.call,'Llamada exacta'],[X.proc,'Qué se extrae'],[X.db,'Base de datos'],[X.met,'Métricas del bloque']];
+  heads.forEach(([x,t])=>txt(svg,x+4,36,t,{size:12.5,w:700,fill:'var(--muted)'}));
+
+  const gs=se('g',{},svg);
+  const fh=bottom-Y0;
+  const fr=box(gs,X.src,Y0,X.sw,fh,'var(--ink)','var(--brand-soft)');
+  S.srcRect=fr;
+  txt(gs,X.src+X.sw/2,Y0+fh/2-30,'Fuente',{size:13,w:700,anchor:'middle'});
+  net.fuente.forEach((s,i)=>txt(gs,X.src+X.sw/2,Y0+fh/2-8+i*15,s,{size:10.5,anchor:'middle',fill:'var(--muted)'}));
+  txt(gs,X.src+X.sw/2,Y0+fh/2+net.fuente.length*15+10,'solo lectura',{size:10,anchor:'middle',fill:'var(--grey)'});
+
+  const blocks={};
+  S.lanes.forEach(l=>{(blocks[l.blk]=blocks[l.blk]||[]).push(l);});
+  for(const b in blocks){
+    const ls=blocks[b];const top=ls[0].y,bot=ls[ls.length-1].y+LH;
+    se('rect',{x:X.band,y:top,width:X.bw,height:bot-top,rx:12,fill:BLK[b].col,stroke:'var(--ink)','stroke-width':1.5},svg);
+    const cy=(top+bot)/2;
+    txt(svg,X.bw/2,cy-8,b,{size:30,w:700,anchor:'middle'});
+    BLK[b].lines.forEach((s,i)=>txt(svg,X.bw/2,cy+12+i*12,s,{size:9.5,anchor:'middle'}));
+  }
+
+  S.laneEls=[];
+  S.lanes.forEach(l=>{
+    const g=se('g',{},svg);
+    const col=BLK[l.blk].col;
+    arrow(g,X.src+X.sw,l.cy,X.call,l.cy);arrow(g,X.call+X.cw,l.cy,X.proc,l.cy);arrow(g,X.proc+X.pw,l.cy,X.db,l.cy);arrow(g,X.db+X.dw,l.cy,X.met,l.cy);
+
+    const cr=box(g,X.call,l.y,X.cw,LH,'var(--ink)');
+    txt(g,X.call+10,l.y+17,l.label,{size:12,w:700});
+    const per=PER[l.pl];
+    const pw=70;se('rect',{x:X.call+X.cw-pw-8,y:l.y+5,width:pw,height:18,rx:9,fill:col,stroke:'var(--ink)','stroke-width':1},g);
+    txt(g,X.call+X.cw-pw/2-8,l.y+18,per.t,{size:10,w:700,anchor:'middle'});
+    l.call.forEach((s,i)=>txt(g,X.call+10,l.y+37+i*14,s,{size:10.5,fill:'var(--muted)'}));
+
+    const pr=box(g,X.proc,l.y,X.pw,LH,'var(--ink)');
+    txt(g,X.proc+10,l.y+17,'Procesador',{size:12,w:700});
+    l.extract.forEach((s,i)=>txt(g,X.proc+10,l.y+37+i*14,s,{size:10.5,fill:'var(--muted)'}));
+
+    const dr=box(g,X.db,l.y,X.dw,LH,'var(--ink)','var(--surface)');
+    const chips=l.tables.map((t,i)=>{
+      const ty=l.y+(LH-(l.tables.length*26+(l.tables.length-1)*6))/2+i*32;
+      const r=se('rect',{x:X.db+10,y:ty,width:X.dw-20,height:26,rx:7,fill:col,stroke:'var(--ink)','stroke-width':1},g);
+      txt(g,X.db+X.dw/2,ty+17,t,{size:10,w:600,anchor:'middle'});return r;
+    });
+
+    const mr=box(g,X.met,l.y,X.mw,LH,'var(--ink)');
+    txt(g,X.met+10,l.y+17,'Métricas',{size:12,w:700});
+    const rows2=l.ids.length>5;
+    const ids=l.ids;
+    const chipEls=ids.map((id,k)=>{
+      const mm=net.metrics.find(x=>x.id===id);
+      const cx=X.met+10+(k%5)*49,cy2=l.y+34+Math.floor(k/5)*28;
+      const r=se('rect',{x:cx,y:cy2,width:44,height:24,rx:7,fill:'var(--paper)',stroke:mm.live?'var(--ink)':'var(--grey)','stroke-width':1.2,'stroke-dasharray':mm.live?'0':'4 3'},g);
+      txt(g,cx+22,cy2+16,id,{size:11,w:700,anchor:'middle',fill:mm.live?'var(--ink)':'var(--grey)'});
+      return {r,id,live:mm.live};
+    });
+    S.laneEls[l.i]={src:fr,call:cr,proc:pr,db:dr,chips,chipEls,mr,col};
+  });
+
+  const bdx=X.src+X.sw/2+0;
+  const rail=se('g',{},svg);
+  se('line',{x1:X.right,y1:Y0,x2:X.right,y2:railY,stroke:'var(--grey)','stroke-width':1.6},rail);
+  se('line',{x1:X.right,y1:railY,x2:bdx+60,y2:railY,stroke:'var(--grey)','stroke-width':1.6},rail);
+  se('line',{x1:bdx+60,y1:railY,x2:bdx+60,y2:fy,stroke:'var(--grey)','stroke-width':1.6,'marker-end':'url(#ah)'},rail);
+  txt(rail,X.right-10,railY-5,'cada 30 s: las métricas se guardan en la BD',{size:11,w:700,anchor:'end'});
+  const FB=[
+    {x:84,w:330,t:'Base de datos · SQLite',s:'metricas_vivo y perfiles_base',fill:'var(--surface)'},
+    {x:474,w:330,t:'Backend · FastAPI',s:'perfil efectivo (base + vivo) → modelo · /api/*',fill:'var(--brand-soft)'},
+    {x:864,w:396,t:'Frontend · Next.js',s:'consulta /api/mediciones cada 15 s → pantalla',fill:'var(--brand)'}
+  ];
+  S.fb=FB.map((b,i)=>{
+    const r=box(svg,b.x,fy,b.w,56,'var(--ink)',b.fill);
+    txt(svg,b.x+b.w/2,fy+22,b.t,{size:13,w:700,anchor:'middle'});
+    txt(svg,b.x+b.w/2,fy+41,b.s,{size:11,anchor:'middle',fill:'var(--muted)'});
+    if(i<FB.length-1)arrow(svg,b.x+b.w,fy+28,FB[i+1].x,fy+28);
+    return r;
+  });
+  S.bdx=bdx+60;S.railY=railY;S.fyc=fy+28;S.FB=FB;
+  S.layer=se('g',{},svg);
+}
+
+function pathIngest(l){return [[X.src+X.sw,l.cy],[X.call+X.cw/2,l.cy],[X.proc+X.pw/2,l.cy],[X.db+X.dw/2,l.cy]];}
+function pathCalc(l){
+  const F=S.FB;
+  return [[X.db+X.dw,l.cy],[X.met+X.mw/2,l.cy],[X.right,l.cy],[X.right,S.railY],[S.bdx,S.railY],[S.bdx,S.fyc],
+    [F[1].x+F[1].w/2,S.fyc],[F[2].x+F[2].w/2,S.fyc]];
+}
+
+function flash(el){if(!el)return;el.classList.remove('flash');void el.getBoundingClientRect();el.classList.add('flash');}
+
+function spawn(kind,l,delay){
+  const pts=kind==='i'?pathIngest(l):pathCalc(l);
+  const col=BLK[l.blk].col;
+  const g=se('g',{visibility:'hidden'},S.layer);
+  se('circle',{r:7,fill:kind==='i'?col:'var(--ink)',stroke:'var(--ink)','stroke-width':1.5},g);
+  txt(g,0,-12,kind==='i'?l.pk:'métricas',{size:10,w:700,anchor:'middle'});
+  const segs=[];let total=0;
+  for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1];const d=Math.hypot(b[0]-a[0],b[1]-a[1]);segs.push(d);total+=d;}
+  S.packets.push({kind,l,g,pts,segs,total,d:-(delay||0)*420,hit:{}});
+  if(kind==='i')flash(S.laneEls[l.i].src);
+}
+
+function arrive(pk,j){
+  const E=S.laneEls[pk.l.i];
+  if(pk.kind==='i'){
+    if(j===1)flash(E.call);if(j===2)flash(E.proc);
+    if(j===3){E.chips.forEach(flash);}
+  }else{
+    if(j===1){
+      flash(E.mr);
+      E.chipEls.forEach(c=>{if(c.live)c.r.setAttribute('fill',BLK[pk.l.blk].col);c.r.classList.remove('flash');void c.r.getBoundingClientRect();c.r.classList.add('flash');
+        const tr=S.rows[c.id];if(tr){tr.classList.remove('pulse');void tr.offsetWidth;tr.classList.add('pulse');}});
+    }
+    if(j===5)flash(S.fb[0]);
+    if(j===6)flash(S.fb[1]);
+    if(j===7)flash(S.fb[2]);
+  }
+}
+
+function movePackets(dt){
+  const sp=420;
+  for(let i=S.packets.length-1;i>=0;i--){
+    const pk=S.packets[i];pk.d+=sp*dt;
+    if(pk.d<0)continue;
+    pk.g.setAttribute('visibility','visible');
+    let rem=pk.d,k=0;
+    while(k<pk.segs.length&&rem>pk.segs[k]){rem-=pk.segs[k];k++;}
+    for(let j=1;j<=Math.min(k,pk.pts.length-1);j++){if(!pk.hit[j]){pk.hit[j]=1;arrive(pk,j);}}
+    if(k>=pk.segs.length){pk.g.remove();S.packets.splice(i,1);continue;}
+    const a=pk.pts[k],b=pk.pts[k+1];const f=rem/pk.segs[k];
+    pk.g.setAttribute('transform',`translate(${a[0]+(b[0]-a[0])*f},${a[1]+(b[1]-a[1])*f})`);
+  }
+}
+
+function resetTimers(){
+  S.timers=[];
+  S.lanes.forEach(l=>{
+    const first=l.pl==='b'?1+l.i*0.8:(l.pl==='e'?3+l.i*0.5:2);
+    S.timers.push({k:'lane',l,p:PER[l.pl].p,next:first,last:0});
+  });
+  S.timers.push({k:'c',p:30,next:10},{k:'u',p:15,next:7});
+}
+
+function fire(t){
+  if(t.k==='lane'){
+    S.cnt[t.l.pl]++;
+    if(t.l.pl==='f'){const now=performance.now();if(now-t.last<500)return;t.last=now;}
+    spawn('i',t.l,0);
+  }else if(t.k==='c'){
+    S.cnt.c++;S.lanes.forEach((l,i)=>spawn('c',l,i*0.12));
+  }else{S.cnt.u++;flash(S.fb[2]);}
+}
+function runTimers(){for(const t of S.timers){let g=0;while(S.vt>=t.next&&g++<60){fire(t);t.next+=t.p;}if(g>=60)t.next=S.vt+t.p;}}
+
+function buildTimers(){
+  const has=k=>S.lanes.some(l=>l.pl===k);
+  const defs=[['b','Bloques / eventos','20 s'],['e','Estado','300 s'],['f','Finalidad','0,3 s'],['c','Cálculo de métricas','30 s'],['u','Front consulta al back','15 s']];
+  $('#timers').innerHTML=defs.map(([k,n,p])=>`<div class="timer${(k==='f'&&!has('f'))?' off':''}" id="tm-${k}"><b>${n} · ${p}</b><div class="bar"><i></i></div><span class="c"></span></div>`).join('');
+}
+function updateTimers(){
+  const per={b:20,e:300,f:0.3,c:30,u:15};
+  for(const k of ['b','e','f','c','u']){
+    const el=$('#tm-'+k);if(!el||el.classList.contains('off')){if(el)el.querySelector('.c').textContent='no aplica';continue;}
+    let prog;
+    if(k==='b'||k==='e'||k==='f'){const t=S.timers.find(x=>x.k==='lane'&&x.l.pl===k);prog=k==='f'?((S.vt%0.3)/0.3):1-(t.next-S.vt)/t.p;}
+    else{const t=S.timers.find(x=>x.k===k);prog=1-(t.next-S.vt)/t.p;}
+    el.querySelector('i').style.width=Math.max(0,Math.min(1,prog))*100+'%';
+    el.querySelector('.c').textContent='× '+S.cnt[k];
+  }
+}
+
+function buildTable(){
+  const tb=$('#tbody');tb.innerHTML='';S.rows={};
+  S.net.metrics.forEach(mm=>{
+    const tr=document.createElement('tr');
+    const col=BLK[mm.id[0]].col;
+    tr.innerHTML=`<td class="id"><span style="background:${col}">${mm.id}</span>${NAMES[mm.id]}</td><td>${mm.src}</td><td class="per">${mm.per}</td>`;
+    tb.appendChild(tr);S.rows[mm.id]=tr;
+  });
+}
+
+function fmtT(s){s=Math.floor(s);const d=Math.floor(s/DAY);s-=d*DAY;const h=Math.floor(s/3600);s-=h*3600;const mi=Math.floor(s/60);s-=mi*60;const p=x=>String(x).padStart(2,'0');return (d?d+' d ':'')+p(h)+':'+p(mi)+':'+p(s);}
+
+function selectNet(i){
+  S.net=NETS[i];
+  document.querySelectorAll('.tab').forEach((t,j)=>t.setAttribute('aria-selected',j===i?'true':'false'));
+  S.vt=0;S.cnt={b:0,e:0,f:0,c:0,u:0};S.packets=[];
+  draw();resetTimers();buildTimers();buildTable();updateTimers();
+}
+
+let lastT=performance.now();
+function frame(now){
+  const dt=Math.min(0.1,(now-lastT)/1000);lastT=now;
+  if(!S.paused){S.vt+=dt*S.speed;runTimers();}
+  movePackets(dt);
+  if(now-S.lastUi>250){S.lastUi=now;updateTimers();$('#clock').textContent='t = '+fmtT(S.vt);}
+  requestAnimationFrame(frame);
+}
+
+buildTabs();
+$('#speed').addEventListener('change',e=>{S.speed=+e.target.value;});
+$('#pause').addEventListener('click',e=>{S.paused=!S.paused;e.target.textContent=S.paused?'Reanudar':'Pausar';});
+if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){S.paused=true;$('#pause').textContent='Reanudar';}
+selectNet(3);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
