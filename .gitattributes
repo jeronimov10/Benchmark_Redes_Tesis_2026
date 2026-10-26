@@ -1,2 +1,5 @@
-# Auto detect text files and perform LF normalization
+# Normaliza finales de linea; los archivos usados dentro de Docker siempre en LF
 * text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf

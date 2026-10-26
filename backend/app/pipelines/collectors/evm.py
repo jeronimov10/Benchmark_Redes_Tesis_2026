@@ -2,6 +2,8 @@
 y llamadas directas al contrato), obtiene sus recibos y los normaliza. Verifica el contrato de USDC (symbol, decimals, codigo) y lee la
 ranura de implementacion del proxy para C5."""
 
+import asyncio
+
 from ...utils.keccak import keccak256_hex, selector
 from ..processors.evm import (TOPIC_TRANSFER, bloque_a_muestra, candidatas_pago, hx, ocupacion,
                               tx_de_pago_evm)
@@ -75,13 +77,22 @@ class ColectorEVM(Colector):
         llamadas = [("eth_getBlockByNumber", [hex(n), True]) for n in range(inicio, cabeza + 1)]
         crudos = [b for b in await self.http.rpc_lote(self.url, llamadas, tamano=10) if b]
         muestras = [bloque_a_muestra(b) for b in crudos]
-        self.repos["muestras"].guardar_bloques(self.red, muestras)
         pagos = await self._pagos(crudos, inicio, cabeza)
+        self.repos["muestras"].guardar_bloques(self.red, muestras)
         return {"bloques": len(muestras), "pagos": pagos}
 
+    async def _logs(self, inicio, fin):
+        filtro = {"address": self.token, "topics": [TOPIC_TRANSFER], "fromBlock": hex(inicio), "toBlock": hex(fin)}
+        for intento in range(4):
+            try:
+                return await self.http.rpc(self.url, "eth_getLogs", [filtro])
+            except ErrorFuente as exc:
+                if "range" not in str(exc) or intento == 3:
+                    raise
+                await asyncio.sleep(1.5 * (intento + 1))
+
     async def _pagos(self, bloques, inicio, fin):
-        logs = await self.http.rpc(self.url, "eth_getLogs", [{
-            "address": self.token, "topics": [TOPIC_TRANSFER], "fromBlock": hex(inicio), "toBlock": hex(fin)}])
+        logs = await self._logs(inicio, fin)
         con_transfer = {lg["transactionHash"].lower() for lg in logs or []}
         info_bloque = {hx(b["number"]): (bloque_a_muestra(b)["ts"], ocupacion(b)) for b in bloques}
         candidatas = []

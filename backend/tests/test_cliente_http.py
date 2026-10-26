@@ -98,3 +98,16 @@ def test_rpc_error_y_lote_en_desorden(settings):
         correr(c.rpc("https://x.test", "eth_x"))
     salida = correr(c.rpc_lote("https://x.test", [("m", []), ("m", []), ("m", [])]))
     assert salida == ["r0", "r1", None]
+
+
+def test_error_de_certificado_falla_sin_reintentos_y_explica_la_causa(settings):
+    import ssl
+    llamadas, esperas = [], []
+
+    def h(req):
+        llamadas.append(1)
+        raise httpx.ConnectError("verify failed") from ssl.SSLCertVerificationError(1, "certificate verify failed")
+
+    with pytest.raises(ErrorFuente, match="intercepta HTTPS"):
+        correr(cliente(settings, h, esperas).get("https://x.test"))
+    assert len(llamadas) == 1 and not esperas

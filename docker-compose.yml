@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      additional_contexts:
+        certs: ./certs
     environment:
       CORS_ORIGINS: http://localhost:3000
       RPC_POLYGON: ${RPC_POLYGON:-https://polygon.publicnode.com}
@@ -19,6 +21,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      additional_contexts:
+        certs: ./certs
       args:
         BACKEND_URL: http://backend:8000
     ports:

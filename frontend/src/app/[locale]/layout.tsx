@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -9,7 +9,12 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import "../globals.css";
 
-const openSans = Open_Sans({ variable: "--font-open-sans", subsets: ["latin"] });
+const openSans = localFont({
+  src: "../../../node_modules/@fontsource-variable/open-sans/files/open-sans-latin-wght-normal.woff2",
+  variable: "--font-open-sans",
+  weight: "300 800",
+  display: "swap",
+});
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

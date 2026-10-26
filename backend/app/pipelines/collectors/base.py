@@ -13,6 +13,19 @@ class ErrorFuente(Exception):
     pass
 
 
+MENSAJE_CERTIFICADO = (
+    "certificado TLS no confiable en {url} ({detalle}). Suele ser un antivirus o proxy que intercepta HTTPS: "
+    "instala su CA raiz en el sistema o, en Docker, copiala a certs/ (ver README, seccion TLS)")
+
+
+def _es_error_certificado(exc):
+    while exc is not None:
+        if isinstance(exc, ssl.SSLCertVerificationError):
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
 class _Reintentable(Exception):
     def __init__(self, mensaje, espera=None):
         super().__init__(mensaje)
@@ -54,6 +67,8 @@ class ClienteHTTP:
                 ultimo = exc
                 espera = exc.espera
             except (httpx.TimeoutException, httpx.TransportError) as exc:
+                if _es_error_certificado(exc):
+                    raise ErrorFuente(MENSAJE_CERTIFICADO.format(url=url, detalle=exc)) from exc
                 ultimo = exc
                 espera = None
             if i == intentos:

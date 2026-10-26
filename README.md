@@ -8,7 +8,7 @@ Proyecto de grado. Aplicación web que monitorea seis redes casi en tiempo real 
 docker compose up --build
 ```
 
-Frontend en http://localhost:3000 y backend en http://localhost:8000. Es el único comando necesario (Docker con Compose); detalles, puertos y solución de problemas en [Cómo correr el proyecto (Docker)](#cómo-correr-el-proyecto-docker).
+Frontend en http://localhost:3000 y backend en http://localhost:8000. Es el único comando necesario (Docker con Compose; en Windows, con el repo fuera de OneDrive); detalles, puertos y solución de problemas en [Cómo correr el proyecto (Docker)](#cómo-correr-el-proyecto-docker).
 
 Diagrama completo de arquitectura y funcionamiento (qué métricas son en vivo, cuáles no, cómo se calculan y cómo decide el modelo): [docs/arquitectura_y_funcionamiento.mmd](docs/arquitectura_y_funcionamiento.mmd). Se abre en <https://mermaid.live> o con la extensión Mermaid de VS Code.
 
@@ -175,36 +175,68 @@ docker compose down -v           # detener y borrar la base de datos
 
 Qué ver: `http://localhost:3000/es/start` (crea un usuario) → `/es/monitor` (estado de colectores y métricas en vivo/base; tras ~1 minuto ya hay datos) → `/es/transaction/new` (describe un pago y mira el resultado).
 
-**Si `docker compose up --build` falla con `invalid file request ...` o `failed to execute bake`:** el repositorio está en OneDrive y algunos archivos son marcadores "solo en la nube" que Docker no puede leer. Fuerza su descarga local (PowerShell, desde la raíz del repo) y reintenta:
+### Solución de problemas de Docker
+
+**¿Quién necesita esto?** Solo quien esté en uno de los dos casos de abajo (carpeta dentro de OneDrive, o antivirus/proxy que intercepta HTTPS). Un tercero que clone el repositorio en una carpeta normal (por ejemplo `C:\dev\...` o `~/proyectos/...`), sin ese tipo de antivirus, ejecuta únicamente `docker compose up --build`: no necesita `scripts/` ni `certs/`. La CA de un antivirus es de cada máquina y no se versiona (`certs/*.crt` está en `.gitignore`).
+
+**Recomendado en Windows:** clonar o copiar el repo fuera de OneDrive (`C:\dev\Benchmark_Redes_Tesis_2026`) y trabajar desde ahí.
+
+Dos causas explican casi todos los fallos "a veces funciona, a veces no". Ambas dependen de la máquina, no del código.
+
+**Máquina de Jerónimo (OneDrive + Avast):** el build se corre desde `C:\dev\Benchmark_Redes_Tesis_2026`, nunca desde la carpeta de OneDrive:
 
 ```powershell
-attrib +P -U "*" /s /d
+cd C:\dev\Benchmark_Redes_Tesis_2026
 docker compose up --build
 ```
 
-Si persiste el error de `bake`: `$env:COMPOSE_BAKE="false"; docker compose up --build`. Lo más estable es mover el repo fuera de OneDrive.
+Esa carpeta ya tiene la CA de Avast en `certs/` (archivo local, no versionado). Si `certs/` queda sin ese `.crt`, se regenera con `scripts\docker-up.ps1 -ConfiarEnInterceptor -SoloBuild`. Esto no aplica a otras máquinas.
+
+**1. `invalid file request Dockerfile` / `failed to execute bake` (repo dentro de OneDrive, Windows).** BuildKit no puede leer los archivos "solo en la nube" de OneDrive aunque estén fijados localmente (`attrib +P` no basta). Construye desde una copia fuera de OneDrive; el script lo hace solo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\docker-up.ps1        # copia a %LOCALAPPDATA%\benchmark-redes-docker y hace compose up --build -d
+powershell -ExecutionPolicy Bypass -File scripts\docker-up.ps1 -Down  # detener
+```
+
+Lo más estable es mover el repo fuera de OneDrive (entonces basta `docker compose up --build`).
+
+**2. `CERTIFICATE_VERIFY_FAILED` en `pip install`, `pnpm install` o en los logs del backend (las seis redes "caídas").** Un antivirus o proxy corporativo (p. ej. Avast "Web/Mail Shield") intercepta el HTTPS y firma con su propia CA. Windows confía en ella, pero los contenedores no. Es intermitente porque el antivirus no siempre escanea. Dos soluciones:
+
+- Desactiva el escaneo HTTPS del antivirus (Avast: Configuración → Protección → Escudos principales → Escudo web → desmarcar "Habilitar análisis HTTPS"), o
+- Haz que las imágenes confíen en esa CA: copia su certificado raíz en PEM, con extensión `.crt`, a la carpeta [certs/](certs/) y reconstruye (`docker compose build --no-cache`). En Windows, `scripts\docker-up.ps1 -ConfiarEnInterceptor` exporta a `certs/` las CA de antivirus/proxy conocidas que encuentre en el almacén de Windows. Úsalo solo en una máquina propia: hace que los contenedores confíen en esa CA.
+
+El backend detecta este caso: en vez de reintentar, registra "certificado TLS no confiable ... intercepta HTTPS" en el log y en `/api/salud`. No se desactiva la verificación TLS en ningún punto.
 
 Si el puerto 3000 u 8000 está ocupado, cámbialo sin editar archivos: `FRONTEND_PORT=3100 BACKEND_PORT=8001 docker compose up --build` (PowerShell: `$env:FRONTEND_PORT="3100"; docker compose up --build`). Para usar otro RPC: `RPC_POLYGON=https://tu-proveedor docker compose up --build`. Sin internet: `COLECTORES_ACTIVOS=false docker compose up --build` (solo línea base).
 
 ### Sin Docker (desarrollo)
 
+Requisitos: Python 3.11+, Node.js 22+ y pnpm (`npm install -g pnpm`). No hay claves que configurar.
+
 ```bash
-pip install -r backend/requirements.txt && cd frontend && pnpm install && cd ..
-cd backend && python -m uvicorn app.main:app --port 8000     # terminal 1
-cd frontend && pnpm dev                                        # terminal 2 -> http://localhost:3000
+pip install -r backend/requirements.txt          # dependencias del backend (idealmente en un venv)
+cd frontend && pnpm install && cd ..             # dependencias del frontend
+
+cd backend && python -m uvicorn app.main:app --port 8000   # terminal 1: API + colectores (crea backend/data/redes.db)
+cd frontend && pnpm dev                                    # terminal 2: UI en http://localhost:3000 (/api/* se reenvía a BACKEND_URL)
 ```
+
+Variables útiles (opcionales; ver [.env.example](.env.example)): `BACKEND_URL` (frontend, por defecto `http://127.0.0.1:8000`), `RPC_POLYGON` y demás `RPC_*`, `DB_PATH`, `COLECTORES_ACTIVOS=false` (solo línea base, sin internet). En PowerShell: `$env:RPC_POLYGON="https://..."; python -m uvicorn app.main:app --port 8000`.
+
+Sin Docker el backend usa el almacén de certificados del sistema operativo, así que un antivirus que intercepta HTTPS no suele afectar (ver el punto 2 de la solución de problemas si aparece `CERTIFICATE_VERIFY_FAILED`).
 
 ## Pruebas
 
 ```bash
-cd backend && python -m pytest tests        # 55 pruebas
+cd backend && python -m pytest tests        # 56 pruebas
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py            # benchmark por lotes con resultados/raw/ (sin red)
 ```
 
 ## Qué funciona y qué no
 
-**Funciona (verificado en vivo el 2026-10-19):** los seis colectores contra las redes reales; 54 de 90 métricas en vivo; recomendación en modo `vivo` y `medicion`; casos de referencia de la tesis (±0,005); monitoreo en el frontend; Recalibrar (corrida real corta completada); 55 pruebas de backend y 19 de frontend.
+**Funciona (verificado en vivo el 2026-10-19):** los seis colectores contra las redes reales; 54 de 90 métricas en vivo; recomendación en modo `vivo` y `medicion`; casos de referencia de la tesis (±0,005); monitoreo en el frontend; Recalibrar (corrida real corta completada); 56 pruebas de backend y 19 de frontend.
 
 **No funciona o es parcial:**
 
