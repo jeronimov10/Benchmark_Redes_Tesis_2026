@@ -5,6 +5,7 @@ Proyecto de grado. Aplicación web que monitorea seis redes casi en tiempo real 
 ## Arranque rápido
 
 ```bash
+SOLO MAQUINA JERONIMO: cd C:\dev\Benchmark_Redes_Tesis_2026
 docker compose up --build
 ```
 
