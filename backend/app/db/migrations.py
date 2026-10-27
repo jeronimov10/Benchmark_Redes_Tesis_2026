@@ -119,4 +119,21 @@ MIGRACIONES = [
         valor TEXT NOT NULL
     );
     """,
+    """
+    CREATE TABLE anclajes (
+        red TEXT NOT NULL,
+        l1_tx TEXT NOT NULL,
+        log_index INTEGER NOT NULL,
+        l1_bloque INTEGER NOT NULL,
+        l1_ts REAL NOT NULL,
+        l2_desde INTEGER,
+        l2_hasta INTEGER,
+        costo_eth REAL,
+        costo_usd REAL,
+        precio_eth_usd REAL,
+        recogido_en REAL NOT NULL,
+        PRIMARY KEY (red, l1_tx, log_index)
+    );
+    CREATE INDEX ix_anclaje_ts ON anclajes (red, l1_ts);
+    """,
 ]

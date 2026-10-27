@@ -12,11 +12,12 @@ from ...models.dominio import EstadoMetrica, MetricaValor
 from ...pipelines.validators.validadores import estado_por_muestras
 from .continuidad import metrica_c3
 
-N_MIN = {"B1": 30, "B2": 100, "B3": 30, "C1": 100, "C3": 100, "C4": 50, "A1": 30, "A2": 30, "A3": 50,
+N_MIN = {"A4": 30, "B1": 30, "B2": 100, "B3": 30, "C1": 100, "C3": 100, "C4": 50, "A1": 30, "A2": 30, "A3": 50,
          "D1": 30, "D2": 30, "D3": 30}
 TPS_REQUERIDO_MODELO = 18.0
 TPS_REQUERIDO_BENCHMARK = 48.0
 UMBRAL_HUECO = 10
+RANGO_OCUPACION_MIN = 0.01
 REMUESTREOS_BOOTSTRAP = 200
 COBERTURA_MIN_CONTINUIDAD = 0.9
 EVM = ("polygon", "celo", "arbitrum")
@@ -28,6 +29,7 @@ class Contexto:
     muestras: object
     estado: object
     ahora: float
+    anclajes: object = None
 
 
 def percentil_ceil(valores, p):
@@ -154,7 +156,7 @@ def m_costos(ctx, red, fuente, solo_transfer):
     return out
 
 
-def m_a3_ocupacion(ctx, red, fuente):
+def m_a3_ocupacion(ctx, red, fuente, r2_minimo=None):
     ventana = ctx.settings.ventana_distribucion_s
     filas = [f for f in ctx.muestras.txs_desde(red, ctx.ahora - ventana)
              if f["fee_usd"] and f["fee_usd"] > 0 and f["ocupacion"] is not None]
@@ -165,6 +167,15 @@ def m_a3_ocupacion(ctx, red, fuente):
         return _mv(ctx, red, "A3", None, "indice", len(xs), ventana, fuente, "regresion no estimable (pocos datos o sin variacion de ocupacion)",
                    estado=EstadoMetrica.INSUFICIENTE if len(xs) < N_MIN["A3"] else EstadoMetrica.NO_COMPUTABLE)
     beta, r2 = reg
+    rango = max(xs) - min(xs)
+    if r2_minimo is not None and rango < RANGO_OCUPACION_MIN:
+        return _mv(ctx, red, "A3", None, "indice", len(xs), ventana, fuente,
+                   f"ocupacion casi constante (rango {rango:.4f} < {RANGO_OCUPACION_MIN}): la pendiente no es interpretable",
+                   estado=EstadoMetrica.NO_COMPUTABLE)
+    if r2_minimo is not None and r2 < r2_minimo:
+        return _mv(ctx, red, "A3", None, "indice", len(xs), ventana, fuente,
+                   f"ajuste no concluyente (R2={r2:.3f} < {r2_minimo}); pendiente {beta:.3f} no se usa",
+                   estado=EstadoMetrica.NO_COMPUTABLE)
     return _mv(ctx, red, "A3", beta, "indice", len(xs), ventana, fuente,
                f"pendiente de ln(costo) sobre ocupacion de bloque; R2={r2:.3f}", ts_ultima=max(f["ts"] for f in filas))
 
@@ -384,12 +395,72 @@ def calcular_canton(ctx):
     return out
 
 
+def _tps_medio(ctx, red, ventana):
+    bloques = ctx.muestras.bloques_desde(red, ctx.ahora - ventana)
+    pares = pares_consecutivos(bloques)
+    dt = sum(b["ts"] - a["ts"] for a, b in pares)
+    return (sum(b["n_tx"] or 0 for _, b in pares) / dt, len(pares)) if dt > 0 else (None, 0)
+
+
+def m_anclaje(ctx, red):
+    s = ctx.settings
+    fuente = f"{red}:anclaje_ethereum"
+    ventana = s.ventana_anclaje_s
+    anclajes = ctx.anclajes.desde(red, ctx.ahora - ventana) if ctx.anclajes else []
+    verif, _ = ctx.estado.ultima(red, "anclaje_verificado")
+    cursor, ts_cursor = ctx.estado.ultima(red, "anclaje_cursor")
+    if not verif or not cursor:
+        razon = "rastreador de anclaje sin verificar o sin lecturas"
+        return [_vacia(ctx, red, m, razon, u, fuente, EstadoMetrica.INSUFICIENTE)
+                for m, u in (("A4", "USD"), ("B2", "s"))] + ([_vacia(ctx, red, "B2b", razon, "s", fuente, EstadoMetrica.INSUFICIENTE)]
+                                                           if red == "polygon" else [])
+    tiempos = sorted({a["l1_ts"] for a in anclajes})
+    cadencias = [b - a for a, b in zip(tiempos, tiempos[1:])]
+    out = []
+    if cadencias:
+        p50 = st.median(cadencias)
+        cubierto = tiempos[-1] - tiempos[0]
+        completo = cubierto >= ventana * 0.95
+        nota = (f"{_nota_anclaje(verif)}; cadencia mediana {p50:.0f} s entre {len(tiempos)} publicaciones; B2 = cadencia/2 (mediana de "
+                f"tau_A - tau_1 para un bloque uniforme dentro del intervalo); cubierto {cubierto / 3600:.1f} h de {ventana / 3600:.0f} h")
+        sigma = error_estandar(cadencias, lambda v: st.median(v) / 2)
+        out.append(_mv(ctx, red, "B2", p50 / 2, "s", len(cadencias), ventana, fuente, nota, sigma=sigma, ts_ultima=ts_cursor,
+                       n_min=30, estado=None if completo else EstadoMetrica.INSUFICIENTE))
+        if red == "polygon":
+            out.append(_mv(ctx, red, "B2b", p50 / 2, "s", len(cadencias), ventana, fuente,
+                           "checkpoint sin ventana de disputa: irrevocable al publicarse, B2b = B2 (definicion de la tesis). " + nota,
+                           sigma=sigma, ts_ultima=ts_cursor, n_min=30, estado=None if completo else EstadoMetrica.INSUFICIENTE))
+    else:
+        out.append(_vacia(ctx, red, "B2", "menos de dos publicaciones de anclaje en la ventana", "s", fuente, EstadoMetrica.INSUFICIENTE))
+        if red == "polygon":
+            out.append(_vacia(ctx, red, "B2b", "menos de dos publicaciones de anclaje en la ventana", "s", fuente, EstadoMetrica.INSUFICIENTE))
+    costos = [a["costo_usd"] for a in anclajes if a["costo_usd"] is not None]
+    tps, n_pares = _tps_medio(ctx, red, s.ventana_distribucion_s)
+    if costos and cadencias and tps and n_pares >= N_MIN["B3"]:
+        tx_por_anclaje = tps * st.median(cadencias)
+        valor = st.median(costos) / tx_por_anclaje
+        out.append(_mv(ctx, red, "A4", valor, "USD", len(costos), ventana, fuente,
+                       f"mediana del costo L1 por publicacion {st.median(costos):.4f} USD (gas por precio efectivo + blobs, recibo en Ethereum) / "
+                       f"~{tx_por_anclaje:,.0f} tx abarcadas (TPS medio {tps:.2f} x cadencia {st.median(cadencias):.0f} s)",
+                       sigma=error_estandar(costos, lambda v: st.median(v) / tx_por_anclaje), ts_ultima=ts_cursor))
+    else:
+        out.append(_mv(ctx, red, "A4", None, "USD", len(costos), ventana, fuente,
+                       "faltan recibos de publicacion, cadencia o caudal L2 medido", estado=EstadoMetrica.INSUFICIENTE))
+    return out
+
+
+def _nota_anclaje(verif):
+    return f"{verif['contrato']} ({verif['evento'].split('(')[0]})"
+
+
 def calcular_evm(ctx, red):
     s = ctx.settings
     f = f"{red}:rpc"
     out = [m_b1_bloques(ctx, red, f), metrica_c3(ctx, red, f)]
     out += m_c1_produccion(ctx, red, f)
     out += m_costos(ctx, red, f, solo_transfer=True)
+    out.append(m_a3_ocupacion(ctx, red, f, r2_minimo=s.a3_r2_minimo))
+    out += m_anclaje(ctx, red)
     usdc, ts_u, err = _estado_reciente(ctx, red, "usdc_verificado")
     nota_tok = f" token de pago {usdc['direccion']}" if usdc else ""
     out.append(m_c4(ctx, red, f, extra_nota=f" (transacciones de pago a/desde USDC{nota_tok})"))

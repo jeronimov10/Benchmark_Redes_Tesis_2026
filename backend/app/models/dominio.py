@@ -59,3 +59,4 @@ class PeticionRecalibracion(BaseModel):
     bloques_tempo: Optional[int] = Field(default=None, ge=50, le=5000)
     bloques_aptos: Optional[int] = Field(default=None, ge=20, le=1500)
     paginas_canton: Optional[int] = Field(default=None, ge=1, le=200)
+    minutos_evm: Optional[int] = Field(default=None, ge=5, le=1440)

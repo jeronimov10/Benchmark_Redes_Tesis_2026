@@ -111,3 +111,23 @@ def test_error_de_certificado_falla_sin_reintentos_y_explica_la_causa(settings):
     with pytest.raises(ErrorFuente, match="intercepta HTTPS"):
         correr(cliente(settings, h, esperas).get("https://x.test"))
     assert len(llamadas) == 1 and not esperas
+
+
+def test_clave_de_aptos_solo_se_envia_al_host_de_aptos(settings):
+    vistos = []
+
+    def h(req):
+        vistos.append((str(req.url), req.headers.get("authorization")))
+        return httpx.Response(200, json={})
+
+    cfg = dataclasses.replace(settings, aptos_api_key="k123")
+    c = ClienteHTTP(cfg, transport=httpx.MockTransport(h))
+    correr(c.get(cfg.rest_aptos + "/blocks/by_height/1"))
+    correr(c.get("https://otro.test/x"))
+    assert vistos[0][1] == "Bearer k123" and vistos[1][1] is None
+
+
+def test_aptos_sin_clave_usa_el_ritmo_que_cabe_en_el_limite_anonimo(settings):
+    base = dataclasses.replace(settings, aptos_api_key="")
+    assert base.intervalo_bloques("aptos") == base.intervalo_aptos_s and base.intervalo_bloques("polygon") == base.intervalo_bloques_s
+    assert base.bloques_aptos_por_ciclo * 2200 / base.intervalo_aptos_s < 40000 / 300

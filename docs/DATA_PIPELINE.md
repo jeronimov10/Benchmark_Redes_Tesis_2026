@@ -172,7 +172,8 @@ flowchart LR
 | Recomendador | `services/decision/recomendador.py` | Envuelve `modelo.py`; caché, pool de procesos, estados explícitos |
 | Instantánea | `services/network/snapshot.py` | Une perfil efectivo, última métrica viva y salud del colector para la vista Monitoreo |
 | Registro de redes | `services/network/registry.py` | Qué métricas son vivas y por qué cada una de las demás es solo base |
-| Recalibración | `services/recalibracion/trabajos.py` | Corre el benchmark por lotes en un subproceso aislado |
+| Rastreador de anclaje | `pipelines/collectors/anclaje.py` | Observa en Ethereum el compromiso de Polygon, Celo y Arbitrum (tabla `anclajes`); contratos verificados en vivo |
+| Recalibración | `services/recalibracion/trabajos.py` | Corre el benchmark por lotes en un subproceso aislado (T/A/C) y rellena la ventana reciente de P/C/A |
 
 ### 3.1 Tablas de SQLite (`db/migrations.py`)
 
@@ -295,10 +296,9 @@ Razones exactas (tomadas de `services/network/registry.py`, que también las mue
 
 | Red | Métrica | Razón |
 |---|---|---|
-| Polygon, Celo, Arbitrum | A3 | la regresión de la tesis exige ajuste con R² suficiente; la línea base la reporta no concluyente |
-| | A4, B2, B2b | requieren el rastreador de anclaje en Ethereum (contratos de checkpoint verificados); no reproducible hoy |
-| | B3 | caudal sostenido de una hora sobre 90 días; no reproducible con una ventana corta |
-| | D2, D3 | la definición estricta de la tesis no es reproducible desde recibos |
+| Polygon, Celo, Arbitrum | B3 | caudal sostenido de una hora sobre 90 días; exige cobertura continua de la ventana, que el sondeo no tiene |
+| | D2, D3 | la definición estricta de referencia y la lista de intercambios que la tesis excluye no están publicadas; no se reproducen desde recibos |
+| Celo, Arbitrum | B2b | requiere la resolución de cada juego de disputa (3,5 días) o emparejar creación y confirmación de aserciones (6,4 días): no implementada en vivo |
 | Aptos | B2 | bloques de ~20 ms más rápidos que un round-trip HTTP (D1 del plan) |
 | | C3 | el muestreo no cubre los pares consecutivos necesarios (cobertura < 0,9) |
 | | D2 | definición de referencia apta (A-5) sin fijar por escrito; muestra dominada por trading de derivados |
@@ -549,7 +549,7 @@ sequenceDiagram
 
 - Parámetros opcionales: `bloques_tempo`, `bloques_aptos`, `paginas_canton`.
 - Un solo trabajo a la vez.
-- Polygon, Celo y Arbitrum no tienen colector por lotes en el repositorio y se reportan `no_disponible` (sus métricas en vivo se acumulan igual).
+- Polygon, Celo y Arbitrum (`minutos_evm`, 10 por defecto): relleno por lotes de la ventana reciente. Por red: `ColectorEVM.rellenar` lee los últimos N minutos de bloques en trozos de 20 con 2 solicitudes concurrentes (los 429 del RPC público se reintentan en una segunda pasada), guarda bloques y pagos USDC, y `RastreadorAnclaje.ciclo` recorre la ventana de 24 h de anclaje en Ethereum y los costos de gas de las publicaciones. Al final se recalculan las métricas. **No modifica la línea base de 90 días de la tesis** (`perfiles_base` de P/C/A queda intacta); solo acelera que sus métricas en vivo lleguen a `valida`. Arbitrum (bloques de 0,27 s) es la más lenta: ≈ 6 min por cada 10 min de ventana por el límite del RPC público.
 - No resuelve `aptos.B2` ni `aptos.D2`.
 
 ---
@@ -562,11 +562,11 @@ Fuente única en código: `services/network/registry.py`; `GET /api/redes` la ex
 |---|---|---|---|---|
 | A1 costo mediano (USD) | vivo (token de comisión USD) | vivo (APT × Pyth on-chain, congelado) | vivo (bytes × `extraTrafficPrice` del DSO) | vivo (gas × Chainlink, transferencias USDC) |
 | A2 p95/mediana | vivo | vivo | vivo | vivo |
-| A3 pendiente costo~ocupación | vivo | vivo | vivo (tráfico por cubeta de 10 s) | base (la tesis exige ajuste con R² suficiente) |
-| A4 anclaje L1 | n/a | n/a | n/a | base (requiere rastreador de anclaje verificado) |
+| A3 pendiente costo~ocupación | vivo | vivo | vivo (tráfico por cubeta de 10 s) | vivo solo si R² ≥ `A3_R2_MINIMO` (0,10) y la ocupación varía (rango ≥ 0,01); si no, `no_computable` como la línea base |
+| A4 anclaje L1 | n/a | n/a | n/a | vivo (mediana del costo L1 por publicación / transacciones abarcadas = TPS medio × cadencia) |
 | B1 latencia p95 | vivo | vivo | vivo (veredicto) | vivo |
-| B2 finalidad | vivo continuo (ventana 72 h; mientras tanto base) | base: imposible por HTTP | vivo (mediana del veredicto) | base (anclaje en Ethereum) |
-| B2b | n/a | n/a | n/a | base |
+| B2 finalidad | vivo continuo (ventana 72 h; mientras tanto base) | base: imposible por HTTP | vivo (mediana del veredicto) | vivo (anclaje en Ethereum, ventana 24 h: cadencia/2) |
+| B2b | n/a | n/a | n/a | Polygon vivo (= B2, sin ventana de disputa); Celo y Arbitrum base |
 | B3 capacidad | vivo (config + mediana de gas) | vivo (`ExecutionConfig` BCS decodificado, 79/79 bytes) | vivo, cota inferior (asignación gratuita por miembro) | base (caudal sostenido 1 h, 90 d) |
 | C1/C2 concentración | vivo (precompilado `ValidatorConfigV2`, voto igualitario) | vivo (`ValidatorSet`) | vivo (`svRewardWeight`) | vivo (productores en muestra) |
 | C3 continuidad | vivo (ventana 14 d) | base: el muestreo no detecta huecos | vivo (latido `ReportActive`, 14 d) | vivo si la cobertura lo permite (Arbitrum probablemente no) |
@@ -601,7 +601,9 @@ Fuente: JSON-RPC (`RPC_POLYGON`, `RPC_CELO`, `RPC_ARBITRUM`); precios Chainlink 
 | C4 | `status` de los recibos de pago | 20 s | 24 h | 50 | al juntar n |
 | C5 | `eth_getStorageAt` de la ranura de implementación del proxy de USDC | 300 s | 14 d | 1 | 14 días de operación |
 | D1 | tipo de tx (EIP-7702), destino (EntryPoint 4337), selector EIP-3009, `feeCurrency` | 20 s | 24 h | 30 | al juntar n |
-| A3, A4, B2, B2b, B3, D2, D3 | — | — | — | — | solo base (ver [§5](#nivel-d-solo-línea-base)) |
+| A3 | misma muestra de transferencias: pendiente de ln(costo) sobre ocupación | 20 s | 24 h | 50 y R² ≥ 0,10 | al juntar n |
+| A4, B2 (B2b en Polygon) | eventos de anclaje en Ethereum (`NewHeaderBlock`, `DisputeGameCreated`, `SequencerBatchDelivered`) y recibo de cada publicación | 120 s | 24 h | 30 | tras la primera exploración (≈ 10 s con relleno) |
+| B3, D2, D3 (y B2b en Celo/Arbitrum) | — | — | — | — | solo base (ver [§5](#nivel-d-solo-línea-base)) |
 
 ### 15.2 Tempo
 

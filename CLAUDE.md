@@ -28,7 +28,7 @@ Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `servi
 pip install -r backend/requirements.txt
 cd backend && python -m uvicorn app.main:app --port 8000      # API + colectores (crea backend/data/redes.db)
 cd frontend && pnpm dev                                     # UI; /api/* se reenvía a BACKEND_URL
-cd backend && python -m pytest tests                           # 56 pruebas
+cd backend && python -m pytest tests                           # 64 pruebas
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py [--collect]                   # benchmark por lotes, desde la raíz
 ```
@@ -41,6 +41,9 @@ python backend/benchmark/main.py [--collect]                   # benchmark por l
 - Cada identificador (USDC, feeds, selectores, topics) se verifica en vivo o se calcula con keccak. Misma regla de oro que abajo.
 - Canton B2 en vivo es la **mediana**; la base de `metrics.csv` usa el p95 (discrepancia heredada del benchmark).
 - Los RPC públicos son inestables (Polygon cambió de proveedor). Se configuran con `RPC_*`.
+- **Anclaje de P/C/A** (`pipelines/collectors/anclaje.py`): A4/B2/B2b salen de eventos en Ethereum. Contratos verificados en vivo: Polygon `RootChainProxy` (de static.polygon.technology), Celo `DisputeGameFactoryProxy` (superchain-registry), Arbitrum `SequencerInbox` (arbitrum-sdk, enlazado desde `Rollup.sequencerInbox()`). B2 = mediana de cadencia / 2, como la base de la tesis. Los nodos L1 públicos solo guardan ~10 000 bloques: la ventana es de 24 h (`VENTANA_ANCLAJE_S`); `rpc.flashbots.net` responde vacío fuera de su rango sin error: no usarlo.
+- **Recalibrar P/C/A** rellena la ventana en vivo (`ColectorEVM.rellenar`); no sustituye la línea base de 90 días de `perfiles.json` (modo `medicion` depende de ella).
+- **Aptos anónimo**: el API cobra por tamaño de respuesta (40 000 unidades/300 s por IP, un bloque con transacciones ≈ 2 200). El sondeo vivo usa 4 bloques/75 s y el benchmark 40 bloques; con `APTOS_API_KEY` ambos suben. No ejecutes dos recolecciones de Aptos a la vez desde la misma IP.
 - Python/httpx: se usa `ssl.create_default_context()` porque el bundle de certifi falla en esta máquina Windows.
 
 ### Cómo añadir una red
@@ -64,7 +67,7 @@ No se edita `modelo.py` (contrato en `backend/modelo/INTEGRACION.md`). Se cambia
 
 ### Limitaciones conocidas
 
-Ver `README.md` (Aptos B2/D2, colector por lotes de P/C/A inexistente, ventanas largas, precio de APT congelado, Canton B3, RPC públicos).
+Ver `README.md` (Aptos B2/D2, B3/D2/D3 de P/C/A solo base, ventanas largas, precio de APT congelado, Canton B3, RPC públicos).
 
 ## La regla de oro (no negociable)
 

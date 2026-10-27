@@ -3,7 +3,7 @@ siembra la linea base la primera vez y los entrega a los controladores. Es el un
 
 from .config import Settings
 from .db.connection import Database
-from .db.repositorios import (EstadoRepo, MetricasRepo, MuestrasRepo, PerfilesRepo, RecomendacionesRepo, RedesRepo,
+from .db.repositorios import (AnclajesRepo, EstadoRepo, MetricasRepo, MuestrasRepo, PerfilesRepo, RecomendacionesRepo, RedesRepo,
                               SaludRepo, TrabajosRepo)
 from .pipelines.collectors.aptos import ColectorAptos
 from .pipelines.collectors.base import ClienteHTTP
@@ -28,7 +28,7 @@ class Contenedor:
         self.repos = {
             "muestras": MuestrasRepo(self.db), "estado": EstadoRepo(self.db), "metricas": MetricasRepo(self.db),
             "salud": SaludRepo(self.db), "trabajos": TrabajosRepo(self.db), "recomendaciones": RecomendacionesRepo(self.db),
-            "perfiles": PerfilesRepo(self.db), "redes": RedesRepo(self.db),
+            "perfiles": PerfilesRepo(self.db), "redes": RedesRepo(self.db), "anclajes": AnclajesRepo(self.db),
         }
         self.precios = ServicioPrecios(self.settings, self.http)
         self.servicio_perfiles = ServicioPerfiles(self.settings, self.repos["perfiles"], self.repos["metricas"])
@@ -38,7 +38,8 @@ class Contenedor:
         self.colectores = self._construir_colectores()
         self.monitor = Monitor(self.settings, self.repos, self.colectores, al_actualizar=self.invalidar_caches)
         self.recalibracion = ServicioRecalibracion(self.settings, self.repos["trabajos"], self.repos["perfiles"],
-                                                   al_terminar=self.invalidar_caches)
+                                                   al_terminar=self.invalidar_caches, colectores=self.colectores,
+                                                   calcular_metricas=self.monitor.calcular_todas)
 
     def invalidar_caches(self):
         self.recomendador.invalidar()

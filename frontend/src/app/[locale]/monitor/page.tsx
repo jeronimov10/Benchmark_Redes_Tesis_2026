@@ -174,9 +174,16 @@ function Recalibrar() {
       {alcance && (
         <ul className="mt-3 space-y-1 text-xs text-muted">
           <li>{t("scopeDoes", { nets: alcance.recalibra.map(label).join(", ") })}</li>
-          <li>
-            {t("scopeNot", { nets: alcance.no_disponible.map(label).join(", ") })} <span lang="es">{alcance.motivo_no_disponible}</span>
-          </li>
+          {alcance.rellena.length > 0 && (
+            <li>
+              {t("scopeFills", { nets: alcance.rellena.map(label).join(", ") })} <span lang="es">{alcance.nota_rellena}</span>
+            </li>
+          )}
+          {alcance.no_disponible.length > 0 && (
+            <li>
+              {t("scopeNot", { nets: alcance.no_disponible.map(label).join(", ") })} <span lang="es">{alcance.motivo_no_disponible}</span>
+            </li>
+          )}
           <li>
             {t("scopeCannot")} <span lang="es">{alcance.no_resuelve.join("; ")}</span>
           </li>

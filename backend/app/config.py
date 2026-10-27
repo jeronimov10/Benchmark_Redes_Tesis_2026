@@ -44,14 +44,27 @@ class Settings:
     intervalo_finalidad_s: float = field(default_factory=lambda: _decimal("INTERVALO_FINALIDAD_S", 0.3))
     intervalo_estado_s: float = field(default_factory=lambda: _decimal("INTERVALO_ESTADO_S", 300))
     intervalo_metricas_s: float = field(default_factory=lambda: _decimal("INTERVALO_METRICAS_S", 30))
+    intervalo_anclaje_s: float = field(default_factory=lambda: _decimal("INTERVALO_ANCLAJE_S", 120))
     max_bloques_por_ciclo: int = field(default_factory=lambda: _entero("MAX_BLOQUES_POR_CICLO", 40))
 
-    bloques_aptos_por_ciclo: int = field(default_factory=lambda: _entero("BLOQUES_APTOS_POR_CICLO", 6))
+    anclaje_bloques_l1_por_consulta: int = field(default_factory=lambda: _entero("ANCLAJE_BLOQUES_L1_POR_CONSULTA", 2000))
+    anclaje_consultas_por_ciclo: int = field(default_factory=lambda: _entero("ANCLAJE_CONSULTAS_POR_CICLO", 12))
+    anclaje_recibos_por_ciclo: int = field(default_factory=lambda: _entero("ANCLAJE_RECIBOS_POR_CICLO", 30))
+    anclaje_recibos_objetivo: int = field(default_factory=lambda: _entero("ANCLAJE_RECIBOS_OBJETIVO", 120))
+    a3_r2_minimo: float = field(default_factory=lambda: _decimal("A3_R2_MINIMO", 0.10))
+    relleno_bloques_max: int = field(default_factory=lambda: _entero("RELLENO_BLOQUES_MAX", 20000))
+    relleno_trozo_bloques: int = field(default_factory=lambda: _entero("RELLENO_TROZO_BLOQUES", 20))
+    relleno_pausa_s: float = field(default_factory=lambda: _decimal("RELLENO_PAUSA_S", 0.3))
+    relleno_concurrencia: int = field(default_factory=lambda: _entero("RELLENO_CONCURRENCIA", 2))
+    aptos_api_key: str = field(default_factory=lambda: _texto("APTOS_API_KEY", ""))
+    bloques_aptos_por_ciclo: int = field(default_factory=lambda: _entero("BLOQUES_APTOS_POR_CICLO", 6 if _texto("APTOS_API_KEY", "") else 4))
+    intervalo_aptos_s: float = field(default_factory=lambda: _decimal("INTERVALO_APTOS_S", 20 if _texto("APTOS_API_KEY", "") else 75))
     canton_submuestreo: int = field(default_factory=lambda: _entero("CANTON_SUBMUESTREO", 4))
     canton_paginas_por_ciclo: int = field(default_factory=lambda: _entero("CANTON_PAGINAS_POR_CICLO", 10))
 
     ventana_flujo_s: int = field(default_factory=lambda: _entero("VENTANA_FLUJO_S", 900))
     ventana_distribucion_s: int = field(default_factory=lambda: _entero("VENTANA_DISTRIBUCION_S", 86400))
+    ventana_anclaje_s: int = field(default_factory=lambda: _entero("VENTANA_ANCLAJE_S", 86400))
     ventana_finalidad_s: int = field(default_factory=lambda: _entero("VENTANA_FINALIDAD_S", 72 * 3600))
     ventana_continuidad_s: int = field(default_factory=lambda: _entero("VENTANA_CONTINUIDAD_S", 14 * 86400))
 
@@ -66,7 +79,8 @@ class Settings:
     rpc_polygon: str = field(default_factory=lambda: _texto("RPC_POLYGON", "https://polygon.publicnode.com"))
     rpc_celo: str = field(default_factory=lambda: _texto("RPC_CELO", "https://forno.celo.org"))
     rpc_arbitrum: str = field(default_factory=lambda: _texto("RPC_ARBITRUM", "https://arb1.arbitrum.io/rpc"))
-    rpc_ethereum: str = field(default_factory=lambda: _texto("RPC_ETHEREUM", "https://eth.drpc.org"))
+    rpc_ethereum: str = field(default_factory=lambda: _texto("RPC_ETHEREUM", "https://ethereum.publicnode.com"))
+    rpc_ethereum_respaldo: str = field(default_factory=lambda: _texto("RPC_ETHEREUM_RESPALDO", "https://eth.drpc.org"))
     hermes_pyth: str = field(default_factory=lambda: _texto("HERMES_PYTH", "https://hermes.pyth.network"))
     usdc_polygon: str = field(default_factory=lambda: _texto("USDC_POLYGON", "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"))
     usdc_celo: str = field(default_factory=lambda: _texto("USDC_CELO", "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"))
@@ -74,6 +88,9 @@ class Settings:
 
     dias_recalibracion: int = field(default_factory=lambda: _entero("DIAS_RECALIBRACION", 14))
     horas_finalidad_recalibracion: float = field(default_factory=lambda: _decimal("HORAS_FINALIDAD_RECALIBRACION", 72))
+
+    def intervalo_bloques(self, red):
+        return self.intervalo_aptos_s if red == "aptos" else self.intervalo_bloques_s
 
     def usdc(self, red):
         return {"polygon": self.usdc_polygon, "celo": self.usdc_celo, "arbitrum": self.usdc_arbitrum}[red]

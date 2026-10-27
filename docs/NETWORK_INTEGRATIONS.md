@@ -21,11 +21,11 @@ Los seis colectores respondieron en la verificación y las métricas "vivas" de 
 |---|---|---|---|---|
 | A1 costo mediano (USD) | vivo (token de comisión USD) | vivo (APT × Pyth on-chain, congelado) | vivo (bytes × `extraTrafficPrice` del DSO) | vivo (gas × Chainlink, transferencias USDC) |
 | A2 p95/mediana | vivo | vivo | vivo | vivo |
-| A3 pendiente costo~ocupación | vivo | vivo | vivo (tráfico por cubeta de 10 s) | base (la tesis exige ajuste con R² suficiente) |
-| A4 anclaje L1 | n/a | n/a | n/a | base (requiere rastreador de anclaje verificado) |
+| A3 pendiente costo~ocupación | vivo | vivo | vivo (tráfico por cubeta de 10 s) | vivo solo si R² ≥ 0,10 y la ocupación varía; si no, `no_computable` |
+| A4 anclaje L1 | n/a | n/a | n/a | vivo (costo L1 por publicación / transacciones abarcadas) |
 | B1 latencia p95 | vivo | vivo | vivo (veredicto) | vivo |
-| B2 finalidad | vivo continuo (ventana 72 h; mientras tanto base) | base: imposible por HTTP | vivo (mediana del veredicto) | base (anclaje en Ethereum) |
-| B2b | n/a | n/a | n/a | base |
+| B2 finalidad | vivo continuo (ventana 72 h; mientras tanto base) | base: imposible por HTTP | vivo (mediana del veredicto) | vivo (anclaje en Ethereum, 24 h: cadencia/2) |
+| B2b | n/a | n/a | n/a | Polygon vivo (= B2); Celo y Arbitrum base |
 | B3 capacidad | vivo (config + mediana de gas) | vivo (`ExecutionConfig` BCS decodificado, 79/79 bytes) | vivo, cota inferior (asignación gratuita por miembro) | base (caudal sostenido 1 h, 90 d) |
 | C1/C2 concentración | vivo (precompilado `ValidatorConfigV2`, voto igualitario) | vivo (`ValidatorSet`) | vivo (`svRewardWeight`) | vivo (productores en muestra) |
 | C3 continuidad | vivo (ventana 14 d) | base: el muestreo no detecta huecos | vivo (latido `ReportActive`, 14 d) | vivo si la cobertura lo permite (Arbitrum probablemente no) |

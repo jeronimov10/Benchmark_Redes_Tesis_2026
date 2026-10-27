@@ -751,11 +751,13 @@
     },
     "noCollector": "Este colector aún no ha reportado.",
     "component": {
+      "anclaje": "Anclaje en Ethereum",
       "bloques": "Bloques y pagos",
       "estado": "Estado de la red",
       "finalidad": "Finalidad",
       "metricas": "Cálculo de métricas",
-      "precio": "Precio del token"
+      "precio": "Precio del token",
+      "precio_l1": "Precio de ETH (costo L1)"
     },
     "lastOk": "último éxito hace {age}",
     "neverOk": "sin éxito todavía",
@@ -799,8 +801,9 @@
     },
     "recalibrate": {
       "title": "Recalibrar mediciones base",
-      "desc": "Vuelve a correr el benchmark por lotes (recolección, cálculo y entregables) y reconstruye las mediciones base de Tempo, Aptos y Canton. Todo lo que sí se puede medir casi en tiempo real ya se actualiza solo; esto solo renueva lo que sirve de respaldo.",
-      "scopeDoes": "Recalibra: {nets}.",
+      "desc": "Vuelve a correr el benchmark por lotes (recolección, cálculo y entregables) y reconstruye las mediciones base de Tempo, Aptos y Canton; en Polygon, Celo y Arbitrum rellena la ventana reciente (bloques, pagos y anclaje en Ethereum) para que sus métricas en vivo se llenen más rápido. Todo lo que sí se puede medir casi en tiempo real ya se actualiza solo; esto solo renueva lo que sirve de respaldo. Aptos sin clave de API tarda varios minutos por el límite del servicio.",
+      "scopeDoes": "Recalibra la línea base: {nets}.",
+      "scopeFills": "Rellena la ventana en vivo: {nets}.",
       "scopeNot": "No disponible: {nets}.",
       "scopeCannot": "No resuelve:",
       "run": "Recalibrar ahora",

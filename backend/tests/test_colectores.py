@@ -100,7 +100,7 @@ def test_evm_pagos_usdc_fallos_patrocinio_y_precio(settings, db):
                for n in range(8, 13)}
     c = contenedor(settings, manejador_polygon(bloques, recibos, precio_chainlink=2.0), db, ["polygon"])
     r = correr(c.colectores["polygon"].ciclo_bloques())
-    assert r == {"bloques": 5, "pagos": 2}
+    assert (r["bloques"], r["pagos"], len(r["muestras"])) == (5, 2, 5)
     filas = {f["hash"]: f for f in c.repos["muestras"].txs_desde("polygon", 0)}
     assert set(filas) == {"0xa", "0xb"}
     assert filas["0xa"]["tiene_transfer"] == 1 and filas["0xa"]["patrocinada"] == 1 and filas["0xa"]["estado_ok"] == 1

@@ -28,7 +28,7 @@ Elegir una red para liquidar un pago depende de costo, tiempo, concentración, c
 - Métricas en vivo (sondeo cada ~20 s) sobre ventanas móviles; lo que no se puede calcular en vivo conserva su medición base y se marca como tal.
 - Recomendación por bandas, certidumbre, compuertas y métrica determinante, con procedencia por métrica (`vivo` / `base`) y edad.
 - Estados explícitos: cargando, ok, dato obsoleto, datos insuficientes, error.
-- Página **Monitoreo**: salud de cada colector, valor/origen/edad de cada métrica y botón **Recalibrar** para las mediciones base.
+- Página **Monitoreo**: salud de cada colector, valor/origen/edad de cada métrica y botón **Recalibrar** (mediciones base de Tempo/Aptos/Canton y relleno de la ventana reciente de Polygon/Celo/Arbitrum).
 - Modo `medicion` que reproduce exactamente la tesis (solo mediciones base).
 
 ## Tecnología
@@ -124,11 +124,11 @@ docs/                  plan, arquitectura, pipeline, modelo, redes, API, desarro
 | Red | Responsable | Fuente | Métricas en vivo |
 |---|---|---|---|
 | Tempo | Jerónimo | JSON-RPC `rpc.tempo.xyz` | 14 de 16 (todas menos A4, B2b) |
-| Aptos | Jerónimo | REST `api.mainnet.aptoslabs.com` | 10 (B2, C3, D2, C5 solo base) |
+| Aptos | Jerónimo | REST `api.mainnet.aptoslabs.com` | 10 (B2, C3, D2, C5 solo base); sin clave de API el servicio limita a 40 000 unidades/300 s por IP |
 | Canton | Jerónimo | Scan API `api.cantonnodes.com` | 13 (D1 solo base) |
-| Polygon | Dilan | JSON-RPC público | 9 (A4, B2, B2b, B3, A3, D2, D3 solo base) |
-| Celo | Dilan | JSON-RPC `forno.celo.org` | 9 |
-| Arbitrum | Dilan | JSON-RPC `arb1.arbitrum.io` | 9 |
+| Polygon | Dilan | JSON-RPC público + checkpoints (`RootChainProxy`) en Ethereum | 13 (B3, D2, D3 solo base) |
+| Celo | Dilan | JSON-RPC `forno.celo.org` + juegos de disputa (`DisputeGameFactory`) en Ethereum | 12 (B2b, B3, D2, D3 solo base) |
+| Arbitrum | Dilan | JSON-RPC `arb1.arbitrum.io` + lotes (`SequencerInbox`) en Ethereum | 12 (B2b, B3, D2, D3 solo base) |
 
 La tabla completa y las razones de cada métrica solo-base están en [docs/NETWORK_INTEGRATIONS.md](docs/NETWORK_INTEGRATIONS.md).
 
@@ -230,22 +230,23 @@ Sin Docker el backend usa el almacén de certificados del sistema operativo, as�
 ## Pruebas
 
 ```bash
-cd backend && python -m pytest tests        # 56 pruebas
+cd backend && python -m pytest tests        # 64 pruebas
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py            # benchmark por lotes con resultados/raw/ (sin red)
 ```
 
 ## Qué funciona y qué no
 
-**Funciona (verificado en vivo el 2026-10-19):** los seis colectores contra las redes reales; 54 de 90 métricas en vivo; recomendación en modo `vivo` y `medicion`; casos de referencia de la tesis (±0,005); monitoreo en el frontend; Recalibrar (corrida real corta completada); 56 pruebas de backend y 19 de frontend.
+**Funciona (verificado en vivo el 2026-10-19):** los seis colectores contra las redes reales; 54 de 90 métricas en vivo; recomendación en modo `vivo` y `medicion`; casos de referencia de la tesis (±0,005); monitoreo en el frontend; Recalibrar (corrida real corta completada); 64 pruebas de backend y 19 de frontend.
 
 **No funciona o es parcial:**
 
 | Qué | Por qué |
 |---|---|
 | Aptos B2, D2, C3 | Bloques de ~20 ms, definición A-5 sin fijar, muestreo sin cobertura de huecos |
-| P/C/A: A3, A4, B2, B2b, B3, D2, D3 en vivo | Requieren el rastreador de anclaje en Ethereum o definiciones de la tesis no reproducibles; usan la base de 90 días |
-| Recalibrar para P/C/A | No existe un colector por lotes de Dilan en este repo |
+| P/C/A: B3, D2, D3 en vivo y B2b de Celo y Arbitrum | Definiciones de la tesis no reproducibles (lista de intercambios, referencia estricta) o ventanas de 90 días / 6,4 días; usan la base |
+| Anclaje de P/C/A: ventana de 24 h | Los nodos públicos de Ethereum solo conservan ~10 000 bloques (~33 h) y los que aceptan consultas más antiguas devuelven vacío sin avisar; con un RPC de archivo propio (`RPC_ETHEREUM`) se puede ampliar con `VENTANA_ANCLAJE_S` |
+| Recalibrar Aptos | El API anónimo cobra por tamaño de respuesta (un bloque ≈ 2 200 unidades de 40 000 por 5 min): 40 bloques ≈ 11 min; con `APTOS_API_KEY` no hay espera |
 | B2 (72 h) y C3/C5 (14 d) en vivo | Solo cuentan cuando el backend lleva corriendo toda la ventana |
 | Persistencia de usuarios | Solo `localStorage` del navegador; no hay cuentas ni backend de usuarios |
 | RPC públicos | Pueden limitar o caer (Polygon ya cambió de proveedor) |
@@ -253,7 +254,7 @@ python backend/benchmark/main.py            # benchmark por lotes con resultados
 ## Limitaciones conocidas
 
 - **Aptos B2** no es medible por HTTP (bloques ~20 ms); **Aptos D2** necesita fijar la definición A-5; ambos quedan sin dato.
-- **Polygon/Celo/Arbitrum**: A4, B2/B2b (anclaje en Ethereum), A3, B3, D2, D3 solo existen en su medición base (90 días); no hay colector por lotes para ellos en este repositorio, así que el botón Recalibrar no los cubre.
+- **Polygon/Celo/Arbitrum**: A3, A4, B2 (y B2b en Polygon) se calculan en vivo; el anclaje en Ethereum se observa en ventana de 24 h (B2 = cadencia/2, como la línea base de la tesis). B3, D2, D3 y B2b de Celo/Arbitrum solo existen en su medición base de 90 días. El botón Recalibrar rellena la ventana reciente de estas redes (no modifica su línea base).
 - Ventanas largas (B2 72 h, C3/C5 14 d) se llenan con el backend corriendo; mientras tanto se usa la base.
 - El precio de APT en Pyth está congelado desde 2026-08-26; A1/A2 de Aptos lo usan y lo marcan.
 - Canton B3 es la asignación gratuita por miembro (probablemente subestima) y se marca como cota inferior.

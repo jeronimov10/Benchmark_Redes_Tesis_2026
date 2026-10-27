@@ -213,8 +213,10 @@ export interface EstadoRecalibracion {
   ocupado: boolean;
   alcance: {
     recalibra: string[];
+    rellena: string[];
     no_disponible: string[];
     motivo_no_disponible: string;
+    nota_rellena: string;
     no_resuelve: string[];
   };
 }

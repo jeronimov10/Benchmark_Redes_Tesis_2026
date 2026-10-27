@@ -8,6 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.container import Contenedor
+from app.pipelines.collectors.anclaje import RastreadorAnclaje
+from app.pipelines.collectors.evm import ColectorEVM
 from app.main import crear_app
 from app.models.dominio import EstadoMetrica, MetricaValor
 from app.services.recalibracion.trabajos import ServicioRecalibracion
@@ -27,7 +29,7 @@ def cliente(settings, db):
 
 def test_salud_y_redes(cliente):
     s = cliente.get("/api/salud").json()
-    assert s["base_de_datos"]["version_esquema"] == 1 and s["monitor"]["corriendo"] is False
+    assert s["base_de_datos"]["version_esquema"] == 2 and s["monitor"]["corriendo"] is False
     assert set(s["redes"]) == {"polygon", "celo", "arbitrum", "tempo", "aptos", "canton"}
     r = cliente.get("/api/redes").json()["redes"]
     assert {x["id"] for x in r} == set(s["redes"])
@@ -110,14 +112,24 @@ def test_recalibracion_ciclo_de_vida(cliente, monkeypatch):
     c = cliente.contenedor
     version_antes = c.repos["perfiles"].version()
 
-    def falso(self, id_, directorio, p):
+    async def relleno_falso(self, minutos, progreso=None, cancelado=None):
+        progreso(1.0)
+        return {"bloques": 12, "pagos": 3, "segundos_por_bloque": 2.0, "bloques_solicitados": 12, "minutos": minutos}
+
+    async def anclaje_falso(self, ventana_s=None, consultas=None, recibos=None):
+        return {"anclajes_nuevos": 5, "costos": 5, "bloques_l1_pendientes": 0}
+
+    monkeypatch.setattr(ColectorEVM, "rellenar", relleno_falso)
+    monkeypatch.setattr(RastreadorAnclaje, "ciclo", anclaje_falso)
+
+    def falso(self, id_, directorio, p, peso=0.94):
         shutil.copy(REPO / "resultados" / "metrics.csv", directorio / "resultados" / "metrics.csv")
         self.trabajos.actualizar(id_, progreso=0.5, etapa=">>> falso")
         return 0, "salida simulada"
 
     monkeypatch.setattr(ServicioRecalibracion, "_correr_benchmark", falso)
     inicio = cliente.post("/api/recalibracion", json={"redes": ["tempo", "polygon"]})
-    assert inicio.status_code == 200 and inicio.json()["redes"] == ["tempo"] and inicio.json()["no_disponible"] == ["polygon"]
+    assert inicio.status_code == 200 and inicio.json()["redes"] == ["tempo", "polygon"] and inicio.json()["no_disponible"] == []
     for _ in range(100):
         estado = cliente.get("/api/recalibracion").json()
         if estado["trabajo"]["estado"] != "en_curso":
@@ -125,13 +137,15 @@ def test_recalibracion_ciclo_de_vida(cliente, monkeypatch):
         time.sleep(0.05)
     assert estado["trabajo"]["estado"] == "completado" and estado["trabajo"]["progreso"] == 1.0
     assert c.repos["perfiles"].version() == version_antes + 1
-    assert "polygon" in estado["alcance"]["no_disponible"]
+    assert "polygon" in estado["alcance"]["rellena"] and estado["alcance"]["no_disponible"] == []
+    assert "polygon: 12 bloques y 3 pagos" in estado["trabajo"]["log_tail"]
+    assert c.repos["perfiles"].todos()[0]["polygon"]["A1"]["valor"] == pytest.approx(0.0042938909065679265)
     assert cliente.delete("/api/recalibracion").status_code == 409
     assert cliente.post("/api/recalibracion", json={"redes": ["xyz"]}).status_code == 422
 
 
 def test_recalibracion_fallida_se_reporta(cliente, monkeypatch):
-    monkeypatch.setattr(ServicioRecalibracion, "_correr_benchmark", lambda self, i, d, p: (3, "boom"))
+    monkeypatch.setattr(ServicioRecalibracion, "_correr_benchmark", lambda self, i, d, p, peso=0.94: (3, "boom"))
     cliente.post("/api/recalibracion", json={})
     for _ in range(100):
         estado = cliente.get("/api/recalibracion").json()

@@ -51,6 +51,10 @@ class MuestrasRepo:
         r = self.db.uno("SELECT MAX(numero) AS n FROM muestras_bloque WHERE red=?", (red,))
         return r["n"] if r else None
 
+    def numeros_entre(self, red, desde, hasta):
+        return {r["numero"] for r in self.db.consultar(
+            "SELECT numero FROM muestras_bloque WHERE red=? AND numero BETWEEN ? AND ?", (red, desde, hasta))}
+
     def conteos(self):
         out = {}
         for tabla in ("muestras_bloque", "muestras_tx", "muestras_finalidad"):
@@ -64,7 +68,40 @@ class MuestrasRepo:
         n += self.db.ejecutar("DELETE FROM muestras_finalidad WHERE tau_f<?", (corte_finalidad,))
         n += self.db.ejecutar("DELETE FROM lecturas_estado WHERE ts<?", (corte_estado,))
         n += self.db.ejecutar("DELETE FROM metricas_vivo WHERE ts<?", (corte_metricas,))
+        n += self.db.ejecutar("DELETE FROM anclajes WHERE l1_ts<?", (corte_finalidad,))
         return n
+
+
+class AnclajesRepo:
+    def __init__(self, db):
+        self.db = db
+
+    def guardar(self, red, anclajes):
+        t = ahora()
+        filas = [(red, a["l1_tx"], a["log_index"], a["l1_bloque"], a["l1_ts"], a.get("l2_desde"), a.get("l2_hasta"), t)
+                 for a in anclajes]
+        return self.db.ejecutar_muchos(
+            "INSERT OR IGNORE INTO anclajes (red,l1_tx,log_index,l1_bloque,l1_ts,l2_desde,l2_hasta,recogido_en)"
+            " VALUES (?,?,?,?,?,?,?,?)", filas)
+
+    def desde(self, red, desde_ts):
+        return self.db.consultar(
+            "SELECT l1_tx,log_index,l1_bloque,l1_ts,l2_desde,l2_hasta,costo_eth,costo_usd,precio_eth_usd FROM anclajes"
+            " WHERE red=? AND l1_ts>=? ORDER BY l1_ts", (red, desde_ts))
+
+    def sin_costo(self, red, desde_ts, limite):
+        return self.db.consultar(
+            "SELECT l1_tx,COUNT(*) AS n_logs FROM anclajes WHERE red=? AND l1_ts>=? AND costo_eth IS NULL"
+            " GROUP BY l1_tx ORDER BY MAX(l1_ts) DESC LIMIT ?", (red, desde_ts, limite))
+
+    def con_costo(self, red, desde_ts):
+        return self.db.uno("SELECT COUNT(*) AS n FROM anclajes WHERE red=? AND l1_ts>=? AND costo_eth IS NOT NULL",
+                           (red, desde_ts))["n"]
+
+    def poner_costo(self, red, l1_tx, costo_eth, precio_eth_usd):
+        return self.db.ejecutar(
+            "UPDATE anclajes SET costo_eth=?, precio_eth_usd=?, costo_usd=? WHERE red=? AND l1_tx=?",
+            (costo_eth, precio_eth_usd, costo_eth * precio_eth_usd, red, l1_tx))
 
 
 class EstadoRepo:

@@ -751,11 +751,13 @@
     },
     "noCollector": "This collector has not reported yet.",
     "component": {
+      "anclaje": "Ethereum anchoring",
       "bloques": "Blocks and payments",
       "estado": "Network state",
       "finalidad": "Finality",
       "metricas": "Metric computation",
-      "precio": "Token price"
+      "precio": "Token price",
+      "precio_l1": "ETH price (L1 cost)"
     },
     "lastOk": "last success {age} ago",
     "neverOk": "no success yet",
@@ -799,8 +801,9 @@
     },
     "recalibrate": {
       "title": "Recalibrate baseline measurements",
-      "desc": "Re-runs the batch benchmark (collection, computation and deliverables) and rebuilds the baseline measurements of Tempo, Aptos and Canton. Everything that can be measured in near real time already updates by itself; this only renews the fallback.",
-      "scopeDoes": "Recalibrates: {nets}.",
+      "desc": "Re-runs the batch benchmark (collection, computation and deliverables) and rebuilds the baseline measurements of Tempo, Aptos and Canton; for Polygon, Celo and Arbitrum it backfills the recent window (blocks, payments and Ethereum anchoring) so their live metrics fill faster. Everything that can be measured in near real time already updates by itself; this only renews the fallback. Aptos without an API key takes several minutes because of the service rate limit.",
+      "scopeDoes": "Recalibrates the baseline: {nets}.",
+      "scopeFills": "Backfills the live window: {nets}.",
       "scopeNot": "Not available: {nets}.",
       "scopeCannot": "Does not resolve:",
       "run": "Recalibrate now",

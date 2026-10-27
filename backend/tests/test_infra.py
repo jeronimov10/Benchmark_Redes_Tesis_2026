@@ -17,7 +17,7 @@ def test_migracion_idempotente_en_disco(tmp_path):
     ruta = tmp_path / "m.db"
     Database(ruta).cerrar()
     d = Database(ruta)
-    assert d.version() == 1
+    assert d.version() == 2
     assert {r["name"] for r in d.consultar("SELECT name FROM sqlite_master WHERE type='table'")} >= {
         "muestras_bloque", "muestras_tx", "muestras_finalidad", "lecturas_estado", "metricas_vivo", "perfiles_base",
         "salud_colector", "trabajos_recalibracion", "recomendaciones", "redes", "meta"}

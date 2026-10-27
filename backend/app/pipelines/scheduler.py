@@ -73,7 +73,7 @@ class Monitor:
             self.repos["estado"].guardar(red, "c3_ciclo", resumen)
 
     def calcular_todas(self):
-        ctx = Contexto(self.settings, self.repos["muestras"], self.repos["estado"], ahora())
+        ctx = Contexto(self.settings, self.repos["muestras"], self.repos["estado"], ahora(), self.repos.get("anclajes"))
         total = 0
         for red in self.colectores:
             try:
@@ -121,12 +121,15 @@ class Monitor:
             c = self.colectores[red]
             desfase = i * 1.5
             self._tareas.append(asyncio.create_task(
-                self._bucle(red, "bloques", lambda r=red: self.ciclo_bloques(r), s.intervalo_bloques_s, desfase)))
+                self._bucle(red, "bloques", lambda r=red: self.ciclo_bloques(r), s.intervalo_bloques(red), desfase)))
             self._tareas.append(asyncio.create_task(
                 self._bucle(red, "estado", c.ciclo_estado, s.intervalo_estado_s, desfase / 2)))
             if red == "tempo":
                 self._tareas.append(asyncio.create_task(
                     self._bucle(red, "finalidad", c.ciclo_finalidad, s.intervalo_finalidad_s, 3.0)))
+            if hasattr(c, "ciclo_anclaje"):
+                self._tareas.append(asyncio.create_task(
+                    self._bucle(red, "anclaje", c.ciclo_anclaje, s.intervalo_anclaje_s, desfase + 5.0)))
         self._tareas.append(asyncio.create_task(self._bucle_metricas()))
         self._tareas.append(asyncio.create_task(self._bucle_poda()))
 

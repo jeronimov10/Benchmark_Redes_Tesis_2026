@@ -1,16 +1,20 @@
 """Colector EVM para Polygon, Celo y Arbitrum: lee bloques completos, localiza pagos en USDC (eventos Transfer del contrato verificado
 y llamadas directas al contrato), obtiene sus recibos y los normaliza. Verifica el contrato de USDC (symbol, decimals, codigo) y lee la
-ranura de implementacion del proxy para C5."""
+ranura de implementacion del proxy para C5. Incluye el rastreador de anclaje en Ethereum (A4, B2, B2b) y el relleno por lotes
+de una ventana reciente (boton Recalibrar)."""
 
 import asyncio
+import math
 
 from ...utils.keccak import keccak256_hex, selector
-from ..processors.evm import (TOPIC_TRANSFER, bloque_a_muestra, candidatas_pago, hx, ocupacion,
+from ..processors.evm import (TOPIC_TRANSFER, bloque_a_muestra, candidatas_pago, hx, ocupacion, ts_bloque,
                               tx_de_pago_evm)
+from .anclaje import RastreadorAnclaje
 from .base import Colector, ErrorFuente
 from .precios import ServicioPrecios
 
 ACTIVO_NATIVO = {"polygon": "POL", "celo": "CELO", "arbitrum": "ETH"}
+MARGEN_CABEZA = 5
 SEL_SIMBOLO = selector("symbol()")
 SEL_DECIMALES = selector("decimals()")
 RANURAS_PROXY = {
@@ -35,6 +39,7 @@ class ColectorEVM(Colector):
         self.token = settings.usdc(red).lower()
         self.precios: ServicioPrecios = precios
         self.token_ok = False
+        self.anclaje = RastreadorAnclaje(red, settings, cliente, repos, precios)
 
     async def verificar(self):
         simbolo = _texto_abi(await self.http.rpc(self.url, "eth_call", [{"to": self.token, "data": SEL_SIMBOLO}, "latest"]))
@@ -73,13 +78,73 @@ class ColectorEVM(Colector):
         else:
             inicio = ultimo + 1
         if inicio > cabeza:
-            return {"bloques": 0, "pagos": 0}
-        llamadas = [("eth_getBlockByNumber", [hex(n), True]) for n in range(inicio, cabeza + 1)]
+            return {"bloques": 0, "pagos": 0, "muestras": []}
+        n_bloques, pagos, muestras = await self._procesar_rango(inicio, cabeza)
+        return {"bloques": n_bloques, "pagos": pagos, "muestras": muestras}
+
+    async def _procesar_rango(self, inicio, fin):
+        llamadas = [("eth_getBlockByNumber", [hex(n), True]) for n in range(inicio, fin + 1)]
         crudos = [b for b in await self.http.rpc_lote(self.url, llamadas, tamano=10) if b]
         muestras = [bloque_a_muestra(b) for b in crudos]
-        pagos = await self._pagos(crudos, inicio, cabeza)
+        pagos = await self._pagos(crudos, inicio, fin)
         self.repos["muestras"].guardar_bloques(self.red, muestras)
-        return {"bloques": len(muestras), "pagos": pagos}
+        return len(muestras), pagos, muestras
+
+    async def ciclo_anclaje(self):
+        return await self.anclaje.ciclo()
+
+    async def segundos_por_bloque(self):
+        referencia = hx(await self.http.rpc(self.url, "eth_blockNumber")) - MARGEN_CABEZA
+        recientes = await self.http.rpc_lote(self.url, [("eth_getBlockByNumber", [hex(n), False]) for n in (referencia - 200, referencia)])
+        if not all(recientes):
+            raise ErrorFuente(f"el nodo de {self.red} no devolvio los bloques de referencia {referencia - 200} y {referencia}")
+        return referencia, max((ts_bloque(recientes[1]) - ts_bloque(recientes[0])) / 200, 0.05)
+
+    async def rellenar(self, minutos, progreso=None, cancelado=None):
+        if not self.token_ok:
+            await self.verificar()
+        cabeza, dt = await self.segundos_por_bloque()
+        total = min(self.settings.relleno_bloques_max, math.ceil(minutos * 60 / dt))
+        inicio = cabeza - total + 1
+        existentes = self.repos["muestras"].numeros_entre(self.red, inicio, cabeza)
+        trozo = self.settings.relleno_trozo_bloques
+        rangos = []
+        for a in range(inicio, cabeza + 1, trozo):
+            b = min(a + trozo - 1, cabeza)
+            if any(n not in existentes for n in range(a, b + 1)):
+                rangos.append((a, b))
+        sem = asyncio.Semaphore(self.settings.relleno_concurrencia)
+        hechos = {"bloques": 0, "pagos": 0, "fallidos": 0, "rangos": 0}
+        fallidos = []
+
+        async def uno(a, b, definitivo):
+            if cancelado and cancelado():
+                return
+            async with sem:
+                try:
+                    nb, np_, _ = await self._procesar_rango(a, b)
+                    hechos["bloques"] += nb
+                    hechos["pagos"] += np_
+                except ErrorFuente as exc:
+                    hechos["ultimo_error"] = str(exc)[:240]
+                    if not definitivo:
+                        fallidos.append((a, b))
+                        await asyncio.sleep(self.settings.relleno_pausa_s * 5)
+                        return
+                    hechos["fallidos"] += 1
+                hechos["rangos"] += 1
+                if progreso:
+                    progreso(hechos["rangos"] / max(len(rangos), 1))
+                await asyncio.sleep(self.settings.relleno_pausa_s)
+
+        await asyncio.gather(*(uno(a, b, False) for a, b in rangos))
+        pendientes, fallidos[:] = list(fallidos), []
+        for a, b in pendientes:
+            await uno(a, b, True)
+        if rangos and hechos["fallidos"] > len(rangos) * 0.3:
+            raise ErrorFuente(f"relleno de {self.red}: fallaron {hechos['fallidos']} de {len(rangos)} rangos ({hechos.get('ultimo_error')})")
+        hechos.update({"bloques_solicitados": total, "segundos_por_bloque": round(dt, 3), "minutos": minutos})
+        return hechos
 
     async def _logs(self, inicio, fin):
         filtro = {"address": self.token, "topics": [TOPIC_TRANSFER], "fromBlock": hex(inicio), "toBlock": hex(fin)}

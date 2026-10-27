@@ -41,6 +41,12 @@ class ClienteHTTP:
                                       headers={"User-Agent": "redes-monitor/1.0"})
         self.ultima_latencia_ms = None
 
+    def _con_credenciales(self, url, kw):
+        clave = self.settings.aptos_api_key
+        if clave and url.startswith(self.settings.rest_aptos):
+            return {**kw, "headers": {**kw.get("headers", {}), "Authorization": f"Bearer {clave}"}}
+        return kw
+
     async def cerrar(self):
         await self._cli.aclose()
 
@@ -50,7 +56,7 @@ class ClienteHTTP:
         for i in range(intentos + 1):
             t0 = time.perf_counter()
             try:
-                r = await self._cli.request(metodo, url, **kw)
+                r = await self._cli.request(metodo, url, **self._con_credenciales(url, kw))
                 self.ultima_latencia_ms = (time.perf_counter() - t0) * 1000
                 if r.status_code in (429, 500, 502, 503, 504):
                     espera = None

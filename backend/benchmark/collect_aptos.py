@@ -1,15 +1,26 @@
 """Colector real Aptos contra api.mainnet.aptoslabs.com/v1.
 Muestra reducida, n declarado explicitamente, no la ventana de 14 dias completa.
+
+Limite del API: sin clave, 40.000 unidades de computo por 300 s y por IP (medido: un bloque con transacciones pesa ~127 KB y cuesta ~2.200
+unidades, asi que solo caben ~18 bloques por ventana de 5 min). Por eso la muestra por defecto es de 40 bloques y el colector espera a que
+se libere la ventana en vez de martillar el API. Con APTOS_API_KEY (clave gratuita de Aptos Build/Geomi) el limite sube y N_BLOCKS_APTOS
+puede aumentarse (p. ej. 350).
 """
 import json
 import os
+import socket
 import time
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor
 
 BASE = "https://api.mainnet.aptoslabs.com/v1"
 OUT_RAW = "resultados/raw/aptos"
-N_BLOCKS = int(os.environ.get("N_BLOCKS_APTOS", 350))
+API_KEY = os.environ.get("APTOS_API_KEY", "")
+N_BLOCKS = int(os.environ.get("N_BLOCKS_APTOS", 350 if API_KEY else 40))
+WORKERS = int(os.environ.get("APTOS_WORKERS", 8 if API_KEY else 2))
+UNIDADES_POR_BLOQUE = 2200
+UNIDADES_POR_SEGUNDO = 40000 / 300
 
 # Pyth en Aptos. Direccion del paquete confirmada por sesiones anteriores
 # (docs.pyth.network/price-feeds/contract-addresses/aptos). El ID de 32 bytes
@@ -23,37 +34,54 @@ PYTH_ACCOUNT = "0x7e783b349d3e89cf5931af376ebeadbfab855b3fa239b7ada8f5a92fbea6b3
 PYTH_APT_USD_FEED_ID = "0x03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5"
 
 
-def get(path, retries=8):
-    req = urllib.request.Request(BASE + path, headers={"User-Agent": "bench/1.0"})
-    delay = 5.0
+def _abrir(req, retries):
+    delay = 3.0
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with urllib.request.urlopen(req, timeout=60) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
-            if e.code == 429 and attempt < retries - 1:
-                time.sleep(delay)
-                delay *= 1.6
-                continue
-            raise
+            if e.code not in (429, 500, 502, 503, 504) or attempt == retries - 1:
+                raise
+            espera = float(e.headers.get("Retry-After") or delay) if e.code == 429 else delay
+        except (urllib.error.URLError, socket.timeout, TimeoutError):
+            if attempt == retries - 1:
+                raise
+            espera = delay
+        time.sleep(espera)
+        delay = min(delay * 1.5, 40.0)
 
 
-def post(path, payload, retries=8):
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        BASE + path, data=body, headers={"Content-Type": "application/json", "User-Agent": "bench/1.0"}
-    )
-    delay = 5.0
-    for attempt in range(retries):
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.loads(r.read())
-        except urllib.error.HTTPError as e:
-            if e.code == 429 and attempt < retries - 1:
-                time.sleep(delay)
-                delay *= 1.6
-                continue
-            raise
+def _cabeceras(extra=None):
+    h = {"User-Agent": "bench/1.0", **(extra or {})}
+    if API_KEY:
+        h["Authorization"] = f"Bearer {API_KEY}"
+    return h
+
+
+def get(path, retries=30):
+    return _abrir(urllib.request.Request(BASE + path, headers=_cabeceras()), retries)
+
+
+def post(path, payload, retries=30):
+    req = urllib.request.Request(BASE + path, data=json.dumps(payload).encode(),
+                                 headers=_cabeceras({"Content-Type": "application/json"}))
+    return _abrir(req, retries)
+
+
+def bajar_bloque(h):
+    try:
+        return get(f"/blocks/by_height/{h}?with_transactions=true")
+    except Exception as e:
+        print("error bloque", h, e)
+        return None
+
+
+def resolver_store(s):
+    try:
+        return s, get(f"/accounts/{s}/resource/0x1::fungible_asset::FungibleStore")["data"]["metadata"]["inner"]
+    except Exception:
+        return s, None
 
 
 def main():
@@ -62,14 +90,14 @@ def main():
     start = head - N_BLOCKS + 1
     print(f"Aptos: bloque actual {head}, muestreando [{start}, {head}]")
 
-    blocks = []
-    for h in range(start, head + 1):
-        try:
-            b = get(f"/blocks/by_height/{h}?with_transactions=true")
-            blocks.append(b)
-        except Exception as e:
-            print("error bloque", h, e)
-        time.sleep(1.2)
+    if not API_KEY:
+        minutos = N_BLOCKS * UNIDADES_POR_BLOQUE / UNIDADES_POR_SEGUNDO / 60
+        print(f"Sin APTOS_API_KEY: limite anonimo de 40.000 unidades/300 s; {N_BLOCKS} bloques tardan ~{minutos:.0f} min "
+              f"(con clave gratuita el limite sube y no hay espera)")
+    t0 = time.time()
+    with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+        blocks = [b for b in ex.map(bajar_bloque, range(start, head + 1)) if b]
+    print(f"{len(blocks)} bloques en {time.time() - t0:.1f} s con {WORKERS} hilos")
 
     with open(f"{OUT_RAW}/blocks_sample.json", "w") as f:
         json.dump(blocks, f)
@@ -108,14 +136,8 @@ def main():
                     s = ev.get("data", {}).get("store")
                     if s:
                         stores.add(s)
-    store_to_asset = {}
-    for s in stores:
-        try:
-            r = get(f"/accounts/{s}/resource/0x1::fungible_asset::FungibleStore")
-            store_to_asset[s] = r["data"]["metadata"]["inner"]
-        except Exception:
-            store_to_asset[s] = None
-        time.sleep(0.3)
+    with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+        store_to_asset = dict(ex.map(resolver_store, sorted(stores)))
     with open(f"{OUT_RAW}/fa_store_to_asset.json", "w") as f:
         json.dump(store_to_asset, f, indent=2)
     print(f"Stores de Fungible Asset resueltos: {len(store_to_asset)}")

@@ -62,4 +62,4 @@ Con `datos_insuficientes`, `resultado` es `null`. `version_perfil` cambia cuando
 
 ## Recalibración
 
-`POST` acepta `{ "redes": ["tempo"], "bloques_tempo": 50, "bloques_aptos": 20, "paginas_canton": 2 }` (todo opcional). Respuesta: `{ "id", "redes", "no_disponible" }`. `GET` devuelve `{ "trabajo": { "estado": "en_curso|completado|fallido|cancelado|interrumpido", "progreso": 0-1, "etapa", "log_tail" }, "ocupado", "alcance": { "recalibra", "no_disponible", "motivo_no_disponible", "no_resuelve" } }`.
+`POST` acepta `{ "redes": ["tempo", "polygon"], "bloques_tempo": 50, "bloques_aptos": 20, "paginas_canton": 2, "minutos_evm": 10 }` (todo opcional; `redes` vacío = las seis). Tempo/Aptos/Canton recalibran su línea base; Polygon/Celo/Arbitrum rellenan `minutos_evm` minutos (5 a 1440) de su ventana en vivo sin tocar su línea base. Respuesta: `{ "id", "redes", "no_disponible" }`. `GET` devuelve `{ "trabajo": { "estado": "en_curso|completado|fallido|cancelado|interrumpido", "progreso": 0-1, "etapa", "log_tail" }, "ocupado", "alcance": { "recalibra", "rellena", "no_disponible", "motivo_no_disponible", "nota_rellena", "no_resuelve" } }`.
