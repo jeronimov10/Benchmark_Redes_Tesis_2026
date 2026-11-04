@@ -29,7 +29,7 @@ Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `servi
 pip install -r backend/requirements.txt
 cd backend && python -m uvicorn app.main:app --port 8000      # API + colectores (crea backend/data/redes.db)
 cd frontend && pnpm dev                                     # UI; /api/* se reenvía a BACKEND_URL
-cd backend && python -m pytest tests                           # 86 pruebas
+cd backend && python -m pytest tests                           # 87 pruebas
 cd backend && python -m simulacion lote --fuente base --replicas 500 --tope 100 --panel 3   # banco de usuarios simulados
 scripts/pruebas_railway.sh verificar|lote|continuo on|descargar  # contra el despliegue de Railway (docs/RAILWAY.md)
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build

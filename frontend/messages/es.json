@@ -17,7 +17,8 @@
     "start": "Empezar",
     "language": "Idioma",
     "main": "Navegación principal",
-    "monitor": "Monitoreo"
+    "monitor": "Monitoreo",
+    "simulation": "Simulación"
   },
   "footer": {
     "demo": "Prototipo académico. Las recomendaciones usan el modelo de la tesis con mediciones base (Polygon, Celo y Arbitrum: 90 días, octubre de 2026; Tempo, Aptos y Canton: benchmark preliminar) y las sobrescriben con métricas en vivo cuando están vigentes. Los costos en pesos usan una TRM demostrativa y no incluyen rampas de entrada y salida.",
@@ -817,5 +818,137 @@
         "interrumpido": "Interrumpido"
       }
     }
+  },
+  "simulation": {
+    "title": "Pruebas con usuarios simulados",
+    "sub": "Doce perfiles de usuario evaluados con el modelo de la tesis sin modificar: a quién le sirve la red que recomienda y qué tan estable es esa respuesta. Esta página se actualiza sola.",
+    "loading": "Consultando el backend…",
+    "error": "No se pudo consultar el backend.",
+    "staleBackend": "Sin conexión con el backend: se muestra el último dato conocido.",
+    "updated": "actualizado hace {age}",
+    "refresh": "se refresca cada {time}",
+    "empty": "Todavía no hay resultados: no se ha completado ningún lote de pruebas. Cuando se ejecute uno, aparecerá aquí.",
+    "source": {
+      "label": "Datos de red",
+      "base": "Línea base",
+      "vivo": "Foto en vivo"
+    },
+    "status": {
+      "title": "Estado de las pruebas",
+      "batch": "Lote P1–P6",
+      "noBatch": "Ningún lote ejecutado todavía.",
+      "stage": "Etapa: {stage}",
+      "evaluations": "{n} evaluaciones",
+      "elapsed": "lleva {age}",
+      "finished": "terminó hace {age}",
+      "panel": "Panel continuo (P7)",
+      "panelActive": "Activo",
+      "panelStopped": "Detenido",
+      "cycles": "{valid} ciclos válidos de {total}",
+      "every": "un ciclo cada {time}",
+      "lastCycle": "último ciclo hace {age}",
+      "noCycles": "Sin ciclos todavía",
+      "lastError": "Último error: {error}",
+      "state": {
+        "en_curso": "En curso",
+        "completado": "Completado",
+        "fallido": "Fallido",
+        "cancelado": "Cancelado",
+        "interrumpido": "Interrumpido"
+      }
+    },
+    "run": {
+      "title": "Lote analizado",
+      "line": "Lote {id} · {evals} evaluaciones · semilla {seed} · {reps} réplicas · panel de {panel} por perfil · terminó hace {age}"
+    },
+    "alerts": {
+      "title": "Alertas del informe",
+      "none": "Sin alertas en este lote."
+    },
+    "fit": {
+      "title": "Cobertura y ajuste a la necesidad (P1, P2)",
+      "sub": "Para cada perfil: qué red recomienda el modelo y si esa red cumple lo que el usuario necesita. La preferencia acepta la inclusión en un bloque; el requisito exige firmeza.",
+      "profile": "Perfil",
+      "band": "Banda 1 más frecuente",
+      "users": "Usuarios",
+      "uncertain": "Certidumbre baja",
+      "ties": "Empates",
+      "preference": "Ajuste (preferencia)",
+      "requirement": "Ajuste (requisito)",
+      "cap": "llegó al tope de usuarios",
+      "types": {
+        "control": "control",
+        "hueco": "hueco",
+        "fuera de rango": "fuera de rango"
+      },
+      "states": {
+        "cumple": "Cumple",
+        "parcial": "Parcial",
+        "brecha": "Brecha",
+        "sin_solucion": "Sin solución",
+        "no_evaluable": "No evaluable"
+      },
+      "legend": "Cumple: toda la banda 1 satisface la necesidad. Parcial: hay empate y solo algunas redes cumplen. Brecha: ninguna red de la banda 1 cumple pero otra admisible sí. Sin solución: ninguna red admisible cumple. No evaluable: falta el dato."
+    },
+    "counter": {
+      "title": "¿El ganador depende de cómo se midió? (P3) y caída de una red (P4)",
+      "sub": "Porcentaje de usuarios del panel cuya red recomendada cambia frente a la referencia.",
+      "measurement": "Contrafactuales de medición",
+      "drops": "Caída de una red",
+      "profile": "Perfil",
+      "drop": "Sin {net}",
+      "aptos": "Aptos en sombra",
+      "aptosHint": "Porcentaje de usuarios donde Aptos superaría a la mejor otra red si se pudiera medir su firmeza.",
+      "scenarios": {
+        "metricas_comunes": "Solo métricas comunes",
+        "sin_sigma": "Sin incertidumbre",
+        "solo_pca": "Solo Polygon, Celo, Arbitrum",
+        "solo_tac": "Solo Tempo, Aptos, Canton"
+      }
+    },
+    "sens": {
+      "title": "Sensibilidad del usuario (P5)",
+      "sub": "Porcentaje de usuarios cuya red recomendada cambia al modificar un solo dato de su pago.",
+      "profile": "Perfil",
+      "attrs": {
+        "monto_x2": "Monto ×2",
+        "monto_div2": "Monto ÷2",
+        "espera_x4": "Espera ×4",
+        "espera_div4": "Espera ÷4",
+        "irrev_arriba": "Irrev. +1",
+        "irrev_abajo": "Irrev. −1",
+        "transfronterizo_inverso": "Transfronterizo invertido"
+      }
+    },
+    "conv": {
+      "title": "Convergencia de réplicas (P6)",
+      "sub": "Coincidencia con la corrida de más réplicas. Indica cuántas réplicas hacen falta.",
+      "replicas": "Réplicas",
+      "reference": "Referencia",
+      "band1": "Coincide banda 1",
+      "order": "Coincide orden completo"
+    },
+    "panel": {
+      "title": "Panel continuo (P7)",
+      "sub": "Los mismos usuarios se reevalúan en cada ciclo con la red en vivo: cualquier cambio solo puede venir de la red.",
+      "stability": "Estabilidad",
+      "stabilityHint": "Parte de las evaluaciones cuya banda 1 no cambió entre ciclos consecutivos.",
+      "differs": "Distinto de la línea base",
+      "differsHint": "Parte de los usuarios con otra banda 1 que en la línea base.",
+      "valid": "Ciclos válidos",
+      "invalid": "Ciclos inválidos",
+      "invalidHint": "Ciclos con menos de la mitad de las métricas vivas esperadas; no cuentan en los indicadores.",
+      "recent": "Últimos ciclos",
+      "cycle": "Ciclo",
+      "when": "Hace",
+      "live": "Métricas vivas",
+      "users": "Usuarios",
+      "changes": "Cambios",
+      "cause": "Causa probable",
+      "invalidTag": "inválido",
+      "empty": "El panel continuo no ha generado ciclos todavía.",
+      "strip": "Cada barra es un ciclo: verde sin cambios, amarillo con cambios, gris inválido."
+    },
+    "disclaimer": "Los perfiles son supuestos de diseño (solo los centros de los perfiles 1 a 3 vienen de la tesis); los resultados se leen por perfil, nunca como porcentaje de la población. Un mal ajuste es evidencia para discutir, no un defecto demostrado del modelo."
   }
 }

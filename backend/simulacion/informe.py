@@ -72,12 +72,13 @@ def filas_personas(evals):
 
 def filas_contrafactuales(evals_p3, evals_p4, evals_ref):
     ref = {(e["fuente"], e["perfil"], e["indice"]): e["datos"] for e in evals_ref}
-    por = defaultdict(list)
+    por, prueba_de = defaultdict(list), {}
     for e in evals_p3 + evals_p4:
         por[(e["fuente"], e["escenario"], e["perfil"])].append(e["datos"])
+        prueba_de[(e["fuente"], e["escenario"], e["perfil"])] = e["prueba"]
     filas = []
     for (fuente, escenario, perfil), regs in sorted(por.items()):
-        fila = {"fuente": fuente, "prueba": "P4" if escenario.startswith("sin_") else "P3", "escenario": escenario, "perfil": perfil, "n": len(regs)}
+        fila = {"fuente": fuente, "prueba": prueba_de[(fuente, escenario, perfil)], "escenario": escenario, "perfil": perfil, "n": len(regs)}
         if escenario == "aptos_sombra":
             fila.update({"cambios_banda1": "", "cuota_cambio": "", "aptos_supera_a_la_mejor": round(sum(1 for r in regs if r["aptos_supera"]) / len(regs), 3),
                          "perdida_puntaje_media": round(mean(r["mejor_otra_central"] - r["aptos_central"] for r in regs), 4), "empeora_ajuste_req": ""})
@@ -145,6 +146,19 @@ def filas_vivo(ciclos):
         for p, (n, cambios, distintos) in sorted(por_perfil.items()):
             filas.append({**base, "perfil": p, "usuarios": n, "cambios": cambios, "distintos_de_base": distintos, "causa_probable": causa})
     return filas
+
+
+def serie_ciclos(ciclos):
+    salida = []
+    for c in ciclos:
+        d = c["datos"]
+        fila = {"id": c["id"], "ts": c["ts"], "valido": bool(c["valido"]), "vivas": c["vivas"], "esperadas": c["esperadas"],
+                "usuarios": None, "cambios": None, "distintos_de_base": None, "causa": None}
+        if c["valido"]:
+            fila.update({"usuarios": len(d["bandas"]), "cambios": len(d["cambios"]), "distintos_de_base": len(d["distintos_de_base"]),
+                         "causa": (d.get("causa") or {}).get("metrica")})
+        salida.append(fila)
+    return salida
 
 
 def _tabla(cabecera, filas):

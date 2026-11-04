@@ -70,6 +70,11 @@ def simulacion_estado(request: Request):
     return ControladorSimulacion(_c(request)).estado()
 
 
+@router.get("/simulacion/resultados")
+async def simulacion_resultados(request: Request):
+    return await ControladorSimulacion(_c(request)).resultados()
+
+
 @router.post("/simulacion/lote", status_code=202)
 async def simulacion_lote(request: Request, peticion: PeticionLote = PeticionLote(), authorization: Optional[str] = Header(default=None)):
     ctl = ControladorSimulacion(_c(request))

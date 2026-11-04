@@ -220,3 +220,114 @@ export interface EstadoRecalibracion {
     no_resuelve: string[];
   };
 }
+
+export type EstadoAjuste = "cumple" | "parcial" | "brecha" | "sin_solucion" | "no_evaluable";
+export type FuenteSimulacion = "base" | "vivo";
+export type EstadoLote = "en_curso" | "completado" | "fallido" | "cancelado" | "interrumpido";
+
+export interface EstadoSimulacion {
+  lote: {
+    id: string;
+    estado: EstadoLote;
+    etapa: string;
+    progreso?: number;
+    evaluaciones?: number;
+    inicio: number;
+    fin: number | null;
+    log: string[];
+  } | null;
+  ocupado: boolean;
+  continuo: {
+    activo: boolean;
+    ciclos: number;
+    ciclos_validos: number;
+    intervalo_s: number;
+    ultimo_ciclo_ts: number | null;
+    ultimo_error: string | null;
+  };
+}
+
+export interface PerfilSimulado {
+  id: number;
+  nombre: string;
+  tipo: string;
+  necesidad: string;
+}
+
+export type FilaPersonas = {
+  fuente: FuenteSimulacion;
+  perfil: number;
+  nombre: string;
+  tipo: string;
+  n: number;
+  banda1_modal: string;
+  cuota_modal: number;
+  semiancho_wilson: number;
+  llego_al_tope: boolean;
+  certidumbre_media: number | "";
+  cuota_certidumbre_baja: number;
+  empates_banda1: number;
+} & Record<`${"preferencia" | "requisito"}_${EstadoAjuste}`, number>;
+
+export interface FilaContrafactual {
+  fuente: FuenteSimulacion;
+  prueba: "P3" | "P4";
+  escenario: string;
+  perfil: number;
+  n: number;
+  cambios_banda1: number | "";
+  cuota_cambio: number | "";
+  aptos_supera_a_la_mejor: number | "";
+  perdida_puntaje_media: number | "";
+  empeora_ajuste_req: number | "";
+}
+
+export interface FilaSensibilidad {
+  fuente: FuenteSimulacion;
+  perfil: number;
+  atributo: string;
+  n: number;
+  cambios_banda1: number;
+  cuota_cambio: number | "";
+}
+
+export interface FilaConvergencia {
+  fuente: FuenteSimulacion;
+  replicas: number;
+  referencia: number;
+  n: number;
+  coincide_banda1: number | "";
+  coincide_orden: number | "";
+}
+
+export interface CicloPanel {
+  id: number;
+  ts: number;
+  valido: boolean;
+  vivas: number;
+  esperadas: number;
+  usuarios: number | null;
+  cambios: number | null;
+  distintos_de_base: number | null;
+  causa: string | null;
+}
+
+export interface ResultadosSimulacion {
+  generado_en: number;
+  corrida: {
+    id: string;
+    estado: EstadoLote;
+    inicio: number;
+    fin: number | null;
+    config: { fuente: string; replicas: number; semilla: number; tope: number; panel_por_perfil: number };
+    notas: string[];
+    evaluaciones: number | null;
+  } | null;
+  perfiles: PerfilSimulado[];
+  personas: FilaPersonas[];
+  contrafactuales: FilaContrafactual[];
+  sensibilidad: FilaSensibilidad[];
+  convergencia: FilaConvergencia[];
+  alertas: string[];
+  vivo: { ciclos_total: number; ciclos_validos: number; serie: CicloPanel[] };
+}

@@ -12,8 +12,10 @@ from .almacen import Almacen
 from .continuo import PanelContinuo
 from .evaluador import Evaluador
 from .fuentes import Fuentes
+from .personas import PERSONAS
 
 LOG = logging.getLogger("simulacion")
+SERIE_MAX_CICLOS = 500
 
 
 class LoteOcupado(Exception):
@@ -178,6 +180,34 @@ class ServicioSimulacion:
             return False
         await self.panel.detener()
         return True
+
+    def resultados(self):
+        vacio = {"generado_en": ahora(), "corrida": None, "perfiles": [], "personas": [], "contrafactuales": [], "sensibilidad": [],
+                 "convergencia": [], "alertas": [], "vivo": {"ciclos_total": 0, "ciclos_validos": 0, "serie": []}}
+        ruta = self.settings.ruta_sim_db
+        if str(ruta) == ":memory:" or not Path(ruta).exists():
+            return vacio
+        a = self.almacen
+        corrida = a.ultima_corrida("completado")
+        conteo = a.conteo_ciclos()
+        resultado = {**vacio, "vivo": {"ciclos_total": conteo["total"], "ciclos_validos": conteo["validos"],
+                                       "serie": informe.serie_ciclos(a.ciclos(limite=SERIE_MAX_CICLOS))}}
+        if corrida:
+            cid = corrida["id"]
+            ref = a.evaluaciones(cid, "REF")
+            personas = informe.filas_personas(a.evaluaciones(cid, "P1P2"))
+            contra = informe.filas_contrafactuales(a.evaluaciones(cid, "P3"), a.evaluaciones(cid, "P4"), ref)
+            sens = informe.filas_sensibilidad(a.evaluaciones(cid, "P5"), ref)
+            conv = informe.filas_convergencia(a.evaluaciones(cid, "P6"))
+            manifiesto = corrida.get("manifiesto") or {}
+            texto = informe.hallazgos(personas, contra, sens, conv, [], manifiesto.get("notas", []))
+            resultado.update({
+                "corrida": {"id": cid, "estado": corrida["estado"], "inicio": corrida["inicio"], "fin": corrida["fin"], "config": corrida["config"],
+                            "notas": manifiesto.get("notas", []), "evaluaciones": manifiesto.get("evaluaciones")},
+                "personas": personas, "contrafactuales": contra, "sensibilidad": sens, "convergencia": conv,
+                "alertas": [x[2:] for x in texto.splitlines() if x.startswith("- ALERTA")]})
+        resultado["perfiles"] = [{"id": p.id, "nombre": p.nombre, "tipo": p.tipo, "necesidad": p.necesidad} for p in PERSONAS]
+        return resultado
 
     async def generar_informe(self):
         return await asyncio.to_thread(informe.generar, self.almacen, self.settings.dir_simulacion, self.settings)

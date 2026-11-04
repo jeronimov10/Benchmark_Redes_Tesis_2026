@@ -87,6 +87,24 @@ Cuerpo opcional del lote (`LOTE_JSON` en los scripts): `{"pruebas":["P1","P2","P
 - Railway factura por uso (CPU, RAM, volumen). Detén el panel (`continuo off`) cuando termines.
 - Un redeploy interrumpe un lote en curso (queda `interrumpido`); el panel continuo se reanuda solo.
 
+## Ver los resultados en el front
+
+La página **Simulación** (`/es/simulation`, enlace "Simulación" en el menú) muestra el estado del lote y del panel continuo, las alertas, el ajuste por perfil (P1, P2), los contrafactuales y caídas de red (P3, P4), la sensibilidad (P5), la convergencia (P6) y los ciclos del panel (P7). Se actualiza sola cada 15 s (cada 6 s mientras corre un lote). Es de solo lectura: lee `GET /api/simulacion/resultados` y no necesita el token; lanzar las pruebas sigue siendo con los scripts.
+
+El front corre en tu PC y le habla al backend de Railway: `next.config.ts` reenvía `/api/*` a `BACKEND_URL`, que se lee **al arrancar**, así que defínela antes.
+
+```powershell
+cd frontend
+pnpm install                      # solo la primera vez
+$env:BACKEND_URL = "https://<dominio>"
+pnpm dev                          # http://localhost:3000/es/simulation
+```
+```bash
+cd frontend && pnpm install && BACKEND_URL=https://<dominio> pnpm dev
+```
+
+Para una versión de producción local: `BACKEND_URL=https://<dominio> pnpm build && pnpm start`. El backend de Railway debe tener desplegado el endpoint `/api/simulacion/resultados` (haz merge a `main`).
+
 ## Salidas
 
 `informe.md`, `personas.csv`, `contrafactuales.csv`, `sensibilidad.csv`, `convergencia.csv`, `serie_vivo.csv` y `manifiesto.json` (semilla, commit, versión de perfil, réplicas, TRM) se escriben en el volumen (`/app/backend/data/simulacion/`) y se descargan con `descargar`. Un ciclo del panel con menos de la mitad de las métricas vivas esperadas se guarda como inválido y no entra en los indicadores.

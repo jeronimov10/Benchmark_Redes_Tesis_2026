@@ -179,6 +179,24 @@ def test_un_lote_no_agrega_filas_a_la_base_de_la_aplicacion_y_genera_el_informe(
     assert len(personas) == 13 and personas[0].startswith("fuente,perfil")
 
 
+def test_resultados_json_vacio_y_despues_de_un_lote(cliente):
+    vacio = cliente.get("/api/simulacion/resultados").json()
+    assert vacio["corrida"] is None and vacio["personas"] == [] and vacio["vivo"]["serie"] == []
+    cuerpo = {"fuente": "base", "replicas": 100, "tope": 50, "panel_por_perfil": 1, "niveles_replicas": [100, 200]}
+    assert cliente.post("/api/simulacion/lote", json=cuerpo).status_code == 202
+    assert _esperar(cliente)["lote"]["estado"] == "completado"
+    d = cliente.get("/api/simulacion/resultados").json()
+    assert d["corrida"]["estado"] == "completado" and len(d["perfiles"]) == 12 and len(d["personas"]) == 12
+    assert {f["perfil"] for f in d["contrafactuales"]} == set(range(1, 13)) and d["convergencia"] and d["sensibilidad"]
+    assert all(set(f) >= {"cumple", "parcial", "brecha"} or "requisito_cumple" in f for f in d["personas"])
+    assert isinstance(d["alertas"], list)
+    prueba = {f["escenario"]: f["prueba"] for f in d["contrafactuales"]}
+    assert prueba["sin_sigma"] == "P3" and prueba["sin_polygon"] == "P4" and prueba["metricas_comunes"] == "P3"
+    assert {e for e, p in prueba.items() if p == "P4"} == {f"sin_{r}" for r in ("polygon", "celo", "arbitrum", "tempo", "aptos", "canton")}
+    cliente.contenedor.simulacion.almacen.guardar_ciclo(time.time(), False, 1, 10, "v", {"motivo": "x"})
+    assert cliente.get("/api/simulacion/resultados").json()["vivo"]["serie"][0]["valido"] is False
+
+
 def test_endpoints_exigen_token_y_rechazan_un_segundo_lote(settings, db):
     s = dataclasses.replace(settings, sim_procesos=2, simulacion_token="secreto")
     with TestClient(crear_app(Contenedor(s, db=db))) as tc:

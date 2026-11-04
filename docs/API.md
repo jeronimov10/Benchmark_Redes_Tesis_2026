@@ -15,6 +15,7 @@ Backend FastAPI en `http://localhost:8000`. El frontend la consume como `/api/*`
 | DELETE | `/api/recalibracion` | Cancela (`409` si no hay trabajo) |
 | GET | `/api/integraciones` | Verifica en vivo las 14 fuentes externas (RPC, Aptos, Canton, Pyth, Chainlink) con latencia y error exacto |
 | GET | `/api/simulacion` | Estado del último lote y del panel continuo |
+| GET | `/api/simulacion/resultados` | Resultados en JSON del último lote completado y serie del panel continuo (lo consume la página Simulación del front) |
 | POST | `/api/simulacion/lote` | Lanza las pruebas P1-P6 (`202`; `409` si hay un lote; `401` sin token) |
 | DELETE | `/api/simulacion/lote` | Cancela el lote |
 | POST / DELETE | `/api/simulacion/continuo` | Inicia / detiene el panel continuo P7 |

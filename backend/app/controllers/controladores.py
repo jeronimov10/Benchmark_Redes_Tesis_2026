@@ -123,6 +123,9 @@ class ControladorSimulacion:
     def estado(self):
         return self.c.simulacion.estado()
 
+    async def resultados(self):
+        return await asyncio.to_thread(self.c.simulacion.resultados)
+
     async def iniciar_lote(self, p: PeticionLote):
         try:
             return await self.c.simulacion.iniciar_lote(p)

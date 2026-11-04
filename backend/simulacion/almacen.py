@@ -79,7 +79,7 @@ class Almacen:
             [(corrida_id, prueba, fuente, escenario, r["perfil"], r["indice"], json.dumps(r)) for r in registros])
 
     def evaluaciones(self, corrida_id, prueba, fuente=None):
-        sql = "SELECT fuente, escenario, perfil, indice, datos FROM evaluaciones WHERE corrida_id=? AND prueba=?"
+        sql = "SELECT prueba, fuente, escenario, perfil, indice, datos FROM evaluaciones WHERE corrida_id=? AND prueba=?"
         params = [corrida_id, prueba]
         if fuente:
             sql += " AND fuente=?"
@@ -91,11 +91,13 @@ class Almacen:
                          (ts, int(valido), vivas, esperadas, version, json.dumps(datos)))
 
     def ciclos(self, limite=None):
-        sql = "SELECT * FROM ciclos ORDER BY id"
-        filas = self.db.consultar(sql)
+        if limite:
+            filas = self.db.consultar("SELECT * FROM (SELECT * FROM ciclos ORDER BY id DESC LIMIT ?) ORDER BY id", (limite,))
+        else:
+            filas = self.db.consultar("SELECT * FROM ciclos ORDER BY id")
         for f in filas:
             f["datos"] = json.loads(f["datos"])
-        return filas[-limite:] if limite else filas
+        return filas
 
     def ultimo_ciclo(self):
         f = self.db.uno("SELECT * FROM ciclos ORDER BY id DESC LIMIT 1")

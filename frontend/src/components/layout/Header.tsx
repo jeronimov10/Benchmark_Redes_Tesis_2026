@@ -27,6 +27,7 @@ export function Header() {
     { href: "/home", label: t("home") },
     { href: "/history", label: t("history") },
     { href: "/monitor", label: t("monitor") },
+    { href: "/simulation", label: t("simulation") },
     { href: "/standard", label: t("standard") },
   ];
 

@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   EntradaModelo,
   EstadoRecalibracion,
+  EstadoSimulacion,
   Instantanea,
   RespuestaInfo,
   RespuestaInterpretar,
   RespuestaRecomendar,
+  ResultadosSimulacion,
 } from "./tipos";
 
 /**
@@ -20,6 +22,8 @@ import type {
 export const TTL_MS = 30_000;
 export const REFRESCO_MEDICIONES_MS = 15_000;
 export const REFRESCO_RECALIBRACION_MS = 3_000;
+export const REFRESCO_SIMULACION_MS = 15_000;
+export const REFRESCO_SIMULACION_RAPIDO_MS = 3_000;
 
 type Accion = "recomendar" | "interpretar";
 
@@ -199,6 +203,12 @@ export const iniciarRecalibracion = () =>
   });
 
 export const cancelarRecalibracion = () => pedirJson<{ cancelando: boolean }>("/api/recalibracion", { method: "DELETE" });
+
+export const useSimulacionEstado = (rapido: boolean) =>
+  usePolling<EstadoSimulacion>("/api/simulacion", rapido ? REFRESCO_SIMULACION_RAPIDO_MS : REFRESCO_SIMULACION_MS);
+
+export const useSimulacionResultados = (rapido: boolean) =>
+  usePolling<ResultadosSimulacion>("/api/simulacion/resultados", rapido ? REFRESCO_SIMULACION_RAPIDO_MS * 2 : REFRESCO_SIMULACION_MS);
 
 /** Value that follows `value` after it stops changing for `ms`. */
 export function useDebounced<T>(value: T, ms: number): T {

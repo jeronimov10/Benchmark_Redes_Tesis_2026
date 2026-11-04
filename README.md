@@ -108,7 +108,7 @@ erDiagram
 
 ## Despliegue en Railway y pruebas con usuarios simulados
 
-Guía paso a paso, endpoints y scripts en [docs/RAILWAY.md](docs/RAILWAY.md); diseño de las pruebas en `docs/diseno_pruebas_usuarios_simulados.html`.
+Guía paso a paso, endpoints, scripts y cómo ver los resultados en el front (página `/es/simulation`) en [docs/RAILWAY.md](docs/RAILWAY.md); diseño de las pruebas en `docs/diseno_pruebas_usuarios_simulados.html`.
 
 ## Estructura
 
@@ -235,7 +235,7 @@ Sin Docker el backend usa el almacén de certificados del sistema operativo, as�
 ## Pruebas
 
 ```bash
-cd backend && python -m pytest tests        # 86 pruebas (incluye el banco de usuarios simulados)
+cd backend && python -m pytest tests        # 87 pruebas (incluye el banco de usuarios simulados)
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py            # benchmark por lotes con resultados/raw/ (sin red)
 ```

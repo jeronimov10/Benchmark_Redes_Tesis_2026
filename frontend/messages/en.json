@@ -17,7 +17,8 @@
     "start": "Get started",
     "language": "Language",
     "main": "Main navigation",
-    "monitor": "Monitor"
+    "monitor": "Monitor",
+    "simulation": "Simulation"
   },
   "footer": {
     "demo": "Academic prototype. Recommendations use the thesis model with baseline measurements (Polygon, Celo and Arbitrum: 90 days, October 2026; Tempo, Aptos and Canton: preliminary benchmark) and override them with live metrics when they are current. Peso costs use a demo exchange rate and exclude on and off ramps.",
@@ -817,5 +818,137 @@
         "interrumpido": "Interrupted"
       }
     }
+  },
+  "simulation": {
+    "title": "Simulated-user tests",
+    "sub": "Twelve user profiles evaluated with the unmodified thesis model: who the recommended network serves and how stable that answer is. This page refreshes itself.",
+    "loading": "Querying the backend…",
+    "error": "Could not reach the backend.",
+    "staleBackend": "No connection to the backend: showing the last known data.",
+    "updated": "updated {age} ago",
+    "refresh": "refreshes every {time}",
+    "empty": "No results yet: no test batch has completed. Once one runs, it will appear here.",
+    "source": {
+      "label": "Network data",
+      "base": "Baseline",
+      "vivo": "Live snapshot"
+    },
+    "status": {
+      "title": "Test status",
+      "batch": "Batch P1–P6",
+      "noBatch": "No batch has run yet.",
+      "stage": "Stage: {stage}",
+      "evaluations": "{n} evaluations",
+      "elapsed": "running for {age}",
+      "finished": "finished {age} ago",
+      "panel": "Continuous panel (P7)",
+      "panelActive": "Active",
+      "panelStopped": "Stopped",
+      "cycles": "{valid} valid cycles of {total}",
+      "every": "one cycle every {time}",
+      "lastCycle": "last cycle {age} ago",
+      "noCycles": "No cycles yet",
+      "lastError": "Last error: {error}",
+      "state": {
+        "en_curso": "Running",
+        "completado": "Completed",
+        "fallido": "Failed",
+        "cancelado": "Cancelled",
+        "interrumpido": "Interrupted"
+      }
+    },
+    "run": {
+      "title": "Batch shown",
+      "line": "Batch {id} · {evals} evaluations · seed {seed} · {reps} replicas · panel of {panel} per profile · finished {age} ago"
+    },
+    "alerts": {
+      "title": "Report alerts",
+      "none": "No alerts in this batch."
+    },
+    "fit": {
+      "title": "Coverage and fit to the need (P1, P2)",
+      "sub": "For each profile: which network the model recommends and whether it meets what the user needs. Preference accepts inclusion in a block; requirement demands finality.",
+      "profile": "Profile",
+      "band": "Most frequent band 1",
+      "users": "Users",
+      "uncertain": "Low certainty",
+      "ties": "Ties",
+      "preference": "Fit (preference)",
+      "requirement": "Fit (requirement)",
+      "cap": "reached the user cap",
+      "types": {
+        "control": "control",
+        "hueco": "gap",
+        "fuera de rango": "out of range"
+      },
+      "states": {
+        "cumple": "Meets",
+        "parcial": "Partial",
+        "brecha": "Gap",
+        "sin_solucion": "No solution",
+        "no_evaluable": "Not evaluable"
+      },
+      "legend": "Meets: all of band 1 satisfies the need. Partial: tie and only some networks meet it. Gap: no band-1 network meets it but another admissible one does. No solution: no admissible network meets it. Not evaluable: data missing."
+    },
+    "counter": {
+      "title": "Does the winner depend on how it was measured? (P3) and a network going down (P4)",
+      "sub": "Share of panel users whose recommended network changes against the reference.",
+      "measurement": "Measurement counterfactuals",
+      "drops": "A network goes down",
+      "profile": "Profile",
+      "drop": "Without {net}",
+      "aptos": "Aptos in shadow",
+      "aptosHint": "Share of users where Aptos would beat the best other network if its finality could be measured.",
+      "scenarios": {
+        "metricas_comunes": "Common metrics only",
+        "sin_sigma": "No uncertainty",
+        "solo_pca": "Polygon, Celo, Arbitrum only",
+        "solo_tac": "Tempo, Aptos, Canton only"
+      }
+    },
+    "sens": {
+      "title": "User sensitivity (P5)",
+      "sub": "Share of users whose recommended network changes when a single payment attribute changes.",
+      "profile": "Profile",
+      "attrs": {
+        "monto_x2": "Amount ×2",
+        "monto_div2": "Amount ÷2",
+        "espera_x4": "Wait ×4",
+        "espera_div4": "Wait ÷4",
+        "irrev_arriba": "Irrev. +1",
+        "irrev_abajo": "Irrev. −1",
+        "transfronterizo_inverso": "Cross-border flipped"
+      }
+    },
+    "conv": {
+      "title": "Replica convergence (P6)",
+      "sub": "Agreement with the run that uses the most replicas. Shows how many replicas are needed.",
+      "replicas": "Replicas",
+      "reference": "Reference",
+      "band1": "Band 1 agrees",
+      "order": "Full order agrees"
+    },
+    "panel": {
+      "title": "Continuous panel (P7)",
+      "sub": "The same users are re-evaluated every cycle on the live network: any change can only come from the network.",
+      "stability": "Stability",
+      "stabilityHint": "Share of evaluations whose band 1 did not change between consecutive cycles.",
+      "differs": "Different from baseline",
+      "differsHint": "Share of users with a different band 1 than on the baseline.",
+      "valid": "Valid cycles",
+      "invalid": "Invalid cycles",
+      "invalidHint": "Cycles with fewer than half the expected live metrics; they do not count in the indicators.",
+      "recent": "Latest cycles",
+      "cycle": "Cycle",
+      "when": "Ago",
+      "live": "Live metrics",
+      "users": "Users",
+      "changes": "Changes",
+      "cause": "Probable cause",
+      "invalidTag": "invalid",
+      "empty": "The continuous panel has not produced cycles yet.",
+      "strip": "Each bar is a cycle: green no changes, yellow with changes, grey invalid."
+    },
+    "disclaimer": "Profiles are design assumptions (only the centers of profiles 1 to 3 come from the thesis); results are read per profile, never as a share of the population. A poor fit is evidence to discuss, not a demonstrated flaw in the model."
   }
 }
