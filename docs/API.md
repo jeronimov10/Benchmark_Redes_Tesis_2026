@@ -13,6 +13,13 @@ Backend FastAPI en `http://localhost:8000`. El frontend la consume como `/api/*`
 | POST | `/api/recalibracion` | Inicia la recalibración (`409` si hay una en curso, `422` red desconocida) |
 | GET | `/api/recalibracion` | Estado del último trabajo y alcance |
 | DELETE | `/api/recalibracion` | Cancela (`409` si no hay trabajo) |
+| GET | `/api/integraciones` | Verifica en vivo las 14 fuentes externas (RPC, Aptos, Canton, Pyth, Chainlink) con latencia y error exacto |
+| GET | `/api/simulacion` | Estado del último lote y del panel continuo |
+| POST | `/api/simulacion/lote` | Lanza las pruebas P1-P6 (`202`; `409` si hay un lote; `401` sin token) |
+| DELETE | `/api/simulacion/lote` | Cancela el lote |
+| POST / DELETE | `/api/simulacion/continuo` | Inicia / detiene el panel continuo P7 |
+| POST | `/api/simulacion/informe` | Regenera informe y CSV desde la base |
+| GET | `/api/simulacion/archivos[/{nombre}]` | Lista / descarga informe, CSV y manifiesto |
 
 ## POST /api/modelo
 
@@ -63,3 +70,7 @@ Con `datos_insuficientes`, `resultado` es `null`. `version_perfil` cambia cuando
 ## Recalibración
 
 `POST` acepta `{ "redes": ["tempo", "polygon"], "bloques_tempo": 50, "bloques_aptos": 20, "paginas_canton": 2, "minutos_evm": 10 }` (todo opcional; `redes` vacío = las seis). Tempo/Aptos/Canton recalibran su línea base; Polygon/Celo/Arbitrum rellenan `minutos_evm` minutos (5 a 1440) de su ventana en vivo sin tocar su línea base. Respuesta: `{ "id", "redes", "no_disponible" }`. `GET` devuelve `{ "trabajo": { "estado": "en_curso|completado|fallido|cancelado|interrumpido", "progreso": 0-1, "etapa", "log_tail" }, "ocupado", "alcance": { "recalibra", "rellena", "no_disponible", "motivo_no_disponible", "nota_rellena", "no_resuelve" } }`.
+
+## Banco de usuarios simulados
+
+Detalle en [RAILWAY.md](RAILWAY.md). `POST`/`DELETE` de `/api/simulacion/*` exigen `Authorization: Bearer $SIMULACION_TOKEN` cuando la variable está definida. El cuerpo de `POST /api/simulacion/lote` es opcional: `{ "pruebas": ["P1".."P6"], "fuente": "base|vivo|ambas", "semilla", "replicas": 100-100000, "tope": 50-400, "panel_por_perfil": 1-50, "niveles_replicas": [500, 2000, 10000, 40000] }`. `GET /api/simulacion` devuelve `{ "lote": { "id", "estado": "en_curso|completado|fallido|cancelado|interrumpido", "etapa", "progreso", "evaluaciones", "log" }, "ocupado", "continuo": { "activo", "ciclos", "ciclos_validos", "intervalo_s", "ultimo_ciclo_ts", "ultimo_error" } }`. `GET /api/integraciones` devuelve `{ "estado": "ok|degradado|caido", "ok", "total", "fuentes": [{ "id", "estado": "ok|limitado|error", "ok", "latencia_ms", "detalle|error|aviso" }], "fallidas", "limitadas", "desde_cache" }` (`limitado` = HTTP 429: responde pero limita por IP; se cachea 30 s).

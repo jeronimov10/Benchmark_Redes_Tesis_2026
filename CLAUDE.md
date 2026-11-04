@@ -13,6 +13,7 @@ Aplicación web que monitorea seis redes casi en tiempo real y recomienda dónde
 backend/app/        FastAPI. routes/ -> controllers/ -> services/ ; pipelines/{collectors,processors,validators,scheduler} ; db/ ; models/ ; utils/
 backend/modelo/     modelo de la tesis (modelo.py, perfiles.json, casos_referencia.json). NO se edita
 backend/benchmark/  pipeline por lotes de Tempo/Aptos/Canton (main.py, collect_*, compute_*, score_engine)
+backend/simulacion/ banco de usuarios simulados (personas, ajuste, evaluador, experimentos P1-P6, continuo P7, informe); API en /api/simulacion
 backend/tests/      pytest
 frontend/src/       Next.js: app/[locale]/*, components/, modelo/ (cliente + tipos del backend), lib/, engine/ (tipos y constantes de display)
 resultados/         salidas del benchmark (fuente de la línea base de T/A/C)
@@ -28,7 +29,9 @@ Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `servi
 pip install -r backend/requirements.txt
 cd backend && python -m uvicorn app.main:app --port 8000      # API + colectores (crea backend/data/redes.db)
 cd frontend && pnpm dev                                     # UI; /api/* se reenvía a BACKEND_URL
-cd backend && python -m pytest tests                           # 64 pruebas
+cd backend && python -m pytest tests                           # 86 pruebas
+cd backend && python -m simulacion lote --fuente base --replicas 500 --tope 100 --panel 3   # banco de usuarios simulados
+scripts/pruebas_railway.sh verificar|lote|continuo on|descargar  # contra el despliegue de Railway (docs/RAILWAY.md)
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py [--collect]                   # benchmark por lotes, desde la raíz
 ```
@@ -45,6 +48,10 @@ python backend/benchmark/main.py [--collect]                   # benchmark por l
 - **Recalibrar P/C/A** rellena la ventana en vivo (`ColectorEVM.rellenar`); no sustituye la línea base de 90 días de `perfiles.json` (modo `medicion` depende de ella).
 - **Aptos anónimo**: el API cobra por tamaño de respuesta (40 000 unidades/300 s por IP, un bloque con transacciones ≈ 2 200). El sondeo vivo usa 4 bloques/75 s y el benchmark 40 bloques; con `APTOS_API_KEY` ambos suben. No ejecutes dos recolecciones de Aptos a la vez desde la misma IP.
 - Python/httpx: se usa `ssl.create_default_context()` porque el bundle de certifi falla en esta máquina Windows.
+
+### Banco de usuarios simulados
+
+`backend/simulacion/` evalúa con `modelo.recomendar` (sin modificar, en su propio pool de procesos) si la red recomendada cumple la necesidad de 12 perfiles. Diseño: `docs/diseno_pruebas_usuarios_simulados.html`; despliegue y operación: `docs/RAILWAY.md`. Escribe solo en `simulacion.db` y en `dir_simulacion`; nunca en `redes.db` ni en `recomendaciones`. Los contrafactuales solo quitan redes, métricas o sigma. El ajuste usa umbrales ya existentes en el modelo (A1 ≤ 1 % del ticket, B1/B2 ≤ espera, B2b ≤ 86 400 s); la cuota "relevante" de alertas no se fija: se reportan las cifras. El panel continuo se reanuda solo tras un reinicio (estado `continuo_activo` en `simulacion.db`). Railway: una sola réplica y volumen en `/app/backend/data`.
 
 ### Cómo añadir una red
 

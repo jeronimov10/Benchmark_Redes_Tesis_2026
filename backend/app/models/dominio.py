@@ -60,3 +60,13 @@ class PeticionRecalibracion(BaseModel):
     bloques_aptos: Optional[int] = Field(default=None, ge=20, le=1500)
     paginas_canton: Optional[int] = Field(default=None, ge=1, le=200)
     minutos_evm: Optional[int] = Field(default=None, ge=5, le=1440)
+
+
+class PeticionLote(BaseModel):
+    pruebas: list[Literal["P1", "P2", "P3", "P4", "P5", "P6"]] = ["P1", "P2", "P3", "P4", "P5", "P6"]
+    fuente: Literal["base", "vivo", "ambas"] = "ambas"
+    semilla: Optional[int] = None
+    replicas: Optional[int] = Field(default=None, ge=100, le=100000)
+    tope: int = Field(default=400, ge=50, le=400)
+    panel_por_perfil: int = Field(default=10, ge=1, le=50)
+    niveles_replicas: list[int] = Field(default=[500, 2000, 10000, 40000], min_length=2, max_length=6)

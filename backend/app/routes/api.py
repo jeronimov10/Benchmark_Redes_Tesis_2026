@@ -1,10 +1,12 @@
 """Rutas HTTP (/api/*): asocian cada endpoint con su controlador. Sin logica propia."""
 
-from fastapi import APIRouter, Request
+from typing import Optional
 
-from ..controllers.controladores import (ControladorMediciones, ControladorModelo, ControladorRecalibracion,
-                                         ControladorRedes, ControladorSalud)
-from ..models.dominio import PeticionModelo, PeticionRecalibracion
+from fastapi import APIRouter, Header, Request
+
+from ..controllers.controladores import (ControladorIntegraciones, ControladorMediciones, ControladorModelo, ControladorRecalibracion,
+                                         ControladorRedes, ControladorSalud, ControladorSimulacion)
+from ..models.dominio import PeticionLote, PeticionModelo, PeticionRecalibracion
 
 router = APIRouter(prefix="/api")
 
@@ -56,3 +58,58 @@ def recalibracion_estado(request: Request):
 @router.delete("/recalibracion")
 async def recalibracion_cancelar(request: Request):
     return await ControladorRecalibracion(_c(request)).cancelar()
+
+
+@router.get("/integraciones")
+async def integraciones(request: Request):
+    return await ControladorIntegraciones(_c(request)).verificar()
+
+
+@router.get("/simulacion")
+def simulacion_estado(request: Request):
+    return ControladorSimulacion(_c(request)).estado()
+
+
+@router.post("/simulacion/lote", status_code=202)
+async def simulacion_lote(request: Request, peticion: PeticionLote = PeticionLote(), authorization: Optional[str] = Header(default=None)):
+    ctl = ControladorSimulacion(_c(request))
+    ctl.autorizar(authorization)
+    return await ctl.iniciar_lote(peticion)
+
+
+@router.delete("/simulacion/lote")
+async def simulacion_lote_cancelar(request: Request, authorization: Optional[str] = Header(default=None)):
+    ctl = ControladorSimulacion(_c(request))
+    ctl.autorizar(authorization)
+    return await ctl.cancelar_lote()
+
+
+@router.post("/simulacion/continuo")
+async def simulacion_continuo_iniciar(request: Request, authorization: Optional[str] = Header(default=None)):
+    ctl = ControladorSimulacion(_c(request))
+    ctl.autorizar(authorization)
+    return ctl.iniciar_continuo()
+
+
+@router.delete("/simulacion/continuo")
+async def simulacion_continuo_detener(request: Request, authorization: Optional[str] = Header(default=None)):
+    ctl = ControladorSimulacion(_c(request))
+    ctl.autorizar(authorization)
+    return await ctl.detener_continuo()
+
+
+@router.post("/simulacion/informe")
+async def simulacion_informe(request: Request, authorization: Optional[str] = Header(default=None)):
+    ctl = ControladorSimulacion(_c(request))
+    ctl.autorizar(authorization)
+    return await ctl.informe()
+
+
+@router.get("/simulacion/archivos")
+def simulacion_archivos(request: Request):
+    return ControladorSimulacion(_c(request)).archivos()
+
+
+@router.get("/simulacion/archivos/{nombre}")
+def simulacion_archivo(nombre: str, request: Request):
+    return ControladorSimulacion(_c(request)).archivo(nombre)

@@ -106,6 +106,10 @@ erDiagram
 
 `lecturas_estado` guarda lecturas puntuales (validadores, configuración, cursor de Canton, continuidad C3 acumulada, ranura de proxy). Las relaciones con `redes` son lógicas (la columna `red`), sin claves foráneas. Detalle del flujo en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Despliegue en Railway y pruebas con usuarios simulados
+
+Guía paso a paso, endpoints y scripts en [docs/RAILWAY.md](docs/RAILWAY.md); diseño de las pruebas en `docs/diseno_pruebas_usuarios_simulados.html`.
+
 ## Estructura
 
 ```
@@ -113,6 +117,7 @@ backend/
   app/                 FastAPI (MVC): routes/ controllers/ models/ services/ pipelines/ db/ utils/
   modelo/              modelo de la tesis + perfiles medidos (sin modificar)
   benchmark/           pipeline por lotes del benchmark Tempo/Aptos/Canton (main.py, collect_*, compute_*)
+  simulacion/          banco de usuarios simulados (12 perfiles, pruebas P1-P7; ver docs/RAILWAY.md)
   tests/               pytest
 frontend/              Next.js (src/app, src/components, src/modelo, src/lib, src/engine)
 resultados/            salidas del benchmark (metrics.csv, benchmark_final.csv, raw/)
@@ -230,7 +235,7 @@ Sin Docker el backend usa el almacén de certificados del sistema operativo, as�
 ## Pruebas
 
 ```bash
-cd backend && python -m pytest tests        # 64 pruebas
+cd backend && python -m pytest tests        # 86 pruebas (incluye el banco de usuarios simulados)
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
 python backend/benchmark/main.py            # benchmark por lotes con resultados/raw/ (sin red)
 ```

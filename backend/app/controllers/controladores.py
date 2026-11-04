@@ -2,13 +2,16 @@
 No contienen logica de recoleccion ni del modelo de decision."""
 
 import asyncio
+import hmac
 
 from fastapi import HTTPException
+from fastapi.responses import FileResponse
 
-from ..models.dominio import PeticionModelo, PeticionRecalibracion
+from ..models.dominio import PeticionLote, PeticionModelo, PeticionRecalibracion
 from ..services.network.registry import REDES
 from ..services.recalibracion.trabajos import RecalibracionOcupada
 from ..utils.tiempo import ahora, iso
+from simulacion.servicio import LoteOcupado
 
 
 class ControladorSalud:
@@ -95,3 +98,56 @@ class ControladorRecalibracion:
         if not await self.c.recalibracion.cancelar():
             raise HTTPException(status_code=409, detail="no hay una recalibracion en curso")
         return {"cancelando": True}
+
+
+class ControladorIntegraciones:
+    def __init__(self, c):
+        self.c = c
+
+    async def verificar(self):
+        return await self.c.integraciones.verificar()
+
+
+class ControladorSimulacion:
+    def __init__(self, c):
+        self.c = c
+
+    def autorizar(self, authorization):
+        token = self.c.settings.simulacion_token
+        if not token:
+            return
+        entregado = (authorization or "").removeprefix("Bearer ").strip()
+        if not hmac.compare_digest(entregado.encode(), token.encode()):
+            raise HTTPException(status_code=401, detail="token invalido o ausente (Authorization: Bearer <SIMULACION_TOKEN>)")
+
+    def estado(self):
+        return self.c.simulacion.estado()
+
+    async def iniciar_lote(self, p: PeticionLote):
+        try:
+            return await self.c.simulacion.iniciar_lote(p)
+        except LoteOcupado as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+
+    async def cancelar_lote(self):
+        if not await self.c.simulacion.cancelar():
+            raise HTTPException(status_code=409, detail="no hay un lote en curso")
+        return {"cancelando": True}
+
+    def iniciar_continuo(self):
+        return {"iniciado": self.c.simulacion.iniciar_continuo(), **self.c.simulacion.estado()["continuo"]}
+
+    async def detener_continuo(self):
+        return {"detenido": await self.c.simulacion.detener_continuo()}
+
+    async def informe(self):
+        return {"archivos": await self.c.simulacion.generar_informe()}
+
+    def archivos(self):
+        return {"archivos": self.c.simulacion.archivos()}
+
+    def archivo(self, nombre):
+        ruta = self.c.simulacion.ruta_archivo(nombre)
+        if ruta is None:
+            raise HTTPException(status_code=404, detail=f"archivo no disponible: {nombre}")
+        return FileResponse(ruta, filename=nombre)

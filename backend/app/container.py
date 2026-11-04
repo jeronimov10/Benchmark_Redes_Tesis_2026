@@ -16,8 +16,10 @@ from .services.analytics.baseline import REDES_BENCHMARK, REDES_TESIS, perfiles_
 from .services.decision.perfiles import ServicioPerfiles
 from .services.decision.recomendador import Recomendador
 from .services.network.registry import definiciones
+from .services.network.integraciones import VerificadorIntegraciones
 from .services.network.snapshot import ServicioInstantanea
 from .services.recalibracion.trabajos import ServicioRecalibracion
+from simulacion.servicio import ServicioSimulacion
 
 
 class Contenedor:
@@ -40,6 +42,8 @@ class Contenedor:
         self.recalibracion = ServicioRecalibracion(self.settings, self.repos["trabajos"], self.repos["perfiles"],
                                                    al_terminar=self.invalidar_caches, colectores=self.colectores,
                                                    calcular_metricas=self.monitor.calcular_todas)
+        self.integraciones = VerificadorIntegraciones(self.settings, transporte=transporte_http)
+        self.simulacion = ServicioSimulacion(self.settings, self.servicio_perfiles, redes_activas=list(self.colectores))
 
     def invalidar_caches(self):
         self.recomendador.invalidar()
@@ -69,8 +73,10 @@ class Contenedor:
         self.recomendador.precalentar()
         if self.settings.colectores_activos:
             self.monitor.iniciar()
+        self.simulacion.reanudar()
 
     async def detener(self):
+        await self.simulacion.cerrar()
         await self.monitor.detener()
         self.recomendador.cerrar()
         await self.http.cerrar()

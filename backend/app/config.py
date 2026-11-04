@@ -86,8 +86,24 @@ class Settings:
     usdc_celo: str = field(default_factory=lambda: _texto("USDC_CELO", "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"))
     usdc_arbitrum: str = field(default_factory=lambda: _texto("USDC_ARBITRUM", "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"))
 
+    simulacion_token: str = field(default_factory=lambda: _texto("SIMULACION_TOKEN", ""))
+    sim_procesos: int = field(default_factory=lambda: _entero("SIM_PROCESOS", 4))
+    sim_dir_env: str = field(default_factory=lambda: _texto("SIM_DIR", ""))
+    sim_intervalo_s: float = field(default_factory=lambda: _decimal("SIM_INTERVALO_S", 900))
+    sim_semilla: int = field(default_factory=lambda: _entero("SIM_SEMILLA", 2026))
+
     dias_recalibracion: int = field(default_factory=lambda: _entero("DIAS_RECALIBRACION", 14))
     horas_finalidad_recalibracion: float = field(default_factory=lambda: _decimal("HORAS_FINALIDAD_RECALIBRACION", 72))
+
+    @property
+    def dir_simulacion(self):
+        return Path(self.sim_dir_env) if self.sim_dir_env else Path(self.db_path).parent / "simulacion"
+
+    @property
+    def ruta_sim_db(self):
+        if str(self.db_path) == ":memory:":
+            return ":memory:"
+        return Path(self.db_path).parent / "simulacion.db"
 
     def intervalo_bloques(self, red):
         return self.intervalo_aptos_s if red == "aptos" else self.intervalo_bloques_s
