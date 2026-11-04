@@ -1,0 +1,547 @@
+<title>Banco de Usuarios Simulados</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap">
+<style>
+:root{
+  --brand:#fdda24;--brand-deep:#f2c900;--brand-soft:#fff3a6;
+  --ink:#2c2a29;--muted:#5e5c5a;--grey:#97999b;--line:#d1d2d4;--surface:#f7f7f7;--paper:#ffffff;
+  --pink:#f9d3e1;--orange:#ff7f41;--green:#00c389;
+  --shadow:0 1px 2px rgb(44 42 41 / .06),0 4px 16px rgb(44 42 41 / .04);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper)}
+body{color:var(--ink);font:15px/1.5 "Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1440px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:24px;margin:0 0 4px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 14px;font-size:14px;max-width:110ch}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tab{padding:8px 18px;border:1.5px solid var(--ink);border-radius:100px;background:var(--paper);color:var(--ink);cursor:pointer;font:inherit;font-weight:600}
+.tab:hover{background:var(--surface)}
+.tab[aria-selected="true"]{background:var(--brand)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:6px}
+.view{display:grid;gap:16px}
+.view[hidden]{display:none}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:grid;gap:12px;min-width:0}
+.card>*{margin:0;min-width:0}
+.card>p,.card>ul,.card>ol{max-width:110ch}
+h2{font-size:18px;margin:0;font-weight:700}
+h3{font-size:15px;margin:0;font-weight:700}
+.tabla{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:720px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:700;font-size:12.5px;background:var(--surface)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.nw{white-space:nowrap}
+code{font-size:12.5px;background:var(--surface);border-radius:4px;padding:0 4px}
+ul,ol{padding-left:1.25em}
+li+li{margin-top:4px}
+.nota{color:var(--muted);font-size:12.5px}
+.sintesis{display:flex;flex-wrap:wrap;gap:8px}
+.sintesis div{flex:1 1 220px;background:var(--surface);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--muted)}
+.sintesis strong{display:block;color:var(--ink);font-size:15px}
+.pill{display:inline-block;padding:0 9px;border:1px solid var(--ink);border-radius:100px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-control{background:var(--green)}
+.p-hueco{background:var(--brand-soft)}
+.p-fuera{background:var(--orange)}
+.p-mal{background:var(--pink)}
+.aviso{background:var(--brand-soft);border-radius:10px;padding:10px 14px}
+.prueba{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding-block:14px;border-bottom:1px solid var(--line)}
+.prueba:last-child{border-bottom:0}
+.prueba .id{align-self:start;text-align:center;font-weight:700;border:1.5px solid var(--ink);border-radius:8px;background:var(--brand);padding:2px 0}
+.prueba .cuerpo{min-width:0;display:grid;gap:8px}
+.prueba .cuerpo>*{margin:0}
+.prueba dl{display:grid;grid-template-columns:82px minmax(0,1fr);gap:4px 12px;font-size:13.5px;margin:0}
+.prueba dt{color:var(--muted);font-weight:700;font-size:12.5px}
+.prueba dd{margin:0;min-width:0}
+.estados{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.estados div{display:grid;grid-template-columns:124px minmax(0,1fr);gap:12px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.estados div:last-child{border-bottom:0}
+.estados div>span:last-child{min-width:0}
+.grafica{overflow-x:auto}
+svg{width:100%;height:auto;display:block}
+.grafica svg{min-width:640px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;border:1px solid var(--ink);display:inline-block}
+pre{margin:0;overflow-x:auto;background:var(--surface);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.55}
+.dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.dos>div{min-width:0;display:grid;gap:6px;align-content:start}
+.dos>div>*{margin:0}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.kpis{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 480px}
+.kpi{background:var(--surface);border-radius:10px;padding:6px 12px;font-size:12px;color:var(--muted);min-width:140px}
+.kpi b{display:block;color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn,select.btn{font:inherit;font-weight:600;padding:6px 16px;border:1.5px solid var(--ink);border-radius:100px;background:var(--ink);color:#fff;cursor:pointer}
+select.btn{background:var(--paper);color:var(--ink)}
+.timer{background:var(--surface);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--muted);flex:1 1 200px}
+.timer b{display:block;color:var(--ink);font-size:12.5px}
+.timer .bar{height:5px;border-radius:3px;background:var(--line);margin:5px 0 2px;overflow:hidden}
+.timer .bar i{display:block;height:100%;width:0;background:var(--ink)}
+.hint{font-size:12.5px;color:var(--muted)}
+footer{color:var(--muted);font-size:12.5px;margin-top:14px}
+@media (max-width:760px){.dos{grid-template-columns:minmax(0,1fr)}.estados div{grid-template-columns:minmax(0,1fr);gap:4px}.prueba dl{grid-template-columns:minmax(0,1fr);gap:0}.prueba dd{margin-bottom:6px}}
+</style>
+
+<div class="wrap">
+  <h1>Banco de usuarios simulados</h1>
+  <p class="sub">Diseño de las pruebas: 12 perfiles de usuario, datos de red reales y el modelo de la tesis sin modificar, para saber a quién le sirve la red que recomienda y qué tan estable es esa respuesta. Estado: diseño, nada implementado ni ejecutado (repo en b496688, 4 de noviembre de 2026).</p>
+  <div class="tabs" role="tablist" id="tabs" aria-label="Vistas"></div>
+
+
+      <section class="view" id="v-resumen" hidden>
+    <div class="card" id="idea">
+      <h2>La idea en una página</h2>
+      <p>La aplicación recibe un pago y recomienda una red. Las pruebas actuales comprueban que el modelo reproduce la tesis, pero no que su recomendación sirva para lo que cada persona necesita. Este banco crea usuarios simulados con necesidades declaradas, les pide una recomendación al modelo sin modificarlo y compara lo recomendado con lo que necesitaban.</p>
+      <div class="sintesis">
+        <div><strong>Usuarios simulados</strong><span>12 perfiles, cada uno con rangos de monto, espera e irrevocabilidad.</span></div>
+        <div><strong>Datos de red reales</strong><span>Línea base y métricas en vivo, leídas tal como las usa la aplicación.</span></div>
+        <div><strong>Modelo intacto</strong><span><code>modelo.py</code> se llama como caja negra; no cambian pesos ni umbrales.</span></div>
+      </div>
+      <div class="aviso"><strong>Regla de oro.</strong> Lo único simulado es la demanda. Ninguna métrica de red se inventa. Los escenarios contrafactuales quitan redes, métricas o incertidumbre, pero nunca agregan un valor que no se haya medido. Todo el banco vive fuera de la aplicación, que no admite datos simulados.</div>
+    </div>
+    <div class="card" id="indicios">
+      <h2>Qué motivó el diseño</h2>
+      <p>Un sondeo corto sobre la línea base, con un puñado de pagos de ejemplo, mostró cuatro indicios. No son resultados del estudio: son las razones por las que el diseño va más allá de mirar quién gana.</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Indicio</th><th>Qué se observó</th><th>Qué lo prueba</th></tr></thead>
+        <tbody>
+          <tr><td><b>La espera no restringe</b></td><td><code>espera_s</code> solo interpola pesos. Con una espera de 3 s, Polygon quedó en banda 1 con <code>B2</code> = 492 s.</td><td>P2</td></tr>
+          <tr><td><b>Aptos no puede ganar</b></td><td>Su <code>B2</code> no es medible por HTTP y la compuerta G2 la descartó en todos los casos probados, con un motivo que habla de anclaje en Ethereum.</td><td>P3</td></tr>
+          <tr><td><b>Comparación asimétrica</b></td><td><code>A3</code> de Tempo (2019) se puntúa sin R²; en Polygon, Celo y Arbitrum se excluye por ajuste insuficiente. Tempo, Aptos y Canton además tienen <code>sigma</code> = 0.</td><td>P3</td></tr>
+          <tr><td><b>Bandas inestables</b></td><td>Un mismo pago dio 3, 2 y 3 bandas con 500, 2.000 y 10.000 réplicas. La banda 1 no cambió; las siguientes sí.</td><td>P6</td></tr>
+        </tbody>
+      </table></div>
+      <p class="nota">Valores de la línea base usados en el resto del documento, de <code>perfiles.json</code> y <code>metrics.csv</code>:</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Red</th><th class="num">A1 costo (USD)</th><th class="num">B1 inclusión (s)</th><th class="num">B2 firmeza (s)</th><th class="num">B2b firmeza final (s)</th><th class="num">Métricas con sigma</th></tr></thead>
+        <tbody>
+          <tr><td>Polygon</td><td class="num">0,0043</td><td class="num">1,5</td><td class="num">492</td><td class="num">492</td><td class="num">9</td></tr>
+          <tr><td>Celo</td><td class="num">0,0013</td><td class="num">1,0</td><td class="num">960</td><td class="num">304.000</td><td class="num">9</td></tr>
+          <tr><td>Arbitrum</td><td class="num">0,0070</td><td class="num">0,25</td><td class="num">60</td><td class="num">557.000</td><td class="num">7</td></tr>
+          <tr><td>Tempo</td><td class="num">0,00002</td><td class="num">0,59</td><td class="num">0,63</td><td class="num">sin dato</td><td class="num">0</td></tr>
+          <tr><td>Aptos</td><td class="num">0,00029</td><td class="num">0,09</td><td class="num">sin dato</td><td class="num">sin dato</td><td class="num">0</td></tr>
+          <tr><td>Canton</td><td class="num">0,8953</td><td class="num">1,06</td><td class="num">1,06</td><td class="num">sin dato</td><td class="num">0</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card" id="preguntas">
+      <h2>Preguntas que debe responder</h2>
+      <p>Cada pregunta se fija antes de medir, junto con la señal que la respondería. Así el informe no busca patrones a posteriori.</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Pregunta</th><th>Señal</th><th>Prueba</th></tr></thead>
+        <tbody>
+          <tr><td>¿A qué perfiles cubre bien el modelo?</td><td>Certidumbre por perfil y cuota de la red más recomendada</td><td>P1</td></tr>
+          <tr><td>¿La recomendación cumple lo que el usuario pidió?</td><td>Distribución de estados de ajuste, en lectura preferencia y requisito</td><td>P2</td></tr>
+          <tr><td>¿El ganador depende de cómo se midió cada red?</td><td>Perfiles cuya banda 1 cambia en cada contrafactual</td><td>P3</td></tr>
+          <tr><td>¿Qué pasa si la red recomendada falla?</td><td>Red de respaldo y pérdida de puntaje</td><td>P4</td></tr>
+          <tr><td>¿La respuesta es frágil ante cambios pequeños?</td><td>Cambios de banda 1 por atributo</td><td>P5</td></tr>
+          <tr><td>¿Cuántas réplicas hacen falta?</td><td>Coincidencia con una corrida de referencia de 40.000</td><td>P6</td></tr>
+          <tr><td>¿La recomendación cambia con la red en vivo?</td><td>Cambios por día, métrica causante y diferencia con la línea base</td><td>P7</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+  <section class="view" id="v-usuarios" hidden>
+    <div class="card" id="usuarios">
+      <h2>Los 12 perfiles</h2>
+      <p>Un perfil describe a un tipo de usuario con rangos. Cada usuario simulado toma valores dentro de ellos con una semilla fija, en escala logarítmica para monto y espera, igual que el modelo. Los controles confirman que el arnés se comporta en terreno conocido; el valor está en los otros nueve.</p>
+      <div class="tabla"><table>
+        <thead><tr><th class="num">#</th><th>Perfil</th><th>Tipo</th><th>Necesidad</th><th>Monto</th><th>Transfr.</th><th>Espera</th><th>Irrev.</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Remesa familiar</td><td><span class="pill p-control">control</span></td><td>Enviar a la familia con el menor costo</td><td class="nw">USD 200–500</td><td>sí</td><td class="nw">30 min–2 h</td><td>baja</td></tr>
+          <tr><td class="num">2</td><td>Tendero con QR</td><td><span class="pill p-control">control</span></td><td>Cobrar en mostrador sin hacer esperar</td><td class="nw">COP 15.000–159.456</td><td>no</td><td class="nw">5–20 s</td><td>media</td></tr>
+          <tr><td class="num">3</td><td>Tesorería de alto valor</td><td><span class="pill p-control">control</span></td><td>Mover grandes sumas con firmeza</td><td class="nw">COP 50–200 M</td><td>no</td><td class="nw">5–20 min</td><td>alta</td></tr>
+          <tr><td class="num">4</td><td>Microremesa</td><td><span class="pill p-hueco">hueco</span></td><td>Enviar poco, donde cada dólar de costo pesa</td><td class="nw">USD 20–100</td><td>sí</td><td class="nw">1–24 h</td><td>baja</td></tr>
+          <tr><td class="num">5</td><td>Freelancer</td><td><span class="pill p-hueco">hueco</span></td><td>Cobrar del exterior sin depender de un banco</td><td class="nw">USD 500–5.000</td><td>sí</td><td class="nw">1–24 h</td><td>media</td></tr>
+          <tr><td class="num">6</td><td>E-commerce</td><td><span class="pill p-hueco">hueco</span></td><td>Confirmar la orden en minutos</td><td class="nw">COP 100.000–2 M</td><td>no</td><td class="nw">1–10 min</td><td>media</td></tr>
+          <tr><td class="num">7</td><td>Nómina de pyme</td><td><span class="pill p-hueco">hueco</span></td><td>Pagar salarios sin apuro y sin reversos</td><td class="nw">COP 1,5–8 M</td><td>no</td><td class="nw">1–4 h</td><td>media</td></tr>
+          <tr><td class="num">8</td><td>Proveedor B2B</td><td><span class="pill p-hueco">hueco</span></td><td>Liquidar facturas grandes en firme</td><td class="nw">COP 20–80 M</td><td>no</td><td class="nw">10–60 min</td><td>alta</td></tr>
+          <tr><td class="num">9</td><td>Importador</td><td><span class="pill p-hueco">hueco</span></td><td>Pagar al exterior montos altos</td><td class="nw">USD 20.000–250.000</td><td>sí</td><td class="nw">1–24 h</td><td>alta</td></tr>
+          <tr><td class="num">10</td><td>Remesa urgente</td><td><span class="pill p-hueco">hueco</span></td><td>Enviar una emergencia en segundos</td><td class="nw">USD 200–500</td><td>sí</td><td class="nw">5–60 s</td><td>media</td></tr>
+          <tr><td class="num">11</td><td>Liquidación urgente</td><td><span class="pill p-hueco">hueco</span></td><td>Cerrar una operación grande casi de inmediato</td><td class="nw">COP 50–500 M</td><td>no</td><td class="nw">5–30 s</td><td>alta</td></tr>
+          <tr><td class="num">12</td><td>Micropago de transporte</td><td><span class="pill p-fuera">fuera de rango</span></td><td>Pagar un pasaje al instante</td><td class="nw">COP 3.000–10.000</td><td>no</td><td class="nw">1–5 s</td><td>baja</td></tr>
+        </tbody>
+      </table></div>
+      <p class="nota">Montos en USD convertidos con TRM 4.000, la de la tesis. Los centros de los perfiles 1 a 3 vienen de los escenarios de la tesis; los rangos de los perfiles 4 a 12 son supuestos de diseño y se declaran como ilustrativos.</p>
+      <div class="grafica" id="mapa" role="img" aria-label="Mapa de los 12 perfiles según monto en pesos y espera en segundos, ambos en escala logarítmica, con los tres escenarios de la tesis marcados."></div>
+      <div class="legend">
+        <span><i style="background:var(--green)"></i>Doméstico</span>
+        <span><i style="background:var(--orange)"></i>Transfronterizo</span>
+        <span>◆ Escenario de la tesis (E1 remesas, E2 comercio, E3 alto valor)</span>
+      </div>
+      <p>El mapa muestra por qué estos perfiles: los escenarios de la tesis son tres puntos, y gran parte de la demanda plausible cae entre ellos. El perfil 12 queda bajo el piso de COP 10.000 del modelo, donde el monto deja de distinguir pagos en la interpolación. El perfil 11 pide alta irrevocabilidad en segundos, una combinación que ningún escenario contempla.</p>
+    </div>
+    <div class="card" id="cuantos">
+      <h2>Cuántos usuarios hacen falta</h2>
+      <p>La respuesta la da la precisión deseada. Lo que se estima por perfil es una proporción: qué parte de sus usuarios recibe la banda 1 más frecuente. Se genera por tandas hasta conocerla con la precisión fijada.</p>
+      <ol>
+        <li>Se evalúan los primeros 50 usuarios del perfil.</li>
+        <li>Se calcula el intervalo de Wilson al 95 % de esa proporción.</li>
+        <li>Si su semiancho es de 5 puntos o menos, el perfil se detiene.</li>
+        <li>Si no, se agregan 50 usuarios, con un tope de 400.</li>
+      </ol>
+      <p>Un perfil homogéneo se detiene pronto y uno dividido entre redes recibe más usuarios. El tamaño se ajusta a la dificultad, y el resultado también informa: un perfil que llega a 400 es un perfil sin respuesta clara.</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Etapa</th><th>Evaluaciones</th><th class="num">Réplicas</th><th class="num">Tiempo estimado</th></tr></thead>
+        <tbody>
+          <tr><td>Muestreo por perfil (P1, P2)</td><td>600 a 4.800</td><td class="num">10.000</td><td class="num">4 a 18 min</td></tr>
+          <tr><td>Contrafactuales y caídas (P3, P4)</td><td>11 escenarios × 120 usuarios = 1.320</td><td class="num">10.000</td><td class="num">5 min</td></tr>
+          <tr><td>Sensibilidad (P5)</td><td>hasta 7 variantes × 120 usuarios = 840</td><td class="num">10.000</td><td class="num">3 min</td></tr>
+          <tr><td>Convergencia (P6)</td><td>4 niveles × 120 usuarios = 480</td><td class="num">500 a 40.000</td><td class="num">3 min</td></tr>
+          <tr><td><b>Lote completo</b></td><td><b>hasta unas 7.400</b></td><td class="num"></td><td class="num"><b>hasta 30 min</b></td></tr>
+        </tbody>
+      </table></div>
+      <p class="nota">Estimación a partir de 1,8 s por evaluación con 10.000 réplicas, medidos en un proceso, repartidos en 8 procesos. Se usan las 10.000 réplicas de la tesis para no introducir otra decisión; P6 dirá si se pueden reducir.</p>
+    </div>
+  </section>
+  <section class="view" id="v-ajuste" hidden>
+    <div class="card" id="ajuste">
+      <h2>Cómo se mide el ajuste a la necesidad</h2>
+      <p>Esta es la medida central. Para cada usuario se revisa si cada red cumple lo pedido, siempre con umbrales que ya existen en el modelo y con los valores del perfil de red usado. No se agrega ningún umbral nuevo.</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Criterio</th><th>Condición</th><th>Origen del umbral</th></tr></thead>
+        <tbody>
+          <tr><td>Costo</td><td><code>A1</code> ≤ 1 % del ticket</td><td>Valor inaceptable de A1 en el modelo</td></tr>
+          <tr><td>Espera, lectura preferencia</td><td><code>B1</code> ≤ <code>espera_s</code></td><td>Espera declarada por el usuario</td></tr>
+          <tr><td>Espera, lectura requisito</td><td><code>B2</code> ≤ <code>espera_s</code></td><td>Espera declarada por el usuario</td></tr>
+          <tr><td>Irrevocabilidad alta</td><td><code>B2b</code> ≤ 86.400 s, o <code>B2</code> si la red no tiene <code>B2b</code></td><td>Valor inaceptable de B2b en el modelo</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Doble lectura de la espera.</strong> <code>INTEGRACION.md</code> define la espera como tolerable hasta la confirmación, sin decir cuál. Por eso se reportan las dos: la preferencia acepta la inclusión en un bloque y el requisito exige firmeza. Ninguna se impone al modelo; ambas evalúan su salida desde afuera.</p>
+      <p>Cada usuario termina en uno de cinco estados:</p>
+      <div class="estados">
+        <div><span><span class="pill p-control">cumple</span></span><span>Todas las redes de la banda 1 satisfacen la necesidad.</span></div>
+        <div><span><span class="pill p-hueco">parcial</span></span><span>Hay empate en banda 1 y solo algunas redes cumplen. El usuario debe elegir bien, y el modelo no le dice cuál.</span></div>
+        <div><span><span class="pill p-mal">brecha</span></span><span>Ninguna red de la banda 1 cumple, pero otra red admisible sí. Es el error más importante.</span></div>
+        <div><span><span class="pill p-fuera">sin solución</span></span><span>Ninguna red admisible cumple. El problema es de la oferta, no del modelo.</span></div>
+        <div><span><span class="pill" style="background:var(--surface)">no evaluable</span></span><span>Falta el dato para decidir. Se cuenta aparte y nunca se asume.</span></div>
+      </div>
+      <p><strong>Ejemplo con la línea base.</strong> Un pago de COP 15.000 con 3 s de espera tiene un ticket de USD 3,75, así que su tope de costo es USD 0,0375. El sondeo dio Polygon y Tempo empatadas en banda 1. Polygon cumple la lectura preferencia (<code>B1</code> = 1,5 s), pero no la de requisito (<code>B2</code> = 492 s). Tempo cumple ambas (<code>B2</code> = 0,63 s). Bajo la lectura requisito ese usuario queda en <span class="pill p-hueco">parcial</span>.</p>
+    </div>
+  </section>
+  <section class="view" id="v-pruebas" hidden>
+    <div class="card" id="pruebas">
+      <h2>Las siete pruebas</h2>
+      <p>P1 a P6 corren en lote, sobre la línea base y sobre una foto de los datos en vivo. P7 es la corrida continua. Donde hace falta un grupo pequeño se usa un panel fijo de 120 usuarios, los 10 primeros de cada perfil.</p>
+
+      <div>
+        <article class="prueba"><span class="id">P1</span><div class="cuerpo">
+          <h3>Cobertura</h3>
+          <p>Mide qué recibe cada perfil, sin juzgar todavía si le sirve.</p>
+          <dl><dt>Método</dt><dd>Se corre el modelo para todos los usuarios de cada perfil.</dd>
+          <dt>Registra</dt><dd>Banda 1 modal y su cuota, empates, certidumbre, composición, métrica determinante, redes inadmisibles y advertencias.</dd>
+          <dt>Alerta si</dt><dd>Un perfil queda con certidumbre baja en la mayoría de sus usuarios o llega al tope de 400.</dd></dl>
+        </div></article>
+
+        <article class="prueba"><span class="id">P2</span><div class="cuerpo">
+          <h3>Ajuste a la necesidad</h3>
+          <p>Es la prueba principal: compara la recomendación con la necesidad declarada.</p>
+          <dl><dt>Método</dt><dd>Se aplican los criterios de la sección anterior a cada red, en las dos lecturas de la espera.</dd>
+          <dt>Registra</dt><dd>Estado de ajuste por usuario y qué criterio falló.</dd>
+          <dt>Alerta si</dt><dd>Un perfil tiene una cuota relevante de brecha, sobre todo si no aparece la misma brecha en la lectura preferencia. Eso apuntaría a que la espera debería tratarse como compuerta, lo cual sería una decisión de tesis.</dd></dl>
+        </div></article>
+
+        <article class="prueba"><span class="id">P3</span><div class="cuerpo">
+          <h3>Contrafactuales de medición</h3>
+          <p>Separa lo que las redes hacen de cómo se midieron.</p>
+          <div class="tabla"><table>
+            <thead><tr><th>Escenario</th><th>Cambio</th><th>Pregunta</th></tr></thead>
+            <tbody>
+              <tr><td>Métricas comunes</td><td>Solo las 13 métricas con dato en las 5 redes admisibles; salen A3, A4 y B2b</td><td>¿Medir más penaliza?</td></tr>
+              <tr><td>Sin sigma</td><td><code>sigma</code> = 0 en todas</td><td>¿Cuánto pesa la incertidumbre asimétrica?</td></tr>
+              <tr><td>Solo Polygon, Celo, Arbitrum</td><td>Se quitan las otras tres</td><td>¿Se mantiene la tesis previa?</td></tr>
+              <tr><td>Solo Tempo, Aptos, Canton</td><td>Se quitan las otras tres</td><td>¿Qué elige el benchmark nuevo por sí solo?</td></tr>
+              <tr><td>Aptos en sombra</td><td>Se calcula su puntaje central, sin tocar la compuerta</td><td>¿Cuánto cuesta no poder medir su <code>B2</code>?</td></tr>
+            </tbody>
+          </table></div>
+          <dl><dt>Alerta si</dt><dd>Muchos perfiles cambian de ganador con solo igualar las métricas. La comparación entre redes dependería de la cobertura, no del desempeño.</dd></dl>
+        </div></article>
+
+        <article class="prueba"><span class="id">P4</span><div class="cuerpo">
+          <h3>Caída de una red</h3>
+          <p>Evalúa la resiliencia de la recomendación si una red deja de estar disponible.</p>
+          <dl><dt>Método</dt><dd>Se repite el panel quitando cada una de las 6 redes, una a la vez.</dd>
+          <dt>Registra</dt><dd>Red de respaldo por perfil, caída de puntaje y cambio en el estado de ajuste.</dd>
+          <dt>Alerta si</dt><dd>Un perfil depende de una sola red: al quitarla, su estado de ajuste empeora o no queda respaldo admisible.</dd></dl>
+        </div></article>
+
+        <article class="prueba"><span class="id">P5</span><div class="cuerpo">
+          <h3>Sensibilidad del usuario</h3>
+          <p>Encuentra las fronteras donde un cambio pequeño en lo declarado cambia la red.</p>
+          <dl><dt>Método</dt><dd>Sobre el panel, se cambia un atributo cada vez: monto ×2 y ÷2, espera ×4 y ÷4, irrevocabilidad un nivel arriba y abajo, y transfronterizo invertido.</dd>
+          <dt>Registra</dt><dd>Qué atributo cambia más veces la banda 1 en cada perfil.</dd>
+          <dt>Alerta si</dt><dd>Un perfil cambia de red con un ajuste que un usuario real no notaría. La interfaz debería advertirlo.</dd></dl>
+        </div></article>
+
+        <article class="prueba"><span class="id">P6</span><div class="cuerpo">
+          <h3>Convergencia de réplicas</h3>
+          <p>Valida los números de todas las demás pruebas.</p>
+          <dl><dt>Método</dt><dd>Se corre el panel con 500, 2.000, 10.000 y 40.000 réplicas, tomando la última como referencia.</dd>
+          <dt>Registra</dt><dd>Coincidencia de la banda 1 y del orden completo de bandas.</dd>
+          <dt>Alerta si</dt><dd>Las 10.000 réplicas de la tesis no coinciden con la referencia. Las bandas inferiores se reportarían con esa salvedad.</dd></dl>
+        </div></article>
+
+        <article class="prueba"><span class="id">P7</span><div class="cuerpo">
+          <h3>Panel continuo</h3>
+          <p>Mide si la recomendación se sostiene mientras la red cambia. Se detalla en la sección siguiente.</p>
+          <dl><dt>Método</dt><dd>Los mismos 120 usuarios se reevalúan cada 15 minutos con el perfil en vivo.</dd>
+          <dt>Registra</dt><dd>Banda 1, cambios, métrica causante y diferencia frente a la línea base.</dd>
+          <dt>Alerta si</dt><dd>Las recomendaciones cambian en horas sin un cambio sostenido en la red, o el modo vivo discrepa de forma persistente del modo medición.</dd></dl>
+        </div></article>
+      </div>
+    </div>
+  </section>
+  <section class="view" id="v-continua" hidden>
+    <div class="card" id="continua">
+      <h2>Corrida continua</h2>
+      <p>El truco es un panel fijo. Como los usuarios no cambian entre ciclos, cualquier cambio en su recomendación solo puede venir de la red.</p>
+      <div class="top">
+        <div class="kpis" id="kp"></div>
+        <div class="ctrl">
+          <button class="btn" id="pausa">Pausar</button>
+          <label>Velocidad
+            <select class="btn" id="vel"><option value="60">×60</option><option value="300" selected>×300</option><option value="900">×900</option></select>
+          </label>
+        </div>
+      </div>
+      <div class="timer"><b id="tm-t">Próximo ciclo</b><div class="bar"><i id="tm"></i></div></div>
+      <svg id="svgc" role="img" aria-label="Animación del ciclo del panel fijo: lectura del perfil, validación, evaluación de 120 usuarios, guardado e informe"></svg>
+      <p class="hint">Animación del proceso. Los contadores cuentan ciclos de ejemplo y no muestran resultados.</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Indicador</th><th>Definición</th></tr></thead>
+        <tbody>
+          <tr><td>Estabilidad</td><td>Parte de los ciclos consecutivos en que la banda 1 de un usuario no cambia</td></tr>
+          <tr><td>Cambios por día</td><td>Cambios de banda 1 por perfil y red, separando los que se revierten en el ciclo siguiente</td></tr>
+          <tr><td>Causa probable</td><td>Métrica con mayor cambio relativo entre los dos perfiles guardados; es atribución indicativa</td></tr>
+          <tr><td>Vivo frente a base</td><td>Parte de los usuarios con distinta banda 1 entre modo vivo y modo medición</td></tr>
+          <tr><td>Patrón horario</td><td>Cambios y costo por hora del día, solo con varios días de datos</td></tr>
+          <tr><td>Cobertura en vivo</td><td>Métricas vivas sobre el total en cada ciclo, para detectar colectores caídos</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Reglas de operación</h3>
+      <ul>
+        <li><strong>Ciclos inválidos.</strong> Un ciclo con menos de la mitad de las métricas vivas esperadas se guarda marcado y no entra en los indicadores. Sin esa regla, una caída de colectores parecería un cambio de recomendación.</li>
+        <li><strong>Duración.</strong> Mínimo 3 días, porque <code>B2</code> de Tempo necesita 72 h de ventana. Lo ideal son 14 días, la ventana de <code>C3</code> y la del plan.</li>
+        <li><strong>Volumen.</strong> 96 ciclos y 11.520 evaluaciones por día.</li>
+        <li><strong>Límites de Aptos.</strong> El banco no consulta ninguna red, así que no gasta la cuota por IP.</li>
+      </ul>
+      <p>Falta decidir dónde corre. Debe ser una máquina encendida junto a los colectores, porque una rutina en la nube no vería la base local. Docker con un perfil opcional comparte el volumen de datos; un script local de Windows es la alternativa.</p>
+    </div>
+  </section>
+  <section class="view" id="v-arquitectura" hidden>
+    <div class="card" id="arquitectura">
+      <h2>Arquitectura propuesta</h2>
+      <p>El banco es un paquete hermano de la aplicación. La reutiliza para leer perfiles, y solo escribe en su propia base.</p>
+      <pre>backend/simulacion/
+  personas.py     catálogo de los 12 perfiles y generación de usuarios con semilla
+  fuentes.py      línea base y perfil en vivo, con acceso de solo lectura
+  evaluador.py    llama a modelo.recomendar y calcula el ajuste
+  experimentos.py P1 a P6: muestreo adaptativo y contrafactuales
+  continuo.py     P7: ciclo, validación y guardado
+  almacen.py      base propia en backend/data/simulacion.db
+  informe.py      genera el informe y los CSV a partir de la base
+  __main__.py     python -m simulacion lote | continuo | informe
+backend/tests/test_simulacion.py</pre>
+      <div class="dos">
+        <div>
+          <h3>Qué se reutiliza</h3>
+          <ul>
+            <li><code>modelo.recomendar</code>, sin modificar</li>
+            <li><code>construir_linea_base</code> para el modo medición</li>
+            <li><code>ServicioPerfiles</code> para la regla de vivo y frescura</li>
+            <li>El filtro de redes con datos de <code>Recomendador</code></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Por qué no usar la API</h3>
+          <ul>
+            <li>Cada recomendación queda en la tabla de auditoría <code>recomendaciones</code></li>
+            <li>Ocuparía los 2 procesos que atienden a usuarios reales</li>
+            <li>Llenaría la caché de 500 entradas</li>
+          </ul>
+        </div>
+      </div>
+      <p>Lo que esta decisión no prueba es la capa HTTP, que ya tiene <code>test_api.py</code>. Como comprobación cruzada, una prueba compara un usuario evaluado por el banco con la respuesta de <code>Recomendador</code>.</p>
+      <h3>Pruebas del propio banco</h3>
+      <ul>
+        <li>La misma semilla genera exactamente los mismos usuarios.</li>
+        <li>Todo usuario cae dentro de los rangos de su perfil.</li>
+        <li>Con Polygon, Celo y Arbitrum, se reproducen los 4 casos de <code>casos_referencia.json</code>.</li>
+        <li>El ajuste clasifica bien cada estado, con datos de ejemplo que incluyan valores nulos.</li>
+        <li>Una corrida no agrega filas a <code>redes.db</code> ni a <code>recomendaciones</code>.</li>
+        <li>Los contrafactuales nunca agregan un valor que no estuviera en el perfil original.</li>
+      </ul>
+    </div>
+    <div class="card" id="informe">
+      <h2>Qué se entrega</h2>
+      <p>Todo queda en <code>resultados/simulacion/</code> y se puede regenerar desde la base, sin volver a correr el modelo.</p>
+      <div class="tabla"><table>
+        <thead><tr><th>Archivo</th><th>Contenido</th></tr></thead>
+        <tbody>
+          <tr><td><code>informe.md</code></td><td>Hallazgos automáticos por pregunta, con su número y sus límites</td></tr>
+          <tr><td><code>personas.csv</code></td><td>P1 y P2 por perfil: tamaño, banda 1, certidumbre y estados de ajuste</td></tr>
+          <tr><td><code>contrafactuales.csv</code></td><td>P3 y P4: cambios por escenario y perfil</td></tr>
+          <tr><td><code>sensibilidad.csv</code></td><td>P5: cambios por atributo</td></tr>
+          <tr><td><code>convergencia.csv</code></td><td>P6: coincidencia por nivel de réplicas</td></tr>
+          <tr><td><code>serie_vivo.csv</code></td><td>P7: un registro por ciclo y perfil</td></tr>
+          <tr><td><code>manifiesto.json</code></td><td>Semilla, commit, versión de perfil, réplicas y TRM para reproducir la corrida</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+  <section class="view" id="v-plan" hidden>
+    <div class="card" id="limites">
+      <h2>Límites que hay que declarar</h2>
+      <ul>
+        <li><strong>No representa el mercado.</strong> Los perfiles no están ponderados por demanda real. Los resultados se leen por perfil; nunca como porcentaje de la población colombiana.</li>
+        <li><strong>Los rangos son supuestos.</strong> Salvo los centros de los controles, se declaran ilustrativos. P5 ayuda a mostrar cuánto dependen de ellos las conclusiones.</li>
+        <li><strong>El banco hereda las mediciones.</strong> La línea base de Tempo, Aptos y Canton viene de una muestra reducida, Canton B3 es una cota inferior y el precio de APT sigue congelado.</li>
+        <li><strong>El ajuste es una lectura externa.</strong> Evalúa el modelo con criterios que este no se propuso cumplir. Un mal ajuste es evidencia para discutir, no un defecto demostrado.</li>
+        <li><strong>La atribución es indicativa.</strong> La métrica que más cambió entre ciclos es una causa probable.</li>
+        <li><strong>El banco no toma decisiones de tesis.</strong> Si los resultados sugieren una nueva compuerta o tratar A3 de otra forma, eso se documenta como propuesta. <code>modelo.py</code> y <code>score_engine.py</code> no cambian como efecto de esta prueba.</li>
+      </ul>
+    </div>
+    <div class="card" id="plan">
+      <h2>Plan y pendientes</h2>
+      <div class="dos">
+        <div>
+          <h3>Decidido</h3>
+          <ul>
+            <li>Los 12 perfiles.</li>
+            <li>La espera se mide en las dos lecturas, sin tocar <code>modelo.py</code>.</li>
+            <li>Por ahora solo diseño; no se corre nada.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Por decidir</h3>
+          <ul>
+            <li>Máquina para la corrida continua.</li>
+            <li>Validar con Jerónimo los rangos de los perfiles.</li>
+            <li>Si los hallazgos entran a la tesis como capítulo o como anexo.</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Orden de implementación</h3>
+      <ol>
+        <li>Perfiles, generación de usuarios y pruebas del banco.</li>
+        <li>Evaluador con ajuste, comprobado contra los casos de referencia.</li>
+        <li>Lote P1 y P2 sobre la línea base, para revisar la utilidad antes de seguir.</li>
+        <li>Contrafactuales, sensibilidad y convergencia.</li>
+        <li>Corrida continua e informe automático.</li>
+      </ol>
+    </div>
+  </section>
+  <footer>Documento de diseño. Las cifras de la línea base son mediciones del repositorio; los tiempos son estimaciones y ningún resultado de las pruebas se ha producido todavía.</footer>
+</div>
+
+<script>
+(function () {
+  var vistas = [['resumen', 'Resumen'], ['usuarios', 'Usuarios'], ['ajuste', 'Ajuste'], ['pruebas', 'Pruebas'], ['continua', 'Corrida continua'], ['arquitectura', 'Arquitectura'], ['plan', 'Plan']];
+  var tabs = document.getElementById("tabs");
+  function abrir(id) {
+    vistas.forEach(function (v) {
+      document.getElementById("v-" + v[0]).hidden = v[0] !== id;
+      document.getElementById("t-" + v[0]).setAttribute("aria-selected", String(v[0] === id));
+    });
+  }
+  vistas.forEach(function (v) {
+    var b = document.createElement("button");
+    b.className = "tab"; b.id = "t-" + v[0]; b.type = "button"; b.setAttribute("role", "tab"); b.textContent = v[1];
+    b.addEventListener("click", function () { abrir(v[0]); });
+    tabs.appendChild(b);
+  });
+  var pedida = location.hash.slice(1);
+  abrir(vistas.some(function (v) { return v[0] === pedida; }) ? pedida : vistas[0][0]);
+
+  var NS = "http://www.w3.org/2000/svg", svg = document.getElementById("svgc");
+  function se(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); (p || svg).appendChild(e); return e; }
+  svg.setAttribute("viewBox", "0 0 1200 210");
+  var pasos = [["Leer", "perfil efectivo", "solo lectura de redes.db", "var(--green)"], ["Validar", "métricas vivas", "descarta ciclos sin datos", "var(--brand)"],
+    ["Evaluar", "120 usuarios", "modelo.py sin cambios", "var(--orange)"], ["Guardar", "ciclo y perfil", "base propia", "var(--pink)"], ["Informar", "informe y CSV", "resultados/simulacion", "var(--brand-deep)"]];
+  var W = 196, G = 50, Y = 50, H = 110, X0 = 12;
+  var d = se("defs", {}), mk = se("marker", { id: "ah", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, d);
+  se("path", { d: "M0 0L10 5L0 10z", fill: "var(--grey)" }, mk);
+  function txt(x, y, s, size, w, fill) { var t = se("text", { x: x, y: y, "font-size": size, "font-weight": w, fill: fill || "var(--ink)" }); t.textContent = s; }
+  pasos.forEach(function (p, i) {
+    var x = X0 + i * (W + G);
+    se("rect", { x: x, y: Y, width: W, height: H, rx: 12, fill: "var(--paper)", stroke: "var(--ink)", "stroke-width": 1.5 });
+    se("rect", { x: x, y: Y, width: W, height: 34, rx: 12, fill: p[3], stroke: "var(--ink)", "stroke-width": 1.5 });
+    txt(x + 14, Y + 23, p[0], 15, 700);
+    txt(x + 14, Y + 62, p[1], 14, 600);
+    txt(x + 14, Y + 84, p[2], 12.5, 400, "var(--muted)");
+    if (i < 4) se("line", { x1: x + W + 4, y1: Y + H / 2, x2: x + W + G - 4, y2: Y + H / 2, stroke: "var(--grey)", "stroke-width": 1.6, "marker-end": "url(#ah)" });
+  });
+  var bx = X0 + 4 * (W + G) + W / 2, ax = X0 + W / 2;
+  se("path", { d: "M" + bx + " " + (Y + H) + "V190H" + ax + "V" + (Y + H + 4), fill: "none", stroke: "var(--grey)", "stroke-width": 1.6, "stroke-dasharray": "6 5", "marker-end": "url(#ah)" });
+  txt(ax + 24, 184, "espera 15 minutos con los mismos 120 usuarios", 12.5, 400, "var(--muted)");
+  var pk = se("circle", { r: 8, cy: Y + H / 2, cx: ax, fill: "var(--ink)" });
+  var CICLO = 900, vt = 0, vel = 300, pausa = false, ciclos = 0, ult = null;
+  var red = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var kp = document.getElementById("kp");
+  function kpis() { kp.innerHTML = '<div class="kpi"><b>' + ciclos + '</b>ciclos de ejemplo</div><div class="kpi"><b>' + (ciclos * 120).toLocaleString("es-CO") + '</b>evaluaciones de ejemplo</div><div class="kpi"><b>96</b>ciclos por día</div>'; }
+  function cuadro(ts) {
+    if (ult !== null && !pausa) {
+      vt += (ts - ult) / 1000 * vel;
+      if (vt >= CICLO) { vt -= CICLO; ciclos++; kpis(); }
+    }
+    ult = ts;
+    var f = vt / CICLO, en = Math.min(f / .4, 1);
+    pk.setAttribute("cx", ax + (bx - ax) * en);
+    pk.setAttribute("opacity", f < .4 ? 1 : .2);
+    document.getElementById("tm").style.width = (f * 100) + "%";
+    document.getElementById("tm-t").textContent = "Próximo ciclo en " + Math.ceil((CICLO - vt) / 60) + " min";
+    requestAnimationFrame(cuadro);
+  }
+  document.getElementById("pausa").addEventListener("click", function () { pausa = !pausa; this.textContent = pausa ? "Seguir" : "Pausar"; });
+  document.getElementById("vel").addEventListener("change", function () { vel = +this.value; });
+  if (red) { pausa = true; document.getElementById("pausa").textContent = "Seguir"; }
+  kpis();
+  requestAnimationFrame(cuadro);
+})();
+</script>
+<script>
+(function () {
+  var perfiles = [
+    [1, 8e5, 2e6, 1800, 7200, true], [2, 15000, 159456, 5, 20, false], [3, 5e7, 2e8, 300, 1200, false],
+    [4, 8e4, 4e5, 3600, 86400, true], [5, 2e6, 2e7, 3600, 86400, true], [6, 1e5, 2e6, 60, 600, false],
+    [7, 1.5e6, 8e6, 3600, 14400, false], [8, 2e7, 8e7, 600, 3600, false], [9, 8e7, 1e9, 3600, 86400, true],
+    [10, 8e5, 2e6, 5, 60, true], [11, 5e7, 5e8, 5, 30, false], [12, 3000, 10000, 1, 5, false]
+  ];
+  var escenarios = [["E1", 1.2e6, 3600], ["E2", 48906, 20], ["E3", 1e8, 600]];
+  var W = 820, H = 430, izq = 74, der = 22, sup = 18, inf = 52;
+  var xLog = function (v) { return izq + (Math.log10(v) - 3) / 6 * (W - izq - der); };
+  var yLog = function (v) { return H - inf - Math.log10(v) / Math.log10(86400) * (H - sup - inf); };
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">';
+  [[1e3, "COP 1.000"], [1e4, "10.000"], [1e5, "100.000"], [1e6, "1 M"], [1e7, "10 M"], [1e8, "100 M"], [1e9, "1.000 M"]].forEach(function (t) {
+    var x = xLog(t[0]);
+    s += '<line x1="' + x + '" x2="' + x + '" y1="' + sup + '" y2="' + (H - inf) + '" stroke="var(--line)"/>';
+    s += '<text x="' + x + '" y="' + (H - inf + 18) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + t[1] + '</text>';
+  });
+  [[1, "1 s"], [60, "1 min"], [3600, "1 h"], [86400, "1 día"]].forEach(function (t) {
+    var y = yLog(t[0]);
+    s += '<line x1="' + izq + '" x2="' + (W - der) + '" y1="' + y + '" y2="' + y + '" stroke="var(--line)"/>';
+    s += '<text x="' + (izq - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + t[1] + '</text>';
+  });
+  s += '<text x="' + ((W + izq) / 2) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="12" fill="var(--muted)">Monto en pesos (escala logarítmica)</text>';
+  s += '<text x="14" y="' + ((H - inf + sup) / 2) + '" text-anchor="middle" font-size="12" fill="var(--muted)" transform="rotate(-90 14 ' + ((H - inf + sup) / 2) + ')">Espera tolerable</text>';
+  var piso = xLog(1e4);
+  s += '<line x1="' + piso + '" x2="' + piso + '" y1="' + sup + '" y2="' + (H - inf) + '" stroke="var(--orange)" stroke-dasharray="5 4" stroke-width="1.5"/>';
+  s += '<text x="' + (piso + 6) + '" y="' + (sup + 13) + '" font-size="11" fill="var(--orange)">piso del modelo</text>';
+  perfiles.forEach(function (p) {
+    var x = xLog(p[1]), x2 = xLog(p[2]), y = yLog(p[4]), y2 = yLog(p[3]);
+    var c = p[5] ? "var(--orange)" : "var(--green)";
+    s += '<rect x="' + x + '" y="' + y + '" width="' + (x2 - x) + '" height="' + (y2 - y) + '" rx="6" fill="' + c + '" fill-opacity=".22" stroke="var(--ink)" stroke-width="1.3"/>';
+    s += '<text x="' + (x + 5) + '" y="' + (y + 14) + '" font-size="12" font-weight="700" fill="var(--ink)">' + p[0] + '</text>';
+  });
+  escenarios.forEach(function (e) {
+    var x = xLog(e[1]), y = yLog(e[2]), r = 6;
+    s += '<path d="M' + x + ' ' + (y - r) + 'L' + (x + r) + ' ' + y + 'L' + x + ' ' + (y + r) + 'L' + (x - r) + ' ' + y + 'Z" fill="var(--ink)"/>';
+    s += '<text x="' + (x + 9) + '" y="' + (y + 4) + '" font-size="11" fill="var(--ink)">' + e[0] + '</text>';
+  });
+  document.getElementById("mapa").innerHTML = s + "</svg>";
+})();
+</script>
