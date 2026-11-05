@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr list:*)",
+      "Bash(pnpm next:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm build:*)",
+      "Bash(git stash:*)",
+      "Bash(pnpm install)",
+      "Bash(pnpm exec next build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm --loglevel=error dlx next@16.5.0-canary.41 internal report-agent-upgrade:*)"
+    ]
+  }
+}
