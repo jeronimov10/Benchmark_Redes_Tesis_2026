@@ -1,3 +1,4 @@
+// Layout por idioma: proveedor de textos, encabezado y pie.
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { notFound } from "next/navigation";

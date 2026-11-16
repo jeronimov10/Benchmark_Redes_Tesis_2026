@@ -1,3 +1,4 @@
+// Encabezado con logo y navegacion.
 "use client";
 
 import { useTranslations } from "next-intl";

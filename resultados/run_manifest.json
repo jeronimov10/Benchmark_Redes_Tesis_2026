@@ -1,5 +1,5 @@
 {
-  "fecha_ejecucion": "2026-09-23T11:47:44.945975+00:00",
+  "fecha_ejecucion": "2026-11-16T22:20:32.750789+00:00",
   "tipo_de_corrida": "verificacion/implementacion con muestra reducida, NO la ventana W_H de 14 dias del plan",
   "redes": {
     "tempo": {
@@ -34,7 +34,7 @@
     "historico_W_H": 41,
     "tiempo_real_W_L": 2,
     "no_aplica_transversal_o_degenerada": 6,
-    "nota": "historico = consulta reproducible sobre bloques/eventos/estado ya producidos por la red (aunque la peticion se haga en vivo contra un nodo, lo que se mide ya ocurrio); tiempo_real = requiere sondeo continuo mientras el evento ocurre (solo B2 en Tempo y Aptos, via scripts/poll_finality.py); no_aplica = transversal o degenerada por arquitectura, sin ventana temporal."
+    "nota": "historico = consulta reproducible sobre bloques/eventos/estado ya producidos por la red (aunque la peticion se haga en vivo contra un nodo, lo que se mide ya ocurrio); tiempo_real = requiere sondeo continuo mientras el evento ocurre (solo B2 en Tempo y Aptos, via backend/benchmark/poll_finality.py); no_aplica = transversal o degenerada por arquitectura, sin ventana temporal."
   },
   "codigo": {
     "collect_tempo.py": "resultados/raw/tempo",

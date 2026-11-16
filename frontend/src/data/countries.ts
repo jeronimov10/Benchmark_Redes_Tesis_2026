@@ -1,4 +1,4 @@
-/** Demo risk points per country (0 low .. 30 high). Invented for the prototype. */
+// Puntos de riesgo por pais usados en el formulario de destinatario.
 export const COUNTRIES: Record<string, number> = {
   CO: 0,
   US: 0,

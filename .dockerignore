@@ -10,3 +10,4 @@ resultados/raw
 *.pdf
 *.xlsx
 .env
+resultados/pruebas

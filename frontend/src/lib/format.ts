@@ -1,10 +1,10 @@
+// Formato de numeros, monedas y etiquetas de red.
 "use client";
 
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { COUNTRY_CODES } from "@/data/countries";
 import type { NetworkId, Unit } from "@/engine/types";
 
-/** Network names are proper nouns and are not translated. */
 export const NETWORK_LABEL: Record<NetworkId, string> = {
   tempo: "Tempo",
   aptos: "Aptos",
@@ -14,7 +14,6 @@ export const NETWORK_LABEL: Record<NetworkId, string> = {
   celo: "Celo",
 };
 
-/** Label of a network id coming from the model (falls back to the raw id). */
 export const networkLabel = (id: string) => NETWORK_LABEL[id as NetworkId] ?? id;
 
 export function useFmt() {

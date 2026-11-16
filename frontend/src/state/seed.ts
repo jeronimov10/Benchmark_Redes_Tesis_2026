@@ -1,3 +1,4 @@
+// Genera el historial inicial de un usuario nuevo.
 import { COUNTRY_CODES } from "@/data/countries";
 import { defaultsFor } from "@/lib/attrs";
 import type { AmountBracket, Frequency, NetworkId, Purpose, RecipientType, TxInput } from "@/engine/types";
@@ -39,10 +40,6 @@ function pick<T>(rand: () => number, xs: T[], fallback: T): T {
   return xs.length ? xs[Math.floor(rand() * xs.length)] : fallback;
 }
 
-/**
- * Deterministic, demo-only past activity derived from the onboarding answers,
- * so a new user starts with a believable history. Marked `seeded`.
- */
 export function seedHistory(user: User, makeId: () => string): HistoryEntry[] {
   const a = user.answers;
   const rand = mulberry32(hash(user.id + user.alias));

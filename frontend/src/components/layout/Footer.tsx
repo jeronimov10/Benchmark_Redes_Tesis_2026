@@ -1,3 +1,4 @@
+// Pie de pagina.
 import { useTranslations } from "next-intl";
 import { Container } from "@/components/ui";
 

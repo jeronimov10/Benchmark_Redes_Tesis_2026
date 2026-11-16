@@ -1,3 +1,4 @@
+// Fila del historial de recomendaciones.
 "use client";
 
 import { useTranslations } from "next-intl";

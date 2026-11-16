@@ -1,36 +1,5 @@
 #!/usr/bin/env python3
-"""Punto de entrada unico del benchmark Tempo / Aptos / Canton.
-
-    python main.py                 -> usa los datos crudos ya descargados en
-                                       resultados/raw/ (rapido, no toca la red)
-    python main.py --collect        -> vuelve a consultar las tres APIs en vivo
-                                       antes de calcular (lento, sujeto a rate
-                                       limit; ver scripts/collect_*.py)
-
-En cualquier caso, al terminar corre compute_*_metrics -> build_deliverables
--> score_engine, y despues imprime un reporte diferenciado por red y por
-bloque (A/B/C/D) de exactamente que se pudo medir, con que n, y por que no
-se pudo medir el resto. Los mismos numeros quedan en resultados/*.csv.
-
-Cada metrica se marca ademas con COMO se obtuvo, en el vocabulario del plan
-(Sec.7.1 de docs/plan_medicion_tempo_aptos_canton.md):
-    [HIST]  dato reconstruido de bloques/eventos/estado ya producidos por la
-            red (ventana W_H) -- aunque la consulta se haga en vivo contra un
-            nodo, lo que se mide ya ocurrio.
-    [VIVO]  requiere sondeo continuo mientras el evento ocurre (ventana W_L).
-            Hoy eso es solo B2 en Tempo y Aptos (scripts/poll_finality.py).
-    [N/A]   transversal o degenerada por diseno de la red, sin ventana
-            temporal (E1, D1 en Canton, C1 en Canton).
-
-Al final se escribe ademas resultados/benchmark_final.csv: una fila por
-red x escenario con los puntajes, la admisibilidad y un resumen de cuantas
-metricas de esa red son historicas / en vivo / no computables -- el
-entregable unico para citar en la tesis.
-
-Nada de lo que imprime este script viene de documentacion: cada valor sale
-de metrics.csv, que a su vez sale de una consulta reproducible registrada en
-resultados/run_manifest.json.
-"""
+"""Punto de entrada del benchmark de Tempo, Aptos y Canton: recalcula desde resultados/raw/ (o con --collect vuelve a consultar las redes), imprime el reporte por red y bloque, y escribe benchmark_final.csv y el informe unificado de las seis redes."""
 import argparse
 import csv
 import os
@@ -51,8 +20,6 @@ MODO_TAG = {
     "no_aplica": "[N/A ]",
 }
 
-# Que metrica sustenta cada compuerta, para poder avisar en consola cuando una
-# compuerta se decide con un dato parcialmente_derivada (ej. B3 en Canton).
 GATE_METRICA = {"G1": "B1", "G3": "D2", "G4": "B3"}
 
 
@@ -101,7 +68,7 @@ def imprime_reporte(por_red, scores, gates):
     print("#  [HIST]=historico (W_H)  [VIVO]=sondeo en tiempo real (W_L)  [N/A]=transversal/degenerada")
     print(f"{'#' * 70}")
 
-    resumen_modo = defaultdict(lambda: defaultdict(int))  # resumen_modo[red][modo] = conteo
+    resumen_modo = defaultdict(lambda: defaultdict(int))
 
     for red in ["tempo", "aptos", "canton"]:
         filas = por_red.get(red, [])
@@ -135,7 +102,6 @@ def imprime_reporte(por_red, scores, gates):
                         razon = razon[:107] + "..."
                     print(f"                 -> {razon}")
 
-        # compuertas de esta red
         gates_red = [g for g in gates if g["red"] == red]
         if gates_red:
             print(f"\n  Compuertas:")
@@ -154,7 +120,6 @@ def imprime_reporte(por_red, scores, gates):
                           f"parcialmente_derivada -- ver razon_estado en metrics.csv antes de leer "
                           f"esta compuerta como definitiva.")
 
-        # puntajes de esta red
         scores_red = [s for s in scores if s["red"] == red]
         if scores_red:
             print(f"\n  Puntajes (S por bloque, S_total geometrico, admisible):")
@@ -175,17 +140,12 @@ def imprime_reporte(por_red, scores, gates):
               f"n/a={rm.get('no_aplica', 0):<3d}")
     print(f"{'#' * 70}")
     print("#  Archivos completos: resultados/metrics.csv, gates.csv, scores.csv,")
-    print("#  sensitivity.csv, discrimination.csv, limitaciones.md, run_manifest.json")
+    print("#  sensitivity.csv, discrimination.csv, run_manifest.json, benchmark.md, benchmark.html, limitaciones.md")
     print("#  Entregable definitivo (una fila por red x escenario): resultados/benchmark_final.csv")
     print(f"{'#' * 70}\n")
 
 
 def escribir_benchmark_final(por_red, scores):
-    """Entregable unico y definitivo: una fila por red x escenario con el
-    puntaje, la admisibilidad y de donde sale el dato de esa red (cuantas
-    metricas historicas, cuantas en vivo, cuantas sin computar todavia).
-    No reemplaza metrics.csv/scores.csv/gates.csv (siguen siendo la fuente
-    de verdad por metrica); esto es la lectura ejecutiva para citar."""
     resumen = {}
     for red, filas in por_red.items():
         conteo = defaultdict(int)
@@ -244,6 +204,7 @@ def main():
     gates = cargar_gates()
     imprime_reporte(por_red, scores, gates)
     escribir_benchmark_final(por_red, scores)
+    run("informe_unificado.py")
 
 
 if __name__ == "__main__":

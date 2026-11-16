@@ -1,3 +1,4 @@
+// Resumen de los atributos del pago consultado.
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -7,7 +8,6 @@ import type { Irreversibility } from "@/engine/types";
 
 const irrKey = (v: Irreversibility) => (v === 0.5 ? "half" : String(v));
 
-/** The two attributes the user chooses directly: tolerable wait and required irreversibility. */
 export function PaymentAttributes({
   waitSec,
   irreversibility,

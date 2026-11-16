@@ -1,3 +1,4 @@
+// Pagina del asistente para describir un pago nuevo.
 "use client";
 
 import { useMemo, useState } from "react";
@@ -51,7 +52,6 @@ export default function NewTransactionPage() {
   const current = attrs ?? preset;
   const memo = needsMemo ?? user?.answers.needsReconciliation ?? false;
 
-  // Preview of the dominant scenario: the model's own interpolation, without Monte Carlo.
   const previewKey = useDebounced(
     amountCop >= 1 ? `${amountCop}|${rCountry}|${current.waitSec}|${current.irreversibility}` : "",
     300,

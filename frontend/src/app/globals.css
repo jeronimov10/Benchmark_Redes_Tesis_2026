@@ -1,16 +1,6 @@
+/* Estilos globales y variables de tema de la aplicacion. */
 @import "tailwindcss";
 
-/*
- * Design tokens. Extracted from the public bancolombia.com/personas source:
- *   yellow  #FDDA24   (card surfaces, brand accent)
- *   ink     #2C2A29   (--primary-primary-p-00-i-bc-brand-primary-00: text and primary CTA)
- *   white   #FFFFFF, light surface #F7F7F7, border #D1D2D4, grey #97999B
- *   accents #00C389 (green), #FF7F41 (orange), #F9D3E1 (pink)
- *   font    Open Sans; header CTA is a pill (border-radius 100px), black with white text;
- *           secondary buttons on yellow cards are outlined ("btn-outline-brand").
- * Muted text and the red traffic light are NOT in the Bancolombia palette; they are
- * neutral/functional additions. Academic prototype, not affiliated with Bancolombia.
- */
 :root {
   --brand: #fdda24;
   --brand-deep: #f2c900;
@@ -24,12 +14,10 @@
   --pink: #f9d3e1;
   --orange: #ff7f41;
 
-  /* traffic light dots */
   --light-green: #00c389;
   --light-yellow: #fdda24;
   --light-red: #e5383b;
 
-  /* text-safe variants of the lights (contrast on white) */
   --ok: #007a58;
   --warn: #8a6a00;
   --bad: #c0282b;

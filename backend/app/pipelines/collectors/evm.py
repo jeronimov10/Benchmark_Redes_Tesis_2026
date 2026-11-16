@@ -1,7 +1,4 @@
-"""Colector EVM para Polygon, Celo y Arbitrum: lee bloques completos, localiza pagos en USDC (eventos Transfer del contrato verificado
-y llamadas directas al contrato), obtiene sus recibos y los normaliza. Verifica el contrato de USDC (symbol, decimals, codigo) y lee la
-ranura de implementacion del proxy para C5. Incluye el rastreador de anclaje en Ethereum (A4, B2, B2b) y el relleno por lotes
-de una ventana reciente (boton Recalibrar)."""
+"""Colector EVM de Polygon, Celo y Arbitrum: lee bloques, localiza pagos en USDC, obtiene sus recibos, lee la implementacion del proxy (C5), rastrea el anclaje en Ethereum (A4, B2, B2b) y rellena ventanas recientes."""
 
 import asyncio
 import math

@@ -1,7 +1,7 @@
+// Tipos y constantes de visualizacion: redes, escenarios y bloques.
 export const NETWORK_IDS = ["polygon", "celo", "arbitrum", "tempo", "aptos", "canton"] as const;
 export type NetworkId = (typeof NETWORK_IDS)[number];
 
-/** Thesis reference scenarios: E1 remittances, E2 domestic commerce, E3 high value. */
 export const SCENARIO_IDS = ["E1", "E2", "E3"] as const;
 export type ScenarioId = (typeof SCENARIO_IDS)[number];
 
@@ -24,10 +24,8 @@ export type PriorityKey = "cost" | "speed" | "security" | "balanced";
 export type Tolerance = "low" | "medium" | "high";
 export type RecipientType = "person" | "business" | "exchange" | "ownWallet" | "unknown";
 
-/** Answers captured by the onboarding. Stable traits of the user. */
 export interface ProfileAnswers {
   userType: UserType;
-  /** Origin country of every payment: the user. */
   country: string;
   experience: Experience;
   usedStablecoins: boolean;
@@ -43,21 +41,17 @@ export interface ProfileAnswers {
   needsReconciliation: boolean;
 }
 
-/** Irreversibility demanded: 0 low, 0.5 medium, 1 high (thesis, Table 10). */
 export type Irreversibility = 0 | 0.5 | 1;
 
-/** One hypothetical payment. Origin is always the user. */
 export interface TxInput {
   amountCop: number;
   purpose: Purpose;
-  /** Tolerable wait until confirmation, in seconds. */
   waitSec: number;
   irreversibility: Irreversibility;
   recipient: {
     type: RecipientType;
     country: string;
     firstTime: boolean;
-    /** Networks the recipient accepts; "unknown" when the user does not know. */
     accepted: NetworkId[] | "unknown";
     needsMemo: boolean;
   };
@@ -65,12 +59,10 @@ export interface TxInput {
 
 export type GateId = "G1" | "G2" | "G3" | "G4";
 
-/** Static facts about a metric. Targets, limits and direction come from the backend (GET /api/modelo). */
 export interface MetricMeta {
   id: MetricId;
   block: BlockId;
   unit: "fraction" | "ratio" | "seconds" | "usd" | "count" | "nines" | "percent" | "index";
-  /** Source of the metric: chain or documentation. */
   source: "chain" | "doc";
 }
 

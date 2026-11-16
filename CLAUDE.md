@@ -2,8 +2,7 @@
 
 Benchmark de tesis que compara **Tempo, Aptos y Canton** como destino de
 liquidación de pagos en Colombia (remesas, comercio, alto valor), siguiendo
-`docs/plan_medicion_tempo_aptos_canton.md` (adaptación de un benchmark previo
-sobre Polygon/Celo/Arbitrum, en `docs/benchmark-medible-polygon-celo-arbitrum.pdf`).
+un plan de medición adaptado de un benchmark previo sobre Polygon/Celo/Arbitrum (sus reglas están resumidas en `docs/DATA_PIPELINE.md`, sección 0).
 
 ## La aplicación (monorepo MVC)
 
@@ -16,12 +15,12 @@ backend/benchmark/  pipeline por lotes de Tempo/Aptos/Canton (main.py, collect_*
 backend/simulacion/ banco de usuarios simulados (personas, ajuste, evaluador, experimentos P1-P6, continuo P7, informe); API en /api/simulacion
 backend/tests/      pytest
 frontend/src/       Next.js: app/[locale]/*, components/, modelo/ (cliente + tipos del backend), lib/, engine/ (tipos y constantes de display)
-resultados/         salidas del benchmark (fuente de la línea base de T/A/C)
+resultados/         benchmark.md/.html, pruebas.md/.html, limitaciones.md, CSV del benchmark (línea base de T/A/C), raw/ y pruebas/datos/
 ```
 
 Puntos de entrada: `backend/app/main.py` (ciclo de vida), `backend/app/container.py` (ensamblado), `backend/app/pipelines/scheduler.py` (sondeo), `backend/app/services/decision/recomendador.py` (modelo), `frontend/src/modelo/cliente.ts` (consumo de la API).
 
-Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `services/analytics/metricas.py` (ventanas móviles) -> `ServicioPerfiles.construir()` (línea base + métricas vivas válidas y frescas, con procedencia) -> `modelo.recomendar` en un pool de procesos -> `/api/modelo` -> frontend. Detalle en `docs/ARCHITECTURE.md`, `docs/DATA_PIPELINE.md`, `docs/DECISION_MODEL.md`, `docs/NETWORK_INTEGRATIONS.md`, `docs/API.md`.
+Flujo de datos: colector -> procesador (muestra normalizada) -> SQLite -> `services/analytics/metricas.py` (ventanas móviles) -> `ServicioPerfiles.construir()` (línea base + métricas vivas válidas y frescas, con procedencia) -> `modelo.recomendar` en un pool de procesos -> `/api/modelo` -> frontend. Detalle en `docs/ARCHITECTURE.md` (componentes, API, integraciones), `docs/DATA_PIPELINE.md` y `docs/MODELO.md` (modelo y banco de simulación). Resultados y limitaciones en `resultados/`.
 
 ### Comandos
 
@@ -31,9 +30,9 @@ cd backend && python -m uvicorn app.main:app --port 8000      # API + colectores
 cd frontend && pnpm dev                                     # UI; /api/* se reenvía a BACKEND_URL
 cd backend && python -m pytest tests                           # 87 pruebas
 cd backend && python -m simulacion lote --fuente base --replicas 500 --tope 100 --panel 3   # banco de usuarios simulados
-scripts/pruebas_railway.sh verificar|lote|continuo on|descargar  # contra el despliegue de Railway (docs/RAILWAY.md)
+cd backend && python -m simulacion publicar                    # resultados/pruebas.md y .html desde resultados/pruebas/datos/
 cd frontend && pnpm test && pnpm exec tsc --noEmit && pnpm lint && pnpm build
-python backend/benchmark/main.py [--collect]                   # benchmark por lotes, desde la raíz
+python backend/benchmark/main.py [--collect]                   # benchmark por lotes y informe unificado de las seis redes, desde la raíz
 ```
 
 ### Decisiones que no son obvias
@@ -51,7 +50,7 @@ python backend/benchmark/main.py [--collect]                   # benchmark por l
 
 ### Banco de usuarios simulados
 
-`backend/simulacion/` evalúa con `modelo.recomendar` (sin modificar, en su propio pool de procesos) si la red recomendada cumple la necesidad de 12 perfiles. Diseño: `docs/diseno_pruebas_usuarios_simulados.html`; despliegue y operación: `docs/RAILWAY.md`. Escribe solo en `simulacion.db` y en `dir_simulacion`; nunca en `redes.db` ni en `recomendaciones`. Los contrafactuales solo quitan redes, métricas o sigma. El ajuste usa umbrales ya existentes en el modelo (A1 ≤ 1 % del ticket, B1/B2 ≤ espera, B2b ≤ 86 400 s); la cuota "relevante" de alertas no se fija: se reportan las cifras. El panel continuo se reanuda solo tras un reinicio (estado `continuo_activo` en `simulacion.db`). Railway: una sola réplica y volumen en `/app/backend/data`.
+`backend/simulacion/` evalúa con `modelo.recomendar` (sin modificar, en su propio pool de procesos) si la red recomendada cumple la necesidad de 12 perfiles. Diseño y operación en `docs/MODELO.md`. Escribe solo en `simulacion.db` y en `dir_simulacion`; nunca en `redes.db` ni en `recomendaciones`. Los contrafactuales solo quitan redes, métricas o sigma. El ajuste usa umbrales ya existentes en el modelo (A1 ≤ 1 % del ticket, B1/B2 ≤ espera, B2b ≤ 86 400 s); la cuota "relevante" de alertas no se fija: se reportan las cifras. El panel continuo se reanuda solo tras un reinicio (estado `continuo_activo` en `simulacion.db`).
 
 ### Cómo añadir una red
 
@@ -74,7 +73,7 @@ No se edita `modelo.py` (contrato en `backend/modelo/INTEGRACION.md`). Se cambia
 
 ### Limitaciones conocidas
 
-Ver `README.md` (Aptos B2/D2, B3/D2/D3 de P/C/A solo base, ventanas largas, precio de APT congelado, Canton B3, RPC públicos).
+Ver `resultados/limitaciones.md` y `README.md`.
 
 ## La regla de oro (no negociable)
 
@@ -133,7 +132,7 @@ python backend/benchmark/main.py              # rápido: usa resultados/raw/ ya 
 python backend/benchmark/main.py --collect    # lento: vuelve a consultar las 3 APIs en vivo primero
 ```
 
-En cualquier caso corre `compute_*_metrics.py` -> `build_deliverables.py` -> `score_engine.py`, imprime un reporte diferenciado en consola y deja todo en `resultados/`. El entregable final para citar es `resultados/benchmark_final.csv`. Desde la app, el botón **Recalibrar** lo corre en un directorio aislado (`backend/data/recalibracion/<id>/`) sin tocar `resultados/`. Los scripts leen `resultados/...` relativo al directorio actual; `main.py` localiza sus scripts por su propia ubicación. Parámetros por entorno: `N_BLOCKS_TEMPO`, `N_BLOCKS_APTOS`, `MAX_PAGES`, `CANTON_START_AFTER`, `CANTON_MIGRATION_ID`.
+En cualquier caso corre `compute_*_metrics.py` -> `build_deliverables.py` -> `score_engine.py`, imprime un reporte diferenciado en consola y deja todo en `resultados/`. El entregable final para citar es `resultados/benchmark.md` (seis redes) y `resultados/benchmark_final.csv` (puntajes de T/A/C). Desde la app, el botón **Recalibrar** lo corre en un directorio aislado (`backend/data/recalibracion/<id>/`) sin tocar `resultados/`. Los scripts leen `resultados/...` relativo al directorio actual; `main.py` localiza sus scripts por su propia ubicación. Parámetros por entorno: `N_BLOCKS_TEMPO`, `N_BLOCKS_APTOS`, `MAX_PAGES`, `CANTON_START_AFTER`, `CANTON_MIGRATION_ID`.
 
 ## Arquitectura del pipeline
 
@@ -278,26 +277,19 @@ Solo quedan 3 huecos reales (ver "Estado actual"), y dos no son de datos:
   (y paginar más allá si hace falta) — el resto del pipeline ya sabe qué
   hacer con más datos, no hace falta tocar los `compute_*` ni
   `build_deliverables.py`.
-- Antes de tocar `score_engine.py`, lee `docs/plan_medicion_tempo_aptos_canton.md`
-  §5.6/§5.7 completo — los pesos y la agregación están heredados
+- Antes de tocar `score_engine.py`, lee `docs/DATA_PIPELINE.md` (sección 0) — los pesos y la agregación están heredados
   deliberadamente sin cambios del estudio de referencia (Sec. D8 del plan)
   para mantener comparabilidad. Ojo con el quirk de `math.log(0)` de la
   sección anterior antes de asumir que un bloque D con una métrica en 0 está
   usando las tres métricas en el promedio.
 
-## Mapa de archivos (documentos del benchmark)
+## Mapa de archivos
 
-Los scripts del benchmark están ahora en `backend/benchmark/` (antes `scripts/` y `main.py` en la raíz); los documentos de `docs/` conservan las rutas antiguas.
+- `docs/ARCHITECTURE.md`, `docs/DATA_PIPELINE.md`, `docs/MODELO.md` — los tres documentos del repositorio. El catálogo de métricas, las compuertas, las ventanas y las reglas de honestidad del plan de medición están en `DATA_PIPELINE.md` (sección 0).
+- `resultados/raw/<red>/` — datos crudos, suficientes para recalcular todo sin volver a tocar la red.
+- `resultados/limitaciones.md` — generado por `backend/benchmark/informe_unificado.py`; entrega de primera clase, no un apéndice.
+- `resultados/pruebas/datos/` — resultados completos del banco de usuarios simulados (lote P1–P6 y panel continuo P7 de 11,9 días).
 
-- `docs/plan_medicion_tempo_aptos_canton.md` — la especificación completa
-  (qué medir, cómo, compuertas, pesos, reglas de honestidad). Léelo antes de
-  añadir o cambiar una métrica.
-- `docs/matriz_requerimientos.md` y `docs/fase4_verificacion.md` — bitácora
-  narrativa de qué se intentó, qué funcionó y qué no, con la evidencia de
-  cada `[VERIFICAR]` del plan. Útil para no repetir investigación ya hecha
-  (ej. la dirección del precompilado de Tempo, los endpoints de Canton que
-  bloquean acceso directo).
-- `resultados/raw/<red>/` — datos crudos, suficientes para recalcular todo
-  sin volver a tocar la red.
-- `resultados/limitaciones.md` — generado automáticamente por
-  `build_deliverables.py`, entrega de primera clase, no un apéndice.
+## Convención de código
+
+Cada archivo lleva solo un comentario o docstring de cabecera que dice qué hace; no hay comentarios en el código. No se añaden.

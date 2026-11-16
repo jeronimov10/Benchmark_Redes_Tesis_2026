@@ -1,4 +1,4 @@
-"""Linea de comandos del banco: python -m simulacion lote | continuo | informe (desde backend/). Usa la misma logica que los endpoints /api/simulacion."""
+"""Linea de comandos del banco: python -m simulacion lote | continuo | informe | publicar (desde backend/). Usa la misma logica que los endpoints /api/simulacion."""
 
 import argparse
 import asyncio
@@ -8,9 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.config import Settings  # noqa: E402
-from app.container import Contenedor  # noqa: E402
-from app.models.dominio import PeticionLote  # noqa: E402
+from app.config import Settings
+from app.container import Contenedor
+from app.models.dominio import PeticionLote
 
 
 def _servicio(args):
@@ -50,6 +50,13 @@ async def _informe(args):
     await s.cerrar()
 
 
+def _publicar(args):
+    from .publicar import publicar
+
+    for ruta in publicar():
+        print(f"escrito {ruta}")
+
+
 def main():
     ap = argparse.ArgumentParser(prog="simulacion")
     ap.add_argument("--salida", help="directorio de salida (por defecto backend/data/simulacion)")
@@ -63,7 +70,11 @@ def main():
     lote.add_argument("--niveles", type=int, nargs="+", default=[500, 2000, 10000, 40000])
     sub.add_parser("continuo")
     sub.add_parser("informe")
+    sub.add_parser("publicar")
     args = ap.parse_args()
+    if args.cmd == "publicar":
+        _publicar(args)
+        return
     asyncio.run({"lote": _lote, "continuo": _continuo, "informe": _informe}[args.cmd](args))
 
 

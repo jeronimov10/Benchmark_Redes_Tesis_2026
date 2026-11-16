@@ -1,3 +1,4 @@
+// Pruebas de la construccion de la entrada del modelo.
 import { describe, expect, it } from "vitest";
 import { composicionPorEscenario, entradaModelo, luzMetrica, luzRed } from "./entrada";
 import type { ResultadoModelo } from "./tipos";

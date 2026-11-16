@@ -1,6 +1,6 @@
+// Catalogo de metricas y bloques A-D para mostrar en la interfaz.
 import type { BlockId, MetricMeta } from "./types";
 
-/** Display facts of the 16 metrics of the thesis catalog (Table 7). Thresholds live in the backend model. */
 export const METRICS: MetricMeta[] = [
   { id: "A1", block: "A", unit: "fraction", source: "chain" },
   { id: "A2", block: "A", unit: "ratio", source: "chain" },

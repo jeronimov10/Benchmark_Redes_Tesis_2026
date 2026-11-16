@@ -1,3 +1,4 @@
+// Pagina del estandar de calificacion: metricas, escenarios y detalle de cada bloque.
 "use client";
 
 import { useTranslations } from "next-intl";

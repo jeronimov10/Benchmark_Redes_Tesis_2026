@@ -1,10 +1,10 @@
+// Selector de idioma (es/en).
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 
-/** Segmented control "ES | EN": the current language is bold, a vertical bar separates them. */
 export function LanguageSwitcher() {
   const t = useTranslations("nav");
   const locale = useLocale();

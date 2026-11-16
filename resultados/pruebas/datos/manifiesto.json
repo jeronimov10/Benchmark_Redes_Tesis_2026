@@ -1,0 +1,32 @@
+{
+  "generado_en": "2026-11-16T22:03:32.830281+00:00",
+  "commit": "cf9a3d3e9658606c59192ee8ced261b8b97ba9f1",
+  "trm": 4000.0,
+  "corrida": "6b3aab8aea53",
+  "config": {
+    "pruebas": [
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6"
+    ],
+    "fuente": "ambas",
+    "semilla": 2026,
+    "replicas": 10000,
+    "tope": 400,
+    "panel_por_perfil": 10,
+    "niveles_replicas": [
+      500,
+      2000,
+      10000,
+      40000
+    ]
+  },
+  "version_perfil": {
+    "base": "af127e4ce8c8",
+    "vivo": "693d7a22ab54"
+  },
+  "ciclos_continuos": 1142
+}

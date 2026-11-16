@@ -1,7 +1,4 @@
-"""Colector real Canton via el espejo publico api.cantonnodes.com (Scan API).
-Ventana reducida y reciente (no los 14 dias de la especificacion completa).
-n declarado explicitamente en la salida.
-"""
+"""Recolecta una ventana reciente de eventos de Canton desde la Scan API del espejo publico (resultados/raw/canton)."""
 import json
 import os
 import time

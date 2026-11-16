@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
-"""
-Modelo de recomendacion de red para pagos en Colombia.
-
-Recibe la descripcion de un caso y devuelve que red conviene, con que
-confianza y por que. No mueve dinero ni consulta ninguna red: es una
-funcion de decision sobre perfiles ya medidos.
-
-Implementa la especificacion del documento del modelo:
-
-  * Cuatro atributos describen el caso.
-  * Los tres escenarios del benchmark son puntos de referencia en el
-    espacio de atributos; los pesos del caso se interpolan entre ellos.
-    Asi la ponderacion responde al caso real y sigue siendo trazable.
-  * La certidumbre combina proximidad al escenario mas cercano y
-    concentracion de la composicion.
-  * Las compuertas se aplican antes de puntuar.
-  * El puntaje se propaga por Monte Carlo y se reporta por bandas, no
-    por puestos.
-
-Uso:
-    python modelo.py                      # ejemplos
-    python modelo.py --monto 1200000 --espera 60
-    python modelo.py --monto 300 --moneda usd --transfronterizo --espera 3600
-"""
+"""Modelo de recomendacion de red para pagos en Colombia: interpola pesos entre escenarios de referencia, aplica compuertas, puntua por Monte Carlo y reporta bandas de desempeno."""
 
 import argparse
 import json
@@ -32,19 +9,7 @@ from pathlib import Path
 
 random.seed(42)
 
-# ==========================================================================
-# ESCENARIOS DE REFERENCIA  (§4.2 del documento del modelo)
-# ==========================================================================
 
-# Posicion de cada escenario en el espacio de atributos, tomada de la tabla
-# de escenarios del documento (seccion 5.3.1):
-#   E1 remesas    USD 300 (centro de USD 200 a 500), transfronterizo,
-#                 espera de horas (3.600 s), irrevocabilidad baja
-#   E2 comercio   COP 48.906 (centro geometrico de 15.000 a 159.456),
-#                 espera de 20 s (techo de Bre-B), irrevocabilidad media
-#   E3 alto valor COP 100 millones, espera de minutos (600 s),
-#                 irrevocabilidad alta
-# Coordenadas = vector_caso() de esos valores, redondeadas a dos decimales.
 REFERENCIAS = {
     "remesas":   {"a": (0.42, 1.0, 0.72, 0.0),
                   "W": {"A": 0.45, "B": 0.15, "C": 0.15, "D": 0.25}},
@@ -56,19 +21,14 @@ REFERENCIAS = {
 ETIQUETA = {"remesas": "remesas", "comercio": "comercio doméstico",
             "altovalor": "alto valor"}
 
-GAMMA = (1.0, 1.5, 1.0, 1.2)   # peso por atributo en la distancia
-P_INV = 2                       # exponente de la proximidad
+GAMMA = (1.0, 1.5, 1.0, 1.2)
+P_INV = 2
 EPS_D = 0.05
-D0 = 0.6                        # escala de distancia para la certidumbre
+D0 = 0.6
 
-M_MIN, M_MAX = 1e4, 1e9         # pesos colombianos
-L_MIN, L_MAX = 1.0, 86400.0     # segundos
+M_MIN, M_MAX = 1e4, 1e9
+L_MIN, L_MAX = 1.0, 86400.0
 
-# ==========================================================================
-# METRICAS  (§8 del documento del benchmark)
-# ==========================================================================
-# t = valor objetivo (puntaje 1); w = umbral inaceptable (puntaje 0)
-# "ticket" en t/w significa fraccion del ticket del caso.
 
 METRICAS = {
     "A1": dict(bloque="A", dir="menor", t=("ticket", 0.001), w=("ticket", 0.01)),
@@ -76,14 +36,9 @@ METRICAS = {
     "A3": dict(bloque="A", dir="menor", t=0.2,     w=2.0),
     "A4": dict(bloque="A", dir="menor", t=0.001,   w=0.10),
     "B1": dict(bloque="B", dir="menor", t=3,       w=20),
-    # B2 y B2b: CPMI-IOSCO (2012), Principio 8, consideracion 8.2: firmeza
-    # "como minimo al final del dia valor", preferiblemente "intradia o en
-    # tiempo real". w = un dia; t = tiempo real, el estandar de Bre-B (20 s).
     "B2": dict(bloque="B", dir="menor", t=20,      w=86400),
     "B2b": dict(bloque="B", dir="menor", t=20,     w=86400),
     "B3": dict(bloque="B", dir="mayor", t=5,       w=1),
-    # C1: t = HHI de 1.000, umbral de mercado no concentrado de las guias de
-    # fusiones de EE. UU. (DOJ y FTC, 2023, nota 15); w = productor unico.
     "C1": dict(bloque="C", dir="menor", t=0.10,    w=1.00),
     "C2": dict(bloque="C", dir="mayor", t=15,      w=1),
     "C3": dict(bloque="C", dir="nueves", t=99.999, w=99.9),
@@ -94,11 +49,8 @@ METRICAS = {
     "D3": dict(bloque="D", dir="mayor", t=0.10,    w=0.001),
 }
 BLOQUES = ["A", "B", "C", "D"]
-EPS_S = 0.05      # piso de la media geometrica
+EPS_S = 0.05
 
-# ==========================================================================
-# ENTRADA
-# ==========================================================================
 
 def normalizar_log(v, lo, hi):
     if v <= 0:
@@ -108,7 +60,6 @@ def normalizar_log(v, lo, hi):
 
 
 def vector_caso(monto_cop, transfronterizo, espera_s, irrevocabilidad):
-    """Convierte la descripcion del caso en su posicion en el espacio."""
     return (normalizar_log(monto_cop, M_MIN, M_MAX),
             1.0 if transfronterizo else 0.0,
             normalizar_log(espera_s, L_MIN, L_MAX),
@@ -116,7 +67,6 @@ def vector_caso(monto_cop, transfronterizo, espera_s, irrevocabilidad):
 
 
 def interpolar(a):
-    """Devuelve composicion, pesos de bloque y certidumbre."""
     d = {e: math.sqrt(sum(g * (a[k] - r["a"][k]) ** 2
                           for k, g in enumerate(GAMMA)))
          for e, r in REFERENCIAS.items()}
@@ -133,16 +83,11 @@ def interpolar(a):
     return lam, W, proximidad * concentracion, min(d.values())
 
 
-# ==========================================================================
-# PUNTUACION
-# ==========================================================================
-
 def umbral(valor, ticket_usd):
     return valor[1] * ticket_usd if isinstance(valor, tuple) else valor
 
 
 def normalizar(mid, x, ticket_usd):
-    """Lleva una medicion a [0,1] segun los umbrales de la metrica."""
     m = METRICAS[mid]
     t, w = umbral(m["t"], ticket_usd), umbral(m["w"], ticket_usd)
     if x is None:
@@ -160,7 +105,6 @@ def normalizar(mid, x, ticket_usd):
 
 
 def puntuar(perfil, W, ticket_usd, rng):
-    """Un puntaje sobre una realizacion del perfil."""
     por_bloque = {}
     for b in BLOQUES:
         vals = []
@@ -169,14 +113,13 @@ def puntuar(perfil, W, ticket_usd, rng):
                 continue
             d = perfil[mid]
             if d.get("valor") is None:
-                continue                       # no concluyente: se excluye
+                continue
             x = rng.gauss(d["valor"], d.get("sigma", 0) or 0)
             s = normalizar(mid, x, ticket_usd)
             if s is not None:
                 vals.append(s)
         por_bloque[b] = sum(vals) / len(vals) if vals else None
 
-    # Bloques sin ninguna metrica: su peso se redistribuye
     validos = {b: v for b, v in por_bloque.items() if v is not None}
     if not validos:
         return 0.0, por_bloque
@@ -188,7 +131,6 @@ def puntuar(perfil, W, ticket_usd, rng):
 
 
 def compuertas(red, perfil, escenario_dominante, ticket_usd):
-    """Devuelve la lista de compuertas falladas, con su motivo."""
     fallas = []
     b1 = perfil.get("B1", {}).get("valor")
     if escenario_dominante == "comercio" and b1 is not None and b1 > 20:
@@ -199,9 +141,6 @@ def compuertas(red, perfil, escenario_dominante, ticket_usd):
     d2 = perfil.get("D2", {}).get("valor")
     if d2 is not None and d2 <= 0:
         fallas.append(("G3", "sin referencia de conciliación en uso"))
-    # G4 solo descarta cuando B3 es una medida de capacidad, no una cota
-    # inferior. Un caudal observado bajo refleja demanda, no incapacidad:
-    # descartar una red por estar poco usada seria un error de lectura.
     b3d = perfil.get("B3", {})
     b3 = b3d.get("valor")
     if (escenario_dominante != "remesas" and b3 is not None and b3 < 1
@@ -210,12 +149,7 @@ def compuertas(red, perfil, escenario_dominante, ticket_usd):
     return fallas
 
 
-# ==========================================================================
-# BANDAS
-# ==========================================================================
-
 def bandas(muestras, umbral_sep=0.85):
-    """Agrupa redes cuyo desempeno no se distingue."""
     redes = sorted(muestras, key=lambda r: -mediana(muestras[r]))
     n = len(next(iter(muestras.values())))
 
@@ -246,10 +180,6 @@ def percentil(v, p):
     lo, hi = math.floor(k), math.ceil(k)
     return s[lo] if lo == hi else s[lo] + (s[hi] - s[lo]) * (k - lo)
 
-
-# ==========================================================================
-# MODELO
-# ==========================================================================
 
 def recomendar(perfiles, monto_cop, transfronterizo=False, espera_s=60,
                irrevocabilidad="media", trm=4000.0, replicas=10000):
@@ -323,14 +253,12 @@ def recomendar(perfiles, monto_cop, transfronterizo=False, espera_s=60,
 
 
 def perturbar(W, rng, kappa_w=50):
-    """Dirichlet sobre los pesos: la ponderacion es un juicio, no una constante."""
     g = {b: rng.gammavariate(max(kappa_w * W[b], 1e-3), 1.0) for b in W}
     t = sum(g.values())
     return {b: v / t for b, v in g.items()}
 
 
 def determinante(admisibles, grupos, W, ticket_usd):
-    """Metrica que mas contribuye a separar la banda 1 de la 2."""
     if len(grupos) < 2:
         return None
     def medio(redes, mid):
@@ -343,10 +271,6 @@ def determinante(admisibles, grupos, W, ticket_usd):
                     vals.append(s)
         return sum(vals) / len(vals) if vals else None
 
-    # Solo se consideran metricas disponibles en TODAS las redes comparadas.
-    # Si una red carece de la metrica, el promedio de su banda se calcula sobre
-    # las demas y la comparacion mezcla conjuntos distintos, lo que puede
-    # senalar como determinante algo que el modelo excluyo por no concluyente.
     todas = list(grupos[0]) + list(grupos[1])
     completas = {mid for mid in METRICAS
                  if all(admisibles[r].get(mid, {}).get("valor") is not None
@@ -365,10 +289,6 @@ def determinante(admisibles, grupos, W, ticket_usd):
     return {"metrica": mejor, "contribucion": round(delta, 4)} if mejor else None
 
 
-# ==========================================================================
-# PERFILES
-# ==========================================================================
-
 def cargar_perfiles(ruta="perfiles.json"):
     p = Path(ruta)
     if p.exists():
@@ -383,8 +303,6 @@ def v(x, s=0.0):
     return {"valor": x, "sigma": s}
 
 
-# Provisionales, coherentes en orden de magnitud con lo observado en las
-# pruebas. NO son resultados: sirven para ejercitar la logica.
 PERFILES_PROVISIONALES = {
     "polygon":  {"A1": v(0.0073, 0.0020), "A2": v(8.3, 1.2), "A3": v(0.45, 0.20),
                  "A4": v(0.004, 0.001),  "B1": v(2.0, 0.3), "B2": v(1056, 200),
@@ -406,10 +324,6 @@ PERFILES_PROVISIONALES = {
                  "D3": v(0.29, 0.05)},
 }
 
-
-# ==========================================================================
-# PRESENTACION
-# ==========================================================================
 
 def imprimir(r):
     c = r["caso"]

@@ -1,3 +1,4 @@
+// Pruebas de los ayudantes de la pagina de simulacion.
 import { describe, expect, it } from "vitest";
 import { atributoMasSensible, bandaLegible, nivelCambio, porcentaje, resumenPanel } from "./simulacion";
 import type { CicloPanel, FilaSensibilidad } from "@/modelo/tipos";

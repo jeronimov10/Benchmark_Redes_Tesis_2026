@@ -1,3 +1,4 @@
+// Pagina de espera mientras se calcula la recomendacion.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -39,7 +40,6 @@ export default function AnalyzingPage() {
 
     const tx = draftRef.current;
     let alive = true;
-    // The animation advances on a timer; the last step waits for the model (about 1 s).
     const timers: ReturnType<typeof setTimeout>[] = [];
     STEPS.slice(0, -1).forEach((_, i) => timers.push(setTimeout(() => alive && setDone(i + 1), (i + 1) * STEP_MS)));
     const minDelay = new Promise((r) => timers.push(setTimeout(r, (STEPS.length - 1) * STEP_MS)));
@@ -57,7 +57,6 @@ export default function AnalyzingPage() {
       (e: Error) => alive && setError(e.message),
     );
     return () => {
-      // Strict Mode re-runs effects: allow the second run to start again (the model call is cached).
       alive = false;
       timers.forEach(clearTimeout);
       started.current = false;

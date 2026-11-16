@@ -1,6 +1,6 @@
+// Ayudantes del monitor: edad, etiquetas de metrica, razon de solo base y resumen por red.
 import type { EstadoMetricaVivo, MetricaMedicion, RedMedicion, SaludRed } from "@/modelo/tipos";
 
-/** Compact, language-neutral age: 15s, 4m, 3h, 2d. */
 export function edadCorta(segundos: number | null | undefined): string {
   if (segundos === null || segundos === undefined || !Number.isFinite(segundos)) return "—";
   const s = Math.max(0, Math.round(segundos));
@@ -12,7 +12,6 @@ export function edadCorta(segundos: number | null | undefined): string {
 
 export type EtiquetaMetrica = "vivo" | "base" | "sin_dato";
 
-/** Which tag a metric shows: live when the effective profile uses a live value, base when it falls back, none when there is no value at all. */
 export function etiquetaMetrica(m: MetricaMedicion): EtiquetaMetrica {
   if (m.origen === "vivo") return "vivo";
   if (m.valor === null) return "sin_dato";
@@ -21,7 +20,6 @@ export function etiquetaMetrica(m: MetricaMedicion): EtiquetaMetrica {
 
 export type RazonBase = EstadoMetricaVivo | "solo_base" | "sin_intento";
 
-/** Why a metric that is not live is still on the baseline. */
 export function razonBase(m: MetricaMedicion): RazonBase | null {
   if (m.origen === "vivo") return null;
   if (m.razon_solo_base) return "solo_base";

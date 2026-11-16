@@ -1,3 +1,5 @@
+"""Calcula las metricas de Aptos desde los datos crudos de resultados/raw/aptos."""
+
 import json
 import math
 import statistics as st
@@ -62,30 +64,18 @@ class BcsReader:
 
 
 def decode_execution_config(hex_blob):
-    """Decodifica el blob BCS de 0x1::execution_config::ExecutionConfig contra el
-    layout EXACTO de `OnChainExecutionConfig` confirmado leyendo el codigo fuente
-    publico de aptos-labs/aptos-core (types/src/on_chain_config/execution_config.rs,
-    commit visto en esta sesion: fetch directo de raw.githubusercontent.com, no
-    adivinado). Devuelve dict con block_gas_limit_type resuelto, o lanza si aparece
-    una variante del enum que esta funcion no cubre (mejor fallar fuerte que
-    devolver un numero silenciosamente incorrecto).
-
-    Orden de variantes de OnChainExecutionConfig tal como estan declaradas en el
-    enum (BCS serializa por indice de declaracion, 0-based):
-        0 V1, 1 V2, 2 V3, 3 Missing, 4 V4, 5 V5, 6 V6, 7 V7
-    """
     data = bytes.fromhex(hex_blob[2:] if hex_blob.startswith("0x") else hex_blob)
     r = BcsReader(data)
 
     def shuffler():
         v = r.u8()
-        if v == 0:  # NoShuffling
+        if v == 0:
             return {"type": "NoShuffling"}
-        if v in (1, 2):  # DeprecatedSenderAwareV1(u32) / SenderAwareV2(u32)
+        if v in (1, 2):
             return {"type": v, "param": r.u32()}
-        if v == 3:  # DeprecatedFairness
+        if v == 3:
             return {"type": "DeprecatedFairness"}
-        if v in (4, 5):  # UseCaseAware / UseCaseAndEncryptedTxnsAware
+        if v in (4, 5):
             return {
                 "type": v,
                 "sender_spread_factor": r.u64(),
@@ -100,7 +90,7 @@ def decode_execution_config(hex_blob):
             return {"type": "NoLimit", "effective_block_gas_limit": None}
         if v == 1:
             return {"type": "Limit", "effective_block_gas_limit": r.u64()}
-        if v == 2:  # ComplexLimitV1
+        if v == 2:
             eff = r.u64()
             exec_mult = r.u64()
             io_mult = r.u64()
@@ -128,15 +118,15 @@ def decode_execution_config(hex_blob):
     out = {"onchain_execution_config_variant": variant}
 
     out["transaction_shuffler_type"] = shuffler()
-    if variant in (0,):  # V1: solo shuffler
+    if variant in (0,):
         out["block_gas_limit_type"] = {"type": "NoLimit", "effective_block_gas_limit": None}
         return out
-    if variant in (1, 2):  # V2/V3: shuffler + block_gas_limit: Option<u64>
+    if variant in (1, 2):
         out["block_gas_limit_type"] = {"type": "Option<u64>", "effective_block_gas_limit": r.option_u64()}
         if variant == 2:
             out["transaction_deduper_type"] = r.u8()
         return out
-    if variant in (4, 5, 6, 7):  # V4..V7: shuffler + block_gas_limit_type (enum completo)
+    if variant in (4, 5, 6, 7):
         out["block_gas_limit_type"] = block_gas_limit_type()
         if variant >= 5:
             out["enable_per_block_gas_limit"] = r.boolean()
@@ -155,7 +145,6 @@ def main():
 
     results = {"n_blocks": len(blocks)}
 
-    # --- B1: latencia de inclusion (delta entre timestamps de bloque, microsegundos) ---
     ts = sorted(int(b["block_timestamp"]) for b in blocks)
     deltas_s = [(b - a) / 1e6 for a, b in zip(ts, ts[1:])]
     deltas_sorted = sorted(deltas_s)
@@ -165,19 +154,16 @@ def main():
         results["B1_cadencia_p95_s"] = deltas_sorted[p95_idx]
         results["B1_n"] = len(deltas_sorted)
 
-    # --- C3: continuidad, huecos > 10x cadencia mediana ---
     if deltas_sorted:
         med = st.median(deltas_sorted)
         umbral = 10 * med
         tiempo_total = ts[-1] - ts[0]
         tiempo_en_huecos = sum(d for d in deltas_s if d * 1e6 > umbral * 1e6) if med else 0
-        # recompute directly in seconds
         tiempo_en_huecos = sum(d for d in deltas_s if d > umbral)
         frac_continuidad = 1 - (tiempo_en_huecos / (tiempo_total / 1e6)) if tiempo_total else None
         results["C3_fraccion_continuidad"] = frac_continuidad
         results["C3_n"] = len(deltas_s)
 
-    # --- C1: Herfindahl produccion de bloques ---
     proposers = Counter()
     for b in blocks:
         for tx in b.get("transactions", []):
@@ -187,7 +173,6 @@ def main():
     results["C1_n_proposers_distintos"] = len(proposers)
     results["C1_n_bloques_con_metadata"] = sum(proposers.values())
 
-    # --- C1b: Herfindahl peso de consenso (voting_power) ---
     weights = [int(v["voting_power"]) for v in vs["data"]["active_validators"]]
     weights_desc = sorted(weights, reverse=True)
     results["C1b_herfindahl_peso_consenso"] = herfindahl(weights)
@@ -196,7 +181,6 @@ def main():
     proposer_weights_desc = sorted(proposers.values(), reverse=True)
     results["C2_operadores_sobre_50pct_por_produccion"] = min_operators_over_50(proposer_weights_desc)
 
-    # --- C4: tasa de fallo sobre user_transactions ---
     total_tx = 0
     fails = 0
     sponsored = 0
@@ -214,12 +198,6 @@ def main():
     results["D1_fraccion_fee_payer_distinto"] = sponsored / total_tx if total_tx else None
     results["D1_n"] = total_tx
 
-    # --- A1/A2: costo real por tx usando el precio de Pyth CONGELADO desde
-    # 2026-08-26 (ver collect_aptos.py). Es una desviacion explicita de la
-    # regla general (Sec.4.2 [VERIFICAR A-2] del plan preve exactamente este
-    # caso: "si no se puede leer historico... se marca parcialmente_derivada"
-    # -- aqui el caso real es peor, se puede leer pero esta congelado, mismo
-    # tratamiento). costo_apt = gas_used * gas_unit_price / 1e8 (octas->APT).
     try:
         pyth = load("pyth_apt_usd_price.json")
         pf = pyth["price_info"]["price_feed"]["price"]
@@ -250,10 +228,6 @@ def main():
     except FileNotFoundError:
         pass
 
-    # --- A3/B3: decodificar ExecutionConfig (ver decode_execution_config arriba)
-    # para obtener el limite de gas de bloque real, y con eso: B3 = H_cfg igual
-    # que en Tempo (limite/gas_mediano/cadencia sobre 48 TPS), A3 = regresion
-    # ln(costo) ~ ocupacion (gas total del bloque / limite).
     try:
         exec_cfg_raw = load("execution_config.json")
         decoded = decode_execution_config(exec_cfg_raw["data"]["config"])
@@ -309,11 +283,6 @@ def main():
     except (FileNotFoundError, KeyError, ValueError) as e:
         results["execution_config_error"] = str(e)
 
-    # --- C5: publicaciones de modulo/paquete en la ventana observada ---
-    # Reconstruible con datos historicos (mismos bloques ya descargados): se
-    # cuentan las entry functions que publican codigo (0x1::code::publish_*)
-    # entre las transacciones de la muestra. n=0 en la muestra es un resultado
-    # valido (no se observaron publicaciones), no un no_computable.
     PUBLISH_FUNCS = {
         "0x1::code::publish_package_txn",
         "0x1::code::publish_package",
@@ -331,10 +300,6 @@ def main():
     results["C5_publicaciones_modulo"] = publicaciones
     results["C5_n"] = total_tx
 
-    # --- D3: multi-transferencia / multi-activo via eventos Fungible Asset,
-    # resolviendo el activo real de cada `store` (ver collect_aptos.py). Se
-    # normaliza sobre la misma poblacion que D1/C4 no se puede (esta usa solo
-    # las tx que efectivamente tocaron un store de FA, distinto universo).
     try:
         store_to_asset = load("fa_store_to_asset.json")
         n_tx_fa = 0

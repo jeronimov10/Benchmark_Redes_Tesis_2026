@@ -1,3 +1,4 @@
+// Pagina de inicio del usuario con saludo y acceso al asistente de pago.
 "use client";
 
 import { useMemo } from "react";
@@ -31,7 +32,6 @@ export default function HomePage() {
   const results = useRecomendaciones(entradas);
 
   const stats = useMemo(() => {
-    // Every network of band 1 counts: tied networks are not split into a winner and a loser.
     const winners: Record<string, number> = {};
     for (const res of results) {
       for (const red of res?.resultado?.bandas[0]?.redes ?? []) winners[red] = (winners[red] ?? 0) + 1;

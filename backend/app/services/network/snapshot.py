@@ -9,7 +9,7 @@ from ...utils.tiempo import ahora, iso
 from .registry import REDES
 
 sys.path.insert(0, str(RAIZ_BACKEND / "modelo"))
-import modelo  # noqa: E402
+import modelo
 
 COMPONENTES_CRITICOS = ("bloques",)
 

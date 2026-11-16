@@ -1,3 +1,4 @@
+// Pagina para empezar: elegir un perfil existente o crear uno nuevo.
 "use client";
 
 import { useTranslations } from "next-intl";

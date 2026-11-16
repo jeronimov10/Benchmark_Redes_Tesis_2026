@@ -1,3 +1,4 @@
+// Componentes de interfaz basicos: botones, tarjetas y contenedor.
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -7,8 +8,6 @@ import { Link } from "@/i18n/navigation";
 import type { Light } from "@/engine/types";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
-
-/* ---------- Buttons: pill shaped like the bancolombia.com header CTA ---------- */
 
 type Variant = "primary" | "secondary" | "accent" | "ghost";
 type Size = "md" | "lg" | "sm";
@@ -59,8 +58,6 @@ export function ButtonLink({
     </Link>
   );
 }
-
-/* ---------- Surfaces ---------- */
 
 export function Card({
   className,
@@ -118,8 +115,6 @@ export function DemoBadge({ className }: { className?: string }) {
   );
 }
 
-/* ---------- Traffic light: colors only, no text ---------- */
-
 const DOT: Record<Light, string> = {
   green: "bg-light-green",
   yellow: "bg-light-yellow",
@@ -127,7 +122,6 @@ const DOT: Record<Light, string> = {
 };
 const DOT_SIZE = { xs: "h-2.5 w-2.5", sm: "h-3.5 w-3.5", md: "h-5 w-5", lg: "h-8 w-8" } as const;
 
-/** A colored dot. The color is the message; the text lives in aria-label and the tooltip. */
 export function Semaphore({
   light,
   size = "md",
@@ -152,8 +146,6 @@ export function Semaphore({
     />
   );
 }
-
-/* ---------- Form controls ---------- */
 
 export function Field({
   label,

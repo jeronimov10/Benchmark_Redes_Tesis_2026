@@ -1,3 +1,4 @@
+// Pruebas del cliente de la API del backend.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TTL_MS, keyOf, pedirJson, pedirRecomendacion } from "./cliente";
 import { esCompleta, type EntradaModelo, type RespuestaRecomendar } from "./tipos";

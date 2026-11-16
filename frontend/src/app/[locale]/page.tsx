@@ -1,3 +1,4 @@
+// Pagina de bienvenida con la presentacion de las redes y los escenarios.
 "use client";
 
 import { useTranslations } from "next-intl";

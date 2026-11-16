@@ -1,0 +1,25 @@
+fuente,perfil,nombre,tipo,n,banda1_modal,cuota_modal,semiancho_wilson,llego_al_tope,certidumbre_media,cuota_certidumbre_baja,empates_banda1,preferencia_cumple,preferencia_parcial,preferencia_brecha,preferencia_sin_solucion,preferencia_no_evaluable,requisito_cumple,requisito_parcial,requisito_brecha,requisito_sin_solucion,requisito_no_evaluable
+base,1,Remesa familiar,control,50,polygon,1.0,0.036,False,0.926,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,2,Tendero con QR,control,200,polygon+tempo,0.86,0.048,False,0.818,0.0,0.955,1.0,0.0,0.0,0.0,0.0,0.0,0.955,0.045,0.0,0.0
+base,3,Tesoreria de alto valor,control,50,tempo,1.0,0.036,False,0.892,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,4,Microremesa,hueco,50,polygon,1.0,0.036,False,0.595,0.02,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,5,Freelancer,hueco,50,polygon,1.0,0.036,False,0.202,1.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,6,E-commerce,hueco,50,polygon+tempo,1.0,0.036,False,0.436,0.62,1.0,1.0,0.0,0.0,0.0,0.0,0.06,0.94,0.0,0.0,0.0
+base,7,Nomina de pyme,hueco,50,polygon+tempo,1.0,0.036,False,0.122,1.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,8,Proveedor B2B,hueco,50,tempo,1.0,0.036,False,0.729,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,9,Importador,hueco,50,polygon+tempo,1.0,0.036,False,0.023,1.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,10,Remesa urgente,hueco,50,polygon,1.0,0.036,False,0.119,1.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0
+base,11,Liquidacion urgente,hueco,50,tempo,1.0,0.036,False,0.398,0.76,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+base,12,Micropago de transporte,fuera de rango,400,tempo,0.507,0.049,True,0.2,1.0,0.492,0.87,0.13,0.0,0.0,0.0,0.507,0.492,0.0,0.0,0.0
+vivo,1,Remesa familiar,control,50,polygon,1.0,0.036,False,0.926,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,2,Tendero con QR,control,350,polygon,0.663,0.049,False,0.817,0.0,0.337,1.0,0.0,0.0,0.0,0.0,0.0,0.337,0.663,0.0,0.0
+vivo,3,Tesoreria de alto valor,control,50,tempo,1.0,0.036,False,0.892,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,4,Microremesa,hueco,50,polygon,1.0,0.036,False,0.595,0.02,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,5,Freelancer,hueco,50,polygon,1.0,0.036,False,0.202,1.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,6,E-commerce,hueco,50,polygon+tempo,1.0,0.036,False,0.436,0.62,1.0,1.0,0.0,0.0,0.0,0.0,0.14,0.86,0.0,0.0,0.0
+vivo,7,Nomina de pyme,hueco,50,polygon+tempo,1.0,0.036,False,0.122,1.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,8,Proveedor B2B,hueco,50,tempo,1.0,0.036,False,0.729,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,9,Importador,hueco,50,polygon+tempo,1.0,0.036,False,0.023,1.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,10,Remesa urgente,hueco,400,canton+polygon+tempo,0.487,0.049,True,0.119,1.0,0.66,1.0,0.0,0.0,0.0,0.0,0.0,0.66,0.34,0.0,0.0
+vivo,11,Liquidacion urgente,hueco,50,tempo,1.0,0.036,False,0.398,0.76,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0
+vivo,12,Micropago de transporte,fuera de rango,400,polygon+tempo,0.61,0.048,True,0.2,1.0,0.61,0.72,0.28,0.0,0.0,0.0,0.39,0.61,0.0,0.0,0.0

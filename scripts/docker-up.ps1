@@ -1,8 +1,4 @@
-# Levanta el proyecto con Docker en Windows evitando los dos fallos conocidos:
-#  1) Repo dentro de OneDrive: BuildKit no puede leer los archivos "solo en la nube" (invalid file request Dockerfile). Se construye desde una copia en %LOCALAPPDATA%.
-#  2) Antivirus/proxy que intercepta HTTPS: con -ConfiarEnInterceptor su CA raiz se exporta a certs/ para que las imagenes confien en ella.
-#     Es opt-in porque hace que los contenedores confien en esa CA; usalo solo en una maquina propia donde sepas que el antivirus es quien intercepta.
-# Uso: powershell -ExecutionPolicy Bypass -File scripts\docker-up.ps1 [-ConfiarEnInterceptor] [-SoloCopiar] [-SoloBuild] [-Down] [-NoCache]
+# Levanta el proyecto con Docker en Windows (opciones: -ConfiarEnInterceptor -SoloCopiar -SoloBuild -Down -NoCache).
 param([switch]$ConfiarEnInterceptor, [switch]$SoloCopiar, [switch]$SoloBuild, [switch]$Down, [switch]$NoCache)
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path

@@ -1,0 +1,117 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resultados del benchmark</title><style>
+:root{--bg:#fff;--fg:#1c2430;--mut:#5c6877;--line:#dfe4ea;--acc:#1f5fbf;--card:#f6f8fb;--warn:#a15c00}
+@media (prefers-color-scheme:dark){:root{--bg:#10151c;--fg:#e4e9f0;--mut:#9aa6b5;--line:#27313d;--acc:#6ea8ff;--card:#171e27;--warn:#f0b050}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}h1{font-size:1.8rem}h2{margin-top:2.2rem;border-bottom:1px solid var(--line);padding-bottom:.3rem}
+h3{margin-top:1.6rem}table{border-collapse:collapse;width:100%;margin:.8rem 0;font-size:.85rem;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:4px 8px;text-align:left;white-space:nowrap}th{background:var(--card)}
+li.alerta{color:var(--warn)}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:1rem 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}.kpi b{display:block;font-size:1.4rem;color:var(--acc)}
+.kpi span{color:var(--mut);font-size:.8rem}svg{max-width:100%;height:auto}.mut{color:var(--mut)}code{background:var(--card);padding:1px 4px;border-radius:4px}
+</style></head><body><main><h1>Resultados del benchmark: seis redes</h1>
+<p>Generado el 2026-11-16 a partir de <code>resultados/metrics.csv</code> (Tempo, Aptos, Canton), <code>backend/modelo/perfiles.json</code> (Polygon, Celo, Arbitrum) y <code>backend/modelo/modelo.py</code> sin modificar. Todos los datos son historicos (ya producidos por la red); la unica metrica de tiempo real, B2 en Tempo y Aptos, se trata en las limitaciones.</p>
+<h2>Resumen</h2><div class="kpis"><div class="kpi"><b>6</b><span>redes comparadas</span></div><div class="kpi"><b>16</b><span>metricas por red</span></div><div class="kpi"><b>4</b><span>casos de referencia</span></div><div class="kpi"><b>85</b><span>valores disponibles de 96</span></div></div>
+<ul>
+<li><strong>Seis redes</strong> comparadas con el mismo modelo de la tesis: Polygon, Celo y Arbitrum (medicion de 90 dias) frente a Tempo, Aptos y Canton (muestra reducida de verificacion).</li>
+<li><strong>Cobertura</strong>: Polygon 15/16 con valor; Celo 15/16 con valor; Arbitrum 15/16 con valor; Tempo 14/16 con valor; Aptos 12/16 con valor; Canton 14/16 con valor.</li>
+<li><strong>Recomendacion por caso</strong> (banda 1): Remesa de USD 300: Polygon; Compra en tienda: Polygon + Tempo; Pago domestico: Polygon + Tempo; Pago de alto valor: Tempo.</li>
+<li><strong>Lectura</strong>: la recomendacion es la banda 1; si tiene varias redes, estan empatadas. Las limitaciones que condicionan esta lectura estan en [limitaciones.md](limitaciones.md) y no son un apendice.</li>
+</ul>
+<h2>Cobertura de metricas por red</h2>
+<p>Metricas del catalogo del modelo (16) segun su estado.</p>
+<table><thead><tr><th>red</th><th>medidas</th><th>parciales</th><th>cota inferior</th><th>no computables</th><th>no aplican</th></tr></thead><tbody>
+<tr><td>Polygon</td><td>14</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>Celo</td><td>14</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>Arbitrum</td><td>14</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+<tr><td>Tempo</td><td>8</td><td>6</td><td>0</td><td>2</td><td>0</td></tr>
+<tr><td>Aptos</td><td>7</td><td>5</td><td>0</td><td>4</td><td>0</td></tr>
+<tr><td>Canton</td><td>10</td><td>3</td><td>1</td><td>2</td><td>0</td></tr>
+</tbody></table>
+<h2>Metricas por red</h2>
+<p>Valores tal como entran al modelo (<code>ServicioPerfiles</code>, modo <code>medicion</code>). Para T/A/C: A2 = p95/mediana, B3 x 48/18, C3 en %, C1 = C1b (HHI de peso de consenso). <code>n/d</code> = sin valor; el estado entre parentesis marca valores parciales o cota inferior.</p>
+<table><thead><tr><th>metrica</th><th>descripcion</th><th>unidad</th><th>Polygon</th><th>Celo</th><th>Arbitrum</th><th>Tempo</th><th>Aptos</th><th>Canton</th></tr></thead><tbody>
+<tr><td><strong>A1</strong></td><td>Costo mediano / ticket</td><td>USD</td><td>0.004294</td><td>0.001339</td><td>0.007005</td><td>2.02e-05 (parcial)</td><td>0.000286 (parcial)</td><td>0.8953 (parcial)</td></tr>
+<tr><td><strong>A2</strong></td><td>Cola de costo (p95 / mediana)</td><td>razon</td><td>9.106</td><td>9.776</td><td>10.71</td><td>8.86 (parcial)</td><td>2.318 (parcial)</td><td>3.072 (parcial)</td></tr>
+<tr><td><strong>A3</strong></td><td>Sensibilidad del costo a la congestion (beta)</td><td>indice</td><td>no computable</td><td>no computable</td><td>no computable</td><td>2.02e+03 (parcial)</td><td>8.628 (parcial)</td><td>5.52e-08</td></tr>
+<tr><td><strong>A4</strong></td><td>Costo de anclaje por transaccion</td><td>USD</td><td>7.01e-06</td><td>3.5e-06</td><td>2.88e-05</td><td>no computable</td><td>no computable</td><td>no computable</td></tr>
+<tr><td><strong>B1</strong></td><td>Latencia de inclusion p95</td><td>s</td><td>1.5</td><td>1</td><td>0.2503</td><td>0.59</td><td>0.08605</td><td>1.061</td></tr>
+<tr><td><strong>B2</strong></td><td>Tiempo a finalidad</td><td>s</td><td>492</td><td>960</td><td>60</td><td>0.6302 (parcial)</td><td>no computable</td><td>1.061</td></tr>
+<tr><td><strong>B2b</strong></td><td>Tiempo a irrevocabilidad en Ethereum</td><td>s</td><td>492</td><td>3.04e+05</td><td>5.57e+05</td><td>no computable</td><td>no computable</td><td>no computable</td></tr>
+<tr><td><strong>B3</strong></td><td>Margen de capacidad (capacidad / 18 TPS)</td><td>razon</td><td>7.828 (cota inferior)</td><td>1.994 (cota inferior)</td><td>6.416 (cota inferior)</td><td>1.48e+03 (parcial)</td><td>1.58e+03 (parcial)</td><td>0.000621 (cota inferior)</td></tr>
+<tr><td><strong>C1</strong></td><td>Concentracion de produccion o consenso (HHI)</td><td>indice</td><td>0.1974</td><td>1</td><td>0.9939</td><td>0.06667</td><td>0.01686</td><td>0.2959</td></tr>
+<tr><td><strong>C2</strong></td><td>Operadores que concentran mas del 50 %</td><td>conteo</td><td>3</td><td>1</td><td>1</td><td>8</td><td>24</td><td>1</td></tr>
+<tr><td><strong>C3</strong></td><td>Continuidad</td><td>%</td><td>99.96</td><td>99.94</td><td>99.95</td><td>100</td><td>100</td><td>100</td></tr>
+<tr><td><strong>C4</strong></td><td>Tasa de fallo</td><td>fraccion</td><td>0</td><td>0.001624</td><td>0</td><td>0</td><td>0</td><td>0.004125</td></tr>
+<tr><td><strong>C5</strong></td><td>Cambios de implementacion en la ventana</td><td>conteo</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>11</td></tr>
+<tr><td><strong>D1</strong></td><td>Pago sin activo volatil propio</td><td>fraccion</td><td>0.3861</td><td>0.5252</td><td>0.1011</td><td>1</td><td>0.01151</td><td>1</td></tr>
+<tr><td><strong>D2</strong></td><td>Transferencias con datos asociables a una orden</td><td>fraccion</td><td>0.008984</td><td>0.005583</td><td>0.007061</td><td>0.45</td><td>no computable</td><td>0.1174</td></tr>
+<tr><td><strong>D3</strong></td><td>Transacciones multi-transferencia</td><td>fraccion</td><td>0.3014</td><td>0.06007</td><td>0.2255</td><td>0.7682 (parcial)</td><td>1 (parcial)</td><td>0 (parcial)</td></tr>
+</tbody></table>
+<h2>Recomendaciones del modelo con las seis redes</h2>
+<p><code>modelo.recomendar</code> con 10 000 replicas, semilla 42 y TRM 4 000, sobre los cuatro casos de referencia de la tesis y las seis redes.</p>
+<h3>Remesa de USD 300 (COP 1 200 000, transfronteriza, espera 1 h, irrevocabilidad baja)</h3>
+<p>Ticket USD 300.00. Composicion: remesas 100%, comercio doméstico 0%, alto valor 0%. Certidumbre 0.985.</p>
+<table><thead><tr><th>banda</th><th>red</th><th>puntaje mediano</th><th>p05 - p95</th></tr></thead><tbody>
+<tr><td>1</td><td>Polygon</td><td>0.722</td><td>0.71 - 0.735</td></tr>
+<tr><td>2</td><td>Canton</td><td>0.638</td><td>0.61 - 0.66</td></tr>
+<tr><td>3</td><td>Arbitrum</td><td>0.63</td><td>0.602 - 0.654</td></tr>
+<tr><td>3</td><td>Tempo</td><td>0.623</td><td>0.553 - 0.7</td></tr>
+<tr><td>3</td><td>Celo</td><td>0.607</td><td>0.573 - 0.636</td></tr>
+</tbody></table>
+<p>Metrica que mas separa la banda 1 de la 2: <strong>D3</strong> (contribucion 0.0833).</p>
+<p>Inadmisibles: Aptos (G2: sin anclaje verificable en Ethereum).</p>
+<p>Advertencia del modelo: métricas no concluyentes, excluidas del cálculo: A3, A4, B2b.</p>
+<h3>Compra en tienda (COP 15 000, domestica, espera 3 s, irrevocabilidad media)</h3>
+<p>Ticket USD 3.75. Composicion: comercio doméstico 93%, alto valor 5%, remesas 2%. Certidumbre 0.62.</p>
+<table><thead><tr><th>banda</th><th>red</th><th>puntaje mediano</th><th>p05 - p95</th></tr></thead><tbody>
+<tr><td>1</td><td>Polygon</td><td>0.729</td><td>0.714 - 0.746</td></tr>
+<tr><td>1</td><td>Tempo</td><td>0.699</td><td>0.621 - 0.777</td></tr>
+<tr><td>2</td><td>Arbitrum</td><td>0.606</td><td>0.58 - 0.63</td></tr>
+<tr><td>3</td><td>Canton</td><td>0.575</td><td>0.554 - 0.594</td></tr>
+<tr><td>3</td><td>Celo</td><td>0.562</td><td>0.533 - 0.591</td></tr>
+</tbody></table>
+<p>La banda 1 reune Polygon, Tempo: estan empatadas, no hay una ganadora unica (P(polygon &gt; tempo) = 0.77).</p>
+<p>Metrica que mas separa la banda 1 de la 2: <strong>C1</strong> (contribucion 0.0274).</p>
+<p>Inadmisibles: Aptos (G2: sin anclaje verificable en Ethereum).</p>
+<p>Advertencia del modelo: certidumbre media (0.62): el caso queda entre escenarios.</p>
+<p>Advertencia del modelo: métricas no concluyentes, excluidas del cálculo: A3, A4, B2b.</p>
+<h3>Pago domestico (COP 1 200 000, espera 60 s, irrevocabilidad media)</h3>
+<p>Ticket USD 300.00. Composicion: comercio doméstico 79%, alto valor 17%, remesas 4%. Certidumbre 0.403.</p>
+<table><thead><tr><th>banda</th><th>red</th><th>puntaje mediano</th><th>p05 - p95</th></tr></thead><tbody>
+<tr><td>1</td><td>Polygon</td><td>0.736</td><td>0.721 - 0.75</td></tr>
+<tr><td>1</td><td>Tempo</td><td>0.719</td><td>0.639 - 0.796</td></tr>
+<tr><td>2</td><td>Arbitrum</td><td>0.628</td><td>0.598 - 0.653</td></tr>
+<tr><td>2</td><td>Canton</td><td>0.624</td><td>0.596 - 0.647</td></tr>
+<tr><td>3</td><td>Celo</td><td>0.556</td><td>0.526 - 0.585</td></tr>
+</tbody></table>
+<p>La banda 1 reune Polygon, Tempo: estan empatadas, no hay una ganadora unica (P(polygon &gt; tempo) = 0.66).</p>
+<p>Metrica que mas separa la banda 1 de la 2: <strong>B3</strong> (contribucion 0.0416).</p>
+<p>Inadmisibles: Aptos (G2: sin anclaje verificable en Ethereum).</p>
+<p>Advertencia del modelo: certidumbre de interpretación baja (0.40): el caso no está bien cubierto por los escenarios evaluados.</p>
+<p>Advertencia del modelo: métricas no concluyentes, excluidas del cálculo: A3, A4, B2b.</p>
+<h3>Pago de alto valor (COP 80 000 000, espera 10 min, irrevocabilidad alta)</h3>
+<p>Ticket USD 20,000.00. Composicion: alto valor 99%, comercio doméstico 0%, remesas 0%. Certidumbre 0.948.</p>
+<table><thead><tr><th>banda</th><th>red</th><th>puntaje mediano</th><th>p05 - p95</th></tr></thead><tbody>
+<tr><td>1</td><td>Tempo</td><td>0.887</td><td>0.815 - 0.938</td></tr>
+<tr><td>2</td><td>Polygon</td><td>0.732</td><td>0.717 - 0.747</td></tr>
+<tr><td>3</td><td>Canton</td><td>0.572</td><td>0.541 - 0.604</td></tr>
+<tr><td>3</td><td>Arbitrum</td><td>0.57</td><td>0.54 - 0.601</td></tr>
+<tr><td>4</td><td>Celo</td><td>0.505</td><td>0.474 - 0.538</td></tr>
+</tbody></table>
+<p>Metrica que mas separa la banda 1 de la 2: <strong>C3</strong> (contribucion 0.0615).</p>
+<p>Inadmisibles: Aptos (G2: sin anclaje verificable en Ethereum).</p>
+<p>Advertencia del modelo: métricas no concluyentes, excluidas del cálculo: A3, A4, B2b.</p>
+<h2>Benchmark de Tempo, Aptos y Canton con el motor del plan</h2>
+<p>Puntajes del motor <code>score_engine.py</code> (pesos y agregacion heredados del estudio de referencia) para los escenarios E1, E2 y E3 del plan. Este motor solo puntua las tres redes del plan; la comparacion de las seis redes es la de la seccion anterior. Un <code>--</code> es una red inadmisible por compuerta.</p>
+<table><thead><tr><th>red</th><th>escenario</th><th>admisible</th><th>compuertas fallidas</th><th>S_total</th><th>S_A</th><th>S_B</th><th>S_C</th><th>S_D</th><th>historicas</th><th>tiempo real</th><th>no aplica</th><th>computadas</th><th>parciales</th><th>no computables</th></tr></thead><tbody>
+<tr><td>Tempo</td><td>E1</td><td>si</td><td>-</td><td>0.851</td><td>0.789</td><td>1.000</td><td>0.692</td><td>1.000</td><td>14</td><td>1</td><td>1</td><td>10</td><td>6</td><td>0</td></tr>
+<tr><td>Tempo</td><td>E2</td><td>si</td><td>-</td><td>0.821</td><td>0.667</td><td>1.000</td><td>0.692</td><td>1.000</td><td>14</td><td>1</td><td>1</td><td>10</td><td>6</td><td>0</td></tr>
+<tr><td>Tempo</td><td>E3</td><td>si</td><td>-</td><td>0.829</td><td>0.667</td><td>1.000</td><td>0.692</td><td>1.000</td><td>14</td><td>1</td><td>1</td><td>10</td><td>6</td><td>0</td></tr>
+<tr><td>Aptos</td><td>E1</td><td>si</td><td>-</td><td>0.730</td><td>0.789</td><td>1.000</td><td>0.750</td><td>0.518</td><td>14</td><td>1</td><td>1</td><td>9</td><td>5</td><td>2</td></tr>
+<tr><td>Aptos</td><td>E2</td><td>si</td><td>-</td><td>0.753</td><td>0.667</td><td>1.000</td><td>0.750</td><td>0.518</td><td>14</td><td>1</td><td>1</td><td>9</td><td>5</td><td>2</td></tr>
+<tr><td>Aptos</td><td>E3</td><td>si</td><td>-</td><td>0.750</td><td>0.667</td><td>1.000</td><td>0.750</td><td>0.518</td><td>14</td><td>1</td><td>1</td><td>9</td><td>5</td><td>2</td></tr>
+<tr><td>Canton</td><td>E1</td><td>si</td><td>-</td><td>0.670</td><td>0.785</td><td>0.667</td><td>0.233</td><td>0.950</td><td>13</td><td>0</td><td>4</td><td>11</td><td>5</td><td>1</td></tr>
+<tr><td>Canton</td><td>E2</td><td>no</td><td>G4</td><td>--</td><td>0.611</td><td>0.800</td><td>0.233</td><td>0.950</td><td>13</td><td>0</td><td>4</td><td>11</td><td>5</td><td>1</td></tr>
+<tr><td>Canton</td><td>E3</td><td>no</td><td>G4</td><td>--</td><td>1.000</td><td>0.775</td><td>0.233</td><td>0.950</td><td>13</td><td>0</td><td>4</td><td>11</td><td>5</td><td>1</td></tr>
+</tbody></table>
+<p>El catalogo de <code>metrics.csv</code> tiene 45 filas (16 metricas x 3 redes y E1, con C1 y C1b). Detalle: <code>resultados/metrics.csv</code>, <code>gates.csv</code>, <code>scores.csv</code>, <code>sensitivity.csv</code>, <code>discrimination.csv</code>, <code>benchmark_final.csv</code>.</p></main></body></html>

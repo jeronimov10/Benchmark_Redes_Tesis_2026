@@ -1,3 +1,5 @@
+"""Construye resultados/metrics.csv y run_manifest.json a partir de las metricas calculadas de Tempo, Aptos y Canton."""
+
 import json
 import csv
 from datetime import datetime, timezone
@@ -13,8 +15,6 @@ with open(f"{RES}/raw/canton_metrics.json") as f:
 
 
 def calcula_H_cfg_tempo():
-    """B3 real de Tempo: gasLimit de bloque / gasUsed mediano de recibo /
-    cadencia mediana de bloque, sobre el requisito de 48 TPS del Anexo."""
     try:
         blocks = json.load(open(f"{RES}/raw/tempo/blocks_sample.json"))
         receipts = json.load(open(f"{RES}/raw/tempo/receipts_sample.json"))
@@ -40,12 +40,6 @@ rows = []
 
 
 def row(red, activo, metrica_id, escenario, valor, unidad, n, estado, razon="", consulta="", modo="historico"):
-    """modo describe COMO se obtuvo el dato, en el vocabulario del propio plan
-    (Sec.7.1): 'historico' = consulta reproducible sobre bloques/eventos/estado
-    ya producidos (ventana W_H, aunque la consulta se haya hecho hace un
-    instante contra un nodo en vivo); 'tiempo_real' = requiere sondeo continuo
-    mientras ocurre (ventana W_L, ej. B2 en Tempo/Aptos); 'no_aplica' = metrica
-    degenerada por diseno o transversal, sin ventana temporal de por medio."""
     rows.append(
         dict(
             red=red, activo=activo, metrica_id=metrica_id, escenario=escenario,
@@ -57,7 +51,6 @@ def row(red, activo, metrica_id, escenario, valor, unidad, n, estado, razon="", 
 
 NOTA_MUESTRA = "muestra reducida de verificacion, no la ventana W_H de 14 dias del plan; sin bootstrap"
 
-# ---------------- TEMPO ----------------
 row("tempo", "TIP-20 (feeToken observado)", "A1", "global", T["A1_costo_mediano_usd"], "USD", T["A_n"],
     "parcialmente_derivada", NOTA_MUESTRA + "; supuesto 18 decimales de precio de gas no confirmado contra TIP publicado", "collect_tempo.py+compute_tempo_metrics.py")
 row("tempo", "TIP-20 (feeToken observado)", "A2", "global", T["A2_costo_p95_usd"], "USD", T["A_n"],
@@ -67,7 +60,7 @@ row("tempo", "TIP-20 (feeToken observado)", "A3", "global", T["A3_beta_ocupacion
 row("tempo", "n/a", "B1", "global", T["B1_cadencia_p95_s"], "segundos", T["B1_n"],
     "computada", NOTA_MUESTRA, "collect_tempo.py")
 row("tempo", "n/a", "B2", "global", 0.6302020549774170, "segundos", 53,
-    "parcialmente_derivada", "Mecanismo de sondeo en vivo (scripts/poll_finality.py) verificado y corrido 30s como demostracion (no las 72h de W_L que exige el plan). p95=0.81s. Confirma la advertencia del plan: tau_F es sub-segundo en Tempo, no discrimina frente al umbral t=60s/w=604800s -- el eje de irreversibilidad no separa a esta red en esta muestra.", "scripts/poll_finality.py (30s, n=53)",
+    "parcialmente_derivada", "Mecanismo de sondeo en vivo (backend/benchmark/poll_finality.py) verificado y corrido 30s como demostracion (no las 72h de W_L que exige el plan). p95=0.81s. Confirma la advertencia del plan: tau_F es sub-segundo en Tempo, no discrimina frente al umbral t=60s/w=604800s -- el eje de irreversibilidad no separa a esta red en esta muestra.", "backend/benchmark/poll_finality.py (30s, n=53)",
     modo="tiempo_real")
 row("tempo", "n/a", "B3", "global", H_CFG_TEMPO["h_cfg"] if H_CFG_TEMPO else None, "razon (H_cfg/48TPS)",
     H_CFG_TEMPO["n"] if H_CFG_TEMPO else 0,
@@ -99,7 +92,7 @@ row("tempo", "n/a", "C5", "global", T.get("C5_actualizaciones_en_ventana"), "con
      else "no se pudo leer tempo_forkSchedule en esta pasada"),
     "collect_tempo.py (RPC tempo_forkSchedule) + compute_tempo_metrics.py")
 row("tempo", "n/a", "D1", "global", T["D1_fraccion_feePayer_distinto"], "fraccion", T["D1_n"],
-    "computada", "OJO: 100% en la muestra; posible artefacto de la abstraccion de cuentas nativa de Tempo (feePayer podria estar siempre poblado por diseno, no solo cuando un tercero patrocina) -- ver docs/matriz_requerimientos.md", "collect_tempo.py")
+    "computada", "OJO: 100% en la muestra; posible artefacto de la abstraccion de cuentas nativa de Tempo (feePayer podria estar siempre poblado por diseno, no solo cuando un tercero patrocina)", "collect_tempo.py")
 row("tempo", "n/a", "D2", "global", T.get("D2_fraccion_con_memo"), "fraccion", T.get("D2_n", 0),
     "computada" if T.get("D2_fraccion_con_memo") is not None else "no_computable",
     (f"RESUELTO en esta pasada: la interfaz ITIP20 (crates/contracts/src/precompiles/tip20.rs, codigo fuente publico) "
@@ -114,7 +107,6 @@ row("tempo", "n/a", "D3", "global", T["D3_fraccion_multi_transferencia"], "fracc
 row("tempo", "TIP-20 nativo", "E1", "global", 1, "fraccion", None,
     "computada", "degenerada por diseno: todo Transfer de un TIP-20 es publico via logs", "-", modo="no_aplica")
 
-# ---------------- APTOS ----------------
 row("aptos", "APT (gas)", "A1", "global", A.get("A1_costo_mediano_usd"), "USD", A.get("A_n", 0),
     "parcialmente_derivada" if A.get("A1_costo_mediano_usd") is not None else "no_computable",
     (f"RESUELTO en esta pasada: el ID de 32 bytes del feed APT/USD de Pyth se obtuvo de la propia API en vivo de Pyth "
@@ -130,7 +122,7 @@ row("aptos", "APT (gas)", "A2", "global", A.get("A2_costo_p95_usd"), "USD", A.ge
     "parcialmente_derivada" if A.get("A2_costo_p95_usd") is not None else "no_computable",
     "misma resolucion y misma advertencia de precio congelado que A1", "idem")
 row("aptos", "n/a", "B2", "global", None, "segundos", 3,
-    "no_computable", "Se intento un sondeo corto (30s, scripts/poll_finality.py) y produjo 17 alturas nuevas pero solo 3 con delta valido, con signos mezclados (-0.09s, +0.03s, -0.56s). Hallazgo metodologico real: el tiempo de bloque de Aptos (~20ms) es mas rapido que el round-trip HTTP hacia la API publica, asi que un sondeo secuencial simple no puede resolver B2 aqui -- se necesitaria un nodo de baja latencia o streaming, no polling HTTP estandar. NO es reconstruible con datos historicos por definicion (D1 del plan): requiere W_L en vivo.", "scripts/poll_finality.py (30s, n=3 invalido)",
+    "no_computable", "Se intento un sondeo corto (30s, backend/benchmark/poll_finality.py) y produjo 17 alturas nuevas pero solo 3 con delta valido, con signos mezclados (-0.09s, +0.03s, -0.56s). Hallazgo metodologico real: el tiempo de bloque de Aptos (~20ms) es mas rapido que el round-trip HTTP hacia la API publica, asi que un sondeo secuencial simple no puede resolver B2 aqui -- se necesitaria un nodo de baja latencia o streaming, no polling HTTP estandar. NO es reconstruible con datos historicos por definicion (D1 del plan): requiere W_L en vivo.", "backend/benchmark/poll_finality.py (30s, n=3 invalido)",
     modo="tiempo_real")
 row("aptos", "n/a", "A3", "global", A.get("A3_beta_ocupacion_global"), "indice", A.get("A3_n"),
     "parcialmente_derivada" if A.get("A3_beta_ocupacion_global") is not None else "no_computable",
@@ -189,7 +181,6 @@ row("aptos", "n/a", "D3", "global", A.get("D3_fraccion_multi_transferencia"), "f
 row("aptos", "Fungible Asset (generico)", "E1", "global", 1, "fraccion", None,
     "computada", "degenerada por diseno: eventos de Fungible Asset son publicos", "-", modo="no_aplica")
 
-# ---------------- CANTON ----------------
 row("canton", "Canton Coin (Amulet)", "A1", "global", C["A1_costo_usd_mediana_confirmado"], "USD", C["A_n"],
     "parcialmente_derivada", "Unidad CONFIRMADA via docs.sync.global (Synchronizer Traffic Fees, CIP-0042/CIP-0084): trafficPrice=60 USD/MB, total_traffic_cost en bytes. Coincide con el objetivo de diseno de CIP-0042 (~1 USD por transferencia estandar de CC). Sigue parcial porque la ventana (~189s) cae en un burst periodico de ValidatorLicense_ReportActive, no en trafico de pagos tipico.", "collect_canton.py + docs.sync.global/deployment/traffic.html")
 row("canton", "Canton Coin (Amulet)", "A2", "global", C["A2_costo_usd_p95_confirmado"], "USD", C["A_n"],
@@ -252,37 +243,11 @@ with open(f"{RES}/metrics.csv", "w", newline="", encoding="utf-8") as f:
 
 print(f"metrics.csv escrito con {len(rows)} filas")
 
-# ---------------- limitaciones.md ----------------
-no_comp = [r for r in rows if r["estado"] in ("no_computable",)]
+no_comp = [r for r in rows if r["estado"] == "no_computable"]
 parcial = [r for r in rows if r["estado"] == "parcialmente_derivada"]
-
 tiempo_real_rows = [r for r in rows if r["modo_dato"] == "tiempo_real"]
 historico_rows = [r for r in rows if r["modo_dato"] == "historico"]
 
-with open(f"{RES}/limitaciones.md", "w", encoding="utf-8") as f:
-    f.write("# Limitaciones — generado desde metrics.csv\n\n")
-    f.write(f"Fecha: {datetime.now(timezone.utc).isoformat()}\n\n")
-    f.write("Esta es una pasada de verificacion/implementacion con muestras reducidas, no la ")
-    f.write("recoleccion completa de 14 dias (W_H) que especifica el plan. Cada entrada abajo ")
-    f.write("es una metrica que NO se completo con un valor pleno, junto con la razon exacta.\n\n")
-    f.write(
-        f"**Modo de obtencion de los datos** (columna `modo_dato` de metrics.csv): "
-        f"{len(historico_rows)} filas se calculan sobre datos historicos (bloques/eventos/estado ya "
-        f"producidos por la red, consultados con una peticion puntual reproducible -- ventana W_H del "
-        f"plan); {len(tiempo_real_rows)} filas requieren sondeo en vivo mientras ocurre el evento "
-        f"(ventana W_L: solo B2 en Tempo y Aptos); el resto son transversales/degeneradas por diseno "
-        f"y no tienen ventana temporal (E1, D1 en Canton, C1 en Canton).\n\n"
-    )
-    f.write("## No computable\n\n")
-    for r in no_comp:
-        f.write(f"- **{r['red']}.{r['metrica_id']}**: {r['razon_estado']}\n")
-    f.write("\n## Parcialmente derivada (valor obtenido, con supuesto o advertencia sin verificar)\n\n")
-    for r in parcial:
-        f.write(f"- **{r['red']}.{r['metrica_id']}** = {r['valor']}: {r['razon_estado']}\n")
-
-print(f"limitaciones.md escrito: {len(no_comp)} no_computable, {len(parcial)} parcialmente_derivada")
-
-# ---------------- run_manifest.json ----------------
 manifest = {
     "fecha_ejecucion": datetime.now(timezone.utc).isoformat(),
     "tipo_de_corrida": "verificacion/implementacion con muestra reducida, NO la ventana W_H de 14 dias del plan",
@@ -319,7 +284,7 @@ manifest = {
         "historico_W_H": len(historico_rows),
         "tiempo_real_W_L": len(tiempo_real_rows),
         "no_aplica_transversal_o_degenerada": len(rows) - len(historico_rows) - len(tiempo_real_rows),
-        "nota": "historico = consulta reproducible sobre bloques/eventos/estado ya producidos por la red (aunque la peticion se haga en vivo contra un nodo, lo que se mide ya ocurrio); tiempo_real = requiere sondeo continuo mientras el evento ocurre (solo B2 en Tempo y Aptos, via scripts/poll_finality.py); no_aplica = transversal o degenerada por arquitectura, sin ventana temporal.",
+        "nota": "historico = consulta reproducible sobre bloques/eventos/estado ya producidos por la red (aunque la peticion se haga en vivo contra un nodo, lo que se mide ya ocurrio); tiempo_real = requiere sondeo continuo mientras el evento ocurre (solo B2 en Tempo y Aptos, via backend/benchmark/poll_finality.py); no_aplica = transversal o degenerada por arquitectura, sin ventana temporal.",
     },
     "codigo": {
         "collect_tempo.py": "resultados/raw/tempo",

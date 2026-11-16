@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
-"""
-Pruebas del modelo sobre los perfiles medidos (perfiles.json).
-No consulta ninguna red.
-
-  1. Benchmark: puntaje de cada red en los tres escenarios, con los pesos
-     exactos de cada escenario (sin interpolar).
-  2. Barrido de pagos: el modelo sobre una malla de pagos que cubre los
-     cuatro atributos. Cuenta que red queda en la banda 1 y con que
-     certidumbre.
-  3. Punto de quiebre: cuanto tendria que empeorar Polygon en una metrica
-     (todo lo demas igual) para perder el primer lugar en cada escenario, y
-     que red lo toma.
-
-Uso:
-    python pruebas_modelo.py
-"""
+"""Pruebas del modelo de la tesis sobre los perfiles medidos: benchmark por escenario, barrido de pagos y punto de quiebre de Polygon."""
 
 import copy
 import json
@@ -59,7 +44,7 @@ def benchmark(perfiles):
 
 def barrido(perfiles):
     print("\n2. BARRIDO DE PAGOS")
-    montos = [10 ** (4 + k / 2) for k in range(11)]          # 10 mil a 1.000 M
+    montos = [10 ** (4 + k / 2) for k in range(11)]
     esperas = [3, 60, 3600, 86400]
     irrev = ["baja", "media", "alta"]
     total = 0

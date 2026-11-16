@@ -1,10 +1,9 @@
+// Opciones y conversion de los atributos del pago desde y hacia la URL.
 import type { Irreversibility, ProfileAnswers, Purpose, TxInput } from "@/engine/types";
 
-/** Options of the "how long can you wait" question, in seconds. */
 export const WAIT_OPTIONS = [2, 20, 300, 3600, 86_400] as const;
 export const IRR_OPTIONS: Irreversibility[] = [0, 0.5, 1];
 
-/** Presets that mirror the three thesis scenarios (Table 6), plus the two extra purposes. */
 const PRESET: Record<Purpose, { waitSec: number; irreversibility: Irreversibility }> = {
   remittance: { waitSec: 3600, irreversibility: 0 },
   commerce: { waitSec: 2, irreversibility: 0.5 },
@@ -24,7 +23,6 @@ function shiftIrr(value: Irreversibility, steps: number): Irreversibility {
   return IRR_OPTIONS[Math.min(IRR_OPTIONS.length - 1, Math.max(0, i + steps))];
 }
 
-/** Defaults of the payment attributes from the purpose and the profile tolerances. */
 export function defaultsFor(
   purpose: Purpose,
   profile: Pick<ProfileAnswers, "timeTolerance" | "riskTolerance">,
@@ -38,12 +36,10 @@ export function defaultsFor(
   };
 }
 
-/** Closest option of the wait question to an arbitrary number of seconds. */
 export function nearestWait(sec: number): number {
   return WAIT_OPTIONS.reduce((best, w) => (Math.abs(Math.log(w) - Math.log(sec)) < Math.abs(Math.log(best) - Math.log(sec)) ? w : best));
 }
 
-/** Encode the what-if changes in a query string so the detail page shows the same ranking. */
 export function txQuery(tx: Pick<TxInput, "amountCop" | "waitSec" | "irreversibility">): string {
   return `a=${tx.amountCop}&w=${tx.waitSec}&i=${tx.irreversibility}`;
 }

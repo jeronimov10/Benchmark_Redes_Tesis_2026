@@ -1,7 +1,4 @@
-"""Colector real Tempo (modulo 1,2,4,6 del plan) contra rpc.tempo.xyz.
-Muestra reducida (no la ventana de 14 dias de la especificacion completa):
-sirve para calcular metricas con n declarado, no para el estudio final.
-"""
+"""Recolecta una muestra reducida de bloques, recibos y logs de Tempo desde su JSON-RPC publico (resultados/raw/tempo)."""
 import json
 import os
 import time
@@ -52,7 +49,6 @@ def main():
     with open(f"{OUT_RAW}/blocks_sample.json", "w") as f:
         json.dump(blocks, f)
 
-    # --- receipts para todas las tx de la muestra ---
     tx_hashes = []
     for b in blocks:
         for tx in b.get("transactions", []):
@@ -72,7 +68,6 @@ def main():
     with open(f"{OUT_RAW}/receipts_sample.json", "w") as f:
         json.dump(receipts, f)
 
-    # --- decimales/simbolo de los feeToken vistos ---
     fee_tokens = sorted({r["feeToken"] for r in receipts if r.get("feeToken")})
     token_meta = {}
     for addr in fee_tokens:
@@ -89,11 +84,6 @@ def main():
 
     print("Metadatos de feeToken:", token_meta)
 
-    # --- C1b: ValidatorConfigV2, direccion confirmada leyendo el codigo
-    # fuente publico de github.com/tempoxyz/tempo (crates/contracts/src/
-    # precompiles/mod.rs, VALIDATOR_CONFIG_V2_ADDRESS). El ABI (interface
-    # IValidatorConfigV2 en el mismo repo) no tiene campo de peso -> consenso
-    # de voto igualitario, C1b = 1/N sobre validadores activos.
     V2 = "0xCCCCCCCC00000000000000000000000000000001"
     try:
         from Crypto.Hash import keccak
@@ -106,8 +96,6 @@ def main():
         sel = selector("getActiveValidators()")
         raw = rpc_one("eth_call", [{"to": V2, "data": sel}, "latest"])
         data = raw[2:]
-        # ABI dinamico: slot0=offset, slot1=longitud del array, en la posicion
-        # 64 caracteres hex despues del offset (32 bytes = 64 hex chars)
         n_activos = int(data[64:128], 16)
     except Exception as e:
         n_activos = None
@@ -117,10 +105,6 @@ def main():
         json.dump({"validator_config_v2_address": V2, "n_activos": n_activos}, f, indent=2)
     print("Validadores activos (ValidatorConfigV2):", n_activos)
 
-    # --- C5: RPC tempo_forkSchedule (extension tempo_*, confirmada leyendo
-    # crates/node/src/rpc/fork_schedule.rs en el repo publico). Da el schedule
-    # completo de TIPs/forks con su activationTime real -- fuente admisible del
-    # registro, no changelog de GitHub.
     fork_schedule = rpc_batch([("tempo_forkSchedule", [])])[0]
     with open(f"{OUT_RAW}/fork_schedule.json", "w") as f:
         json.dump({"result": fork_schedule}, f, indent=2)

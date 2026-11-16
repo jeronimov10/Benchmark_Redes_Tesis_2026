@@ -1,3 +1,4 @@
+// Formulario por pasos del perfil del usuario: identidad, uso y destinatarios.
 "use client";
 
 import { Suspense } from "react";

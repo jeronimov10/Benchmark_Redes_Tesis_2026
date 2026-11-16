@@ -1,3 +1,4 @@
+// Pagina de detalle de una red dentro de una recomendacion.
 "use client";
 
 import { Suspense, use } from "react";

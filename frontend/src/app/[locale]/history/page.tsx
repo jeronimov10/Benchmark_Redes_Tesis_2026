@@ -1,3 +1,4 @@
+// Pagina del historial de recomendaciones del usuario.
 "use client";
 
 import { useMemo } from "react";

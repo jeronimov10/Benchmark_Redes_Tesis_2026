@@ -1,3 +1,4 @@
+// Cliente de la API del backend con cache, refresco periodico y estados de error.
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,13 +12,6 @@ import type {
   RespuestaRecomendar,
   ResultadosSimulacion,
 } from "./tipos";
-
-/**
- * Browser side of the bridge to the FastAPI backend (proxied at /api/*).
- * Model answers are cached per input for TTL_MS and refreshed on a timer, so a page that
- * stays open picks up new live measurements: the answer carries `version_perfil`, which
- * changes whenever a live metric or the baseline changes.
- */
 
 export const TTL_MS = 30_000;
 export const REFRESCO_MEDICIONES_MS = 15_000;
@@ -81,15 +75,12 @@ export interface Estado<T> {
   data: T | null;
   error: string | null;
   loading: boolean;
-  /** True when the last refresh failed or the data is older than twice the refresh period. */
   stale: boolean;
-  /** Epoch ms of the last successful answer, or null. */
   actualizado: number | null;
 }
 
 const VACIO: Estado<never> = { data: null, error: null, loading: false, stale: false, actualizado: null };
 
-/** Counter and wall-clock time that advance every `ms`; keeps render pure. */
 function useReloj(ms: number): { n: number; ahora: number } {
   const [estado, setEstado] = useState(() => ({ n: 0, ahora: Date.now() }));
   useEffect(() => {
@@ -99,7 +90,6 @@ function useReloj(ms: number): { n: number; ahora: number } {
   return estado;
 }
 
-/** Current time in epoch ms, refreshed every `ms`. */
 export const useAhora = (ms: number): number => useReloj(ms).ahora;
 
 function useModel<T>(accion: Accion, e: EntradaModelo | null): Estado<T> {
@@ -120,8 +110,6 @@ function useModel<T>(accion: Accion, e: EntradaModelo | null): Estado<T> {
     return () => {
       alive = false;
     };
-    // `key` covers every field of `e`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accion, key, tick]);
 
   if (!key) return VACIO;
@@ -135,7 +123,6 @@ function useModel<T>(accion: Accion, e: EntradaModelo | null): Estado<T> {
 export const useRecomendacion = (e: EntradaModelo | null) => useModel<RespuestaRecomendar>("recomendar", e);
 export const useInterpretacion = (e: EntradaModelo | null) => useModel<RespuestaInterpretar>("interpretar", e);
 
-/** Several recommendations at once (home, history). Entries without an answer yet map to null. */
 export function useRecomendaciones(entradas: EntradaModelo[]): (RespuestaRecomendar | null)[] {
   const keys = entradas.map((e) => keyOf("recomendar", e));
   const joined = keys.join("|");
@@ -153,14 +140,11 @@ export function useRecomendaciones(entradas: EntradaModelo[]): (RespuestaRecomen
     return () => {
       alive = false;
     };
-    // `joined` covers every entry.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joined, tick]);
 
   return keys.map((k) => (done.get(k)?.data as RespuestaRecomendar | undefined) ?? null);
 }
 
-/** Polls a JSON endpoint. Keeps the last good answer and flags it stale when a refresh fails. */
 export function usePolling<T>(url: string, cadaMs: number, activo = true): Estado<T> & { recargar: () => void } {
   const [estado, setEstado] = useState<Estado<T>>({ ...VACIO, loading: true });
   const [version, setVersion] = useState(0);
@@ -187,7 +171,6 @@ export function usePolling<T>(url: string, cadaMs: number, activo = true): Estad
   return { ...estado, recargar };
 }
 
-/** Description of the model (thresholds, scenarios) and the freshness of the live data. */
 export const useInfoModelo = (): RespuestaInfo | null => usePolling<RespuestaInfo>("/api/modelo", 60_000).data;
 
 export const useMediciones = () => usePolling<Instantanea>("/api/mediciones", REFRESCO_MEDICIONES_MS);
@@ -210,7 +193,6 @@ export const useSimulacionEstado = (rapido: boolean) =>
 export const useSimulacionResultados = (rapido: boolean) =>
   usePolling<ResultadosSimulacion>("/api/simulacion/resultados", rapido ? REFRESCO_SIMULACION_RAPIDO_MS * 2 : REFRESCO_SIMULACION_MS);
 
-/** Value that follows `value` after it stops changing for `ms`. */
 export function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -220,9 +202,7 @@ export function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-/** Stable object identity for an input built during render. */
 export function useEntrada(e: EntradaModelo | null): EntradaModelo | null {
   const key = e ? keyOf("recomendar", e) : null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => e, [key]);
 }

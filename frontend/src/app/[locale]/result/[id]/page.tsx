@@ -1,3 +1,4 @@
+// Pagina de resultado: bandas, certidumbre y procedencia de la recomendacion.
 "use client";
 
 import { use, useState } from "react";
@@ -63,7 +64,6 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
   const current = useRecomendacion(
     useEntrada(entry ? entradaModelo({ ...entry.tx, ...settledOverride }, entry.answers.country) : null),
   );
-  // While a new what-if runs, keep showing the last answer instead of blanking the page.
   const [shown, setShown] = useState<RespuestaRecomendar | null>(null);
   if (current.data && current.data !== shown) setShown(current.data);
   const rec = current.data ?? shown;

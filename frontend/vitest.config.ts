@@ -1,3 +1,4 @@
+// Configuracion de Vitest para las pruebas unitarias del frontend.
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 

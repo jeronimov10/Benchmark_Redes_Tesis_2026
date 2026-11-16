@@ -1,3 +1,4 @@
+// Avisos de estado de los datos: sin recomendacion, datos obsoletos y etiqueta de procedencia.
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -7,7 +8,6 @@ import { Link } from "@/i18n/navigation";
 import { edadCorta } from "@/lib/monitor";
 import type { Procedencia, RespuestaRecomendar } from "@/modelo/tipos";
 
-/** Full-page notice when the backend cannot support a recommendation (insufficient data). */
 export function SinRecomendacion({ rec }: { rec: RespuestaRecomendar }) {
   const t = useTranslations("liveData.insufficient");
   return (
@@ -24,7 +24,6 @@ export function SinRecomendacion({ rec }: { rec: RespuestaRecomendar }) {
   );
 }
 
-/** Strip above a result: how many inputs are live, how old, and whether the last refresh failed. */
 export function AvisoDatos({ rec, obsoleto }: { rec: RespuestaRecomendar; obsoleto: boolean }) {
   const t = useTranslations("liveData.banner");
   const { frescura } = rec;
@@ -57,7 +56,6 @@ export function AvisoDatos({ rec, obsoleto }: { rec: RespuestaRecomendar; obsole
   );
 }
 
-/** Small tag showing whether a metric value is live or from the baseline measurement. */
 export function EtiquetaProcedencia({ p }: { p: Procedencia | null | undefined }) {
   const t = useTranslations("liveData.tag");
   if (!p) return null;

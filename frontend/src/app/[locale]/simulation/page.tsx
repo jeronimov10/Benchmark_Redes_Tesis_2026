@@ -1,3 +1,4 @@
+// Pagina de solo lectura con los resultados del banco de usuarios simulados.
 "use client";
 
 import { useState } from "react";

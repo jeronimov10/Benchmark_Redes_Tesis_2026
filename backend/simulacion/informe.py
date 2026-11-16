@@ -39,7 +39,7 @@ def _por_clave(evaluaciones):
 
 
 def _commit():
-    for var in ("RAILWAY_GIT_COMMIT_SHA", "GIT_COMMIT"):
+    for var in ("GIT_COMMIT",):
         if os.environ.get(var):
             return os.environ[var]
     try:

@@ -1,14 +1,11 @@
+"""Calcula las metricas de Canton desde los datos crudos de resultados/raw/canton."""
+
 import json
 import math
 import statistics as st
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
-# Choices de gobernanza del DSO que son ruido rutinario (votos de precio, reportes
-# de estado, confirmaciones de accion ya contadas en otro lado, merges de trafico)
-# y NO cuentan como "cambio de la ruta de pago" para C5. Definicion operativa
-# declarada aqui porque el plan no fija una lista cerrada -- se documenta como
-# supuesto, no se oculta (Sec.10 regla 8 del plan).
 DSO_CHOICES_RUTINARIAS = {
     "DsoRules_UpdateAmuletPriceVote",
     "DsoRules_SubmitStatusReport",
@@ -21,17 +18,12 @@ TRANSFER_CHOICES = {"TransferFactory_Transfer", "AmuletRules_Transfer"}
 HEARTBEAT_CHOICE = "ValidatorLicense_ReportActive"
 
 RAW = "resultados/raw/canton"
-# trafficPrice se lee en vivo de /v0/dso (amuletConfig) en collect_canton.py.
-# Unidad CONFIRMADA como USD/MB via docs.sync.global/deployment/traffic.html
-# (Synchronizer Traffic Fees, CIP-0042/CIP-0084). total_traffic_cost esta en
-# bytes -> costo_usd = total_traffic_cost / 1e6 * trafficPrice.
 TRAFFIC_PRICE_USD_POR_MB = 60.0
 
 
 def parse_ts(s):
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
-    # normaliza microsegundos a 6 digitos
     if "." in s:
         head, rest = s.split(".")
         frac, tz = rest[: rest.index("+")], rest[rest.index("+") :]
@@ -67,9 +59,6 @@ def main():
         if ts and "total_traffic_cost" in ts:
             traffic_costs.append(ts["total_traffic_cost"])
 
-    # --- C-6: busqueda de una stablecoin bajo el estandar de token (CIP-56) ---
-    # Se cuentan familias de template_id (antes del ':') vistas en los updates
-    # visibles, sin decodificar contenido de instrumentos privados.
     template_families = Counter()
     for e in events:
         upd = e.get("update")
@@ -128,14 +117,7 @@ def main():
         results["ventana_inicio"] = rt_sorted[0].isoformat()
         results["ventana_fin"] = rt_sorted[-1].isoformat()
 
-    # ============================================================
-    # Metricas historicas nuevas: todas reconstruibles de datos ya
-    # descargados (dso_state.json + events_sample.json), sin sondeo en vivo.
-    # ============================================================
 
-    # --- C1b/C2: Herfindahl de peso de consenso via svRewardWeight, y minimo
-    # de operadores que concentran >50% del peso. dso_rules.svs ya estaba
-    # descargado en dso_state.json (collect_canton.py) pero no se habia leido.
     try:
         with open(f"{RAW}/dso_state.json") as f:
             dso = json.load(f)
@@ -155,7 +137,6 @@ def main():
                     break
             results["C2_operadores_sobre_50pct"] = min_ops
 
-        # --- B3: H_cfg desde los limites de trafico del sincronizador (ACS) ---
         fees = dso["amulet_rules"]["contract"]["payload"]["configSchedule"]["initialValue"][
             "decentralizedSynchronizer"
         ]["fees"]
@@ -176,10 +157,6 @@ def main():
             results["B3_h_cfg"] = tps_cfg / 48.0
             results["B3_n"] = len(traffic_costs)
 
-    # --- A3: pendiente ln(costo individual) ~ trafico total del sincronizador
-    # por intervalo de 10s (sustituto de "ocupacion" para Canton, Sec.5.1 del
-    # plan). Se espera beta~0 por diseno de tarifa fija -- eso mismo es un
-    # resultado valido, no una falla del calculo.
     registros_costo = []
     for e in events:
         v = e.get("verdict")
@@ -214,9 +191,6 @@ def main():
             results["A3_n"] = n
             results["A3_bucket_s"] = BUCKET_S
 
-    # --- C3: continuidad usando el latido del DSO (ValidatorLicense_ReportActive,
-    # hallado en la matriz de requerimientos como burst periodico), no el trafico
-    # de usuarios -- exactamente la distincion que exige C-5/C3 del plan.
     latidos = []
     for e in events:
         u = e.get("update")
@@ -242,16 +216,8 @@ def main():
         results["C3_n"] = len(latidos)
         results["C3_cadencia_latido_mediana_s"] = med_latido
 
-    # --- D1: sujeto declarado (Sec.5.4 del plan: "el operador compra trafico,
-    # no el usuario"). Degenerada por arquitectura, igual que Tempo D1=100%:
-    # el costo de red (trafico) lo adquiere el operador del validador, no el
-    # usuario final gastando un activo volatil propio para pagar la comision.
     results["D1_declarado_degenerada"] = 1.0
 
-    # --- D2/D3: sobre las mismas choices de transferencia real (TransferFactory_
-    # Transfer / AmuletRules_Transfer): D2 = fraccion con datos de referencia en
-    # el campo `meta` del estandar de token; D3 = fraccion con mas de una salida
-    # (multi-transferencia) y con mas de un instrumento de entrada (multi-activo).
     n_transfer = 0
     n_con_meta = 0
     n_multi_salida = 0
@@ -273,14 +239,6 @@ def main():
                 n_con_meta += 1
             if len(outputs) > 1:
                 n_multi_salida += 1
-            # Instrumentos distintos tocados por la transferencia. TransferFactory_
-            # Transfer trae un unico instrumentId por diseno (nunca multi-activo por
-            # construccion de la choice). AmuletRules_Transfer no trae instrumentId,
-            # solo `inputs` etiquetados; se normaliza "InputAmulet"/"InputLockedAmulet"
-            # como el MISMO activo (Amulet en distinto estado de holding, no dos
-            # instrumentos), consistente con el hallazgo C-6 de que solo Amulet
-            # circula visible en esta muestra. Un tag realmente distinto (ej. una
-            # stablecoin) si se contaria aparte.
             instrumentos = set()
             inst = transfer.get("instrumentId")
             if inst:
@@ -297,10 +255,6 @@ def main():
         results["D3_fraccion_multi_activo"] = n_multi_activo / n_transfer
         results["D2_D3_n"] = n_transfer
 
-    # --- C5: cambios estructurales de las reglas del DSO en la ventana (choices
-    # DsoRules_* que no son ruido rutinario, ver DSO_CHOICES_RUTINARIAS arriba).
-    # 0 en la ventana muestreada es un resultado valido (no se observo ninguno),
-    # no un no_computable.
     estructurales = Counter()
     for e in events:
         u = e.get("update")

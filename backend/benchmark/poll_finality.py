@@ -1,28 +1,4 @@
-"""Sondeador de finalidad en vivo para B2 (tau_F - tau_1) en Tempo y Aptos.
-
-NO reconstruible desde el historico: ninguna de las dos redes deja un evento
-posterior que registre cuando un bloque paso a ser 'finalizado'. Este script
-implementa el mecanismo tal como lo exige la Sec.7.1 del plan (ventana W_L,
-sondeo <=100ms, reloj del observador registrado), pero esta pensado para
-correr HORAS (72h en el plan completo) en un proceso de fondo dedicado, no
-dentro de una sesion interactiva corta.
-
-Uso:
-    python poll_finality.py tempo   --minutes 5 --interval-ms 100
-    python poll_finality.py aptos   --minutes 5 --interval-ms 100
-
-Salida: resultados/raw/<red>/finality_samples.jsonl, una linea por bloque
-recien finalizado, con:
-    numero_bloque, timestamp_red (tau_1), timestamp_observador_utc (tau_F
-    aproximado -- el instante en que ESTE observador vio el cambio, no el
-    instante exacto de finalizacion en la red), delta_s, deriva_reloj_nota.
-
-Limitacion declarada: tau_F medido asi es "cuando este observador se entero",
-no el instante exacto en que la red considero el bloque final -- el plan
-exige registrar la deriva del reloj del observador precisamente porque esta
-aproximacion es inevitable al sondear desde afuera. No se puede eliminar el
-sesgo de sondeo (polling lag), solo acotarlo con un intervalo pequeno.
-"""
+"""Sondeo en vivo de la finalidad (B2) de Tempo y Aptos: registra el instante en que cada altura pasa a finalizada; pensado para correr horas en segundo plano."""
 import argparse
 import json
 import time
@@ -91,9 +67,6 @@ def poll_aptos(minutes, interval_ms, out_path):
                 continue
             height = int(info["block_height"])
             if height != last_height:
-                # tau_1 real exige leer el bloque para su block_timestamp;
-                # se hace solo en la transicion, no en cada tick, para no
-                # multiplicar peticiones y disparar rate limit.
                 try:
                     b = get(f"/blocks/by_height/{height}")
                     tau_1 = int(b["block_timestamp"]) / 1e6

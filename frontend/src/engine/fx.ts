@@ -1,4 +1,4 @@
-/** Demo exchange rate, COP per USDT. Fixed on purpose: no live data in this prototype. */
+// Conversion COP/USDT con una tasa fija de visualizacion (DEMO_TRM).
 export const DEMO_TRM = 4000;
 
 export function copToUsdt(cop: number, trm: number = DEMO_TRM): number {

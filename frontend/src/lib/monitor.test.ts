@@ -1,3 +1,4 @@
+// Pruebas de los ayudantes del monitor.
 import { describe, expect, it } from "vitest";
 import { colorSalud, edadCorta, etiquetaMetrica, razonBase, resumenRed, trabajoActivo } from "./monitor";
 import type { MetricaMedicion, RedMedicion } from "@/modelo/tipos";

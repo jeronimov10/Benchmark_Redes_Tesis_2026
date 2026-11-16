@@ -1,3 +1,4 @@
+// Configuracion de Next.js: internacionalizacion y reenvio de /api/* al backend (BACKEND_URL).
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -10,7 +11,6 @@ const nextConfig: NextConfig = {
     return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
   },
   turbopack: {
-    // Pin the root: a stray package-lock.json in the user home dir confuses detection.
     root: __dirname,
     rules: {
       "*.css": {

@@ -1,4 +1,4 @@
-# Imagen del backend (FastAPI + colectores). Contexto de construccion: la raiz del repositorio; el contexto nombrado "certs" aporta CAs extra.
+# Imagen del backend: FastAPI, colectores y banco de simulacion.
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1

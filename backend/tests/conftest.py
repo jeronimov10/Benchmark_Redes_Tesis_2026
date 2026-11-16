@@ -10,8 +10,8 @@ BACKEND = Path(__file__).resolve().parents[1]
 REPO = BACKEND.parent
 sys.path.insert(0, str(BACKEND))
 
-from app.config import Settings  # noqa: E402
-from app.db.connection import Database  # noqa: E402
+from app.config import Settings
+from app.db.connection import Database
 
 
 @pytest.fixture

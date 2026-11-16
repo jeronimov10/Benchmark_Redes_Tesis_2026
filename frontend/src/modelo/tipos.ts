@@ -1,22 +1,16 @@
+// Tipos de las peticiones y respuestas de la API del backend.
 import type { BlockId, GateId, MetricId } from "@/engine/types";
-
-/**
- * Shapes returned by the FastAPI backend (backend/app). `resultado` is the dict of
- * modelo.recomendar() unchanged (see backend/modelo/INTEGRACION.md, "Qué devuelve").
- */
 
 export type Irrevocabilidad = "baja" | "media" | "alta";
 export type NivelCertidumbre = "alta" | "media" | "baja";
 export type ModoDatos = "vivo" | "medicion";
 
-/** Parameters of modelo.recomendar(), except `replicas`, which the server fixes at 10.000. */
 export interface EntradaModelo {
   monto_cop: number;
   transfronterizo: boolean;
   espera_s: number;
   irrevocabilidad: Irrevocabilidad;
   trm: number;
-  /** "vivo" (default): baseline overridden by fresh live metrics. "medicion": baseline only (thesis). */
   modo?: ModoDatos;
 }
 
@@ -36,15 +30,12 @@ export interface Banda {
 
 export interface ResultadoModelo {
   caso: Omit<EntradaModelo, "trm" | "modo"> & { ticket_usd: number };
-  /** Keyed by the model's scenario labels: "remesas", "comercio doméstico", "alto valor". */
   composicion: Record<string, number>;
   pesos: Record<BlockId, number>;
   certidumbre: number;
-  /** Network -> list of [gate, reason]. */
   inadmisibles: Record<string, [GateId, string][]>;
   advertencias: string[];
   bandas: Banda[];
-  /** Absent when no network is admissible; null when there is a single band. */
   determinante?: { metrica: MetricId; contribucion: number } | null;
 }
 
@@ -63,21 +54,18 @@ export interface MetricaDetalle {
   id: MetricId;
   bloque: BlockId;
   direccion: "menor" | "mayor" | "nueves";
-  /** Thresholds already resolved for this payment (A1 is a fraction of the ticket, in USD). */
   objetivo: number;
   inaceptable: number;
   valor: number | null;
   sigma: number | null;
   nota: string | null;
   cota_inferior: boolean;
-  /** modelo.normalizar() at the measured value; null when the metric is not conclusive. */
   puntaje: number | null;
   procedencia: Procedencia | null;
 }
 
 export interface DetalleRed {
   metricas: MetricaDetalle[];
-  /** Block means from modelo.puntuar() at the measured values; null when the block has no data. */
   bloques: Record<BlockId, number | null>;
   puntaje_central: number;
   compuertas_falladas: { compuerta: GateId; motivo: string }[];
@@ -98,7 +86,6 @@ export interface RespuestaRecomendar {
   resultado: ResultadoModelo | null;
   nivel_certidumbre: NivelCertidumbre | null;
   detalle: Record<string, DetalleRed>;
-  /** Description of the baseline measurement. */
   medicion: string;
   trm: number;
   modo: ModoDatos;

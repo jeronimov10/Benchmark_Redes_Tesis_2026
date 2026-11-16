@@ -12,7 +12,7 @@ from ...utils.tiempo import ahora, iso
 from .trabajador import ejecutar_modelo, calentar
 
 sys.path.insert(0, str(RAIZ_BACKEND / "modelo"))
-import modelo  # noqa: E402
+import modelo
 
 MEDICION_BASE = "perfiles de linea base: Polygon, Celo y Arbitrum medidos en 90 dias (octubre 2026); Tempo, Aptos y Canton de resultados/metrics.csv"
 MINIMO_REDES_CON_DATOS = 2

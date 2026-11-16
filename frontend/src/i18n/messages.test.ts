@@ -1,3 +1,4 @@
+// Pruebas de que los textos es y en tienen las mismas claves.
 import { describe, expect, it } from "vitest";
 import es from "../../messages/es.json";
 import en from "../../messages/en.json";

@@ -1,7 +1,4 @@
-"""Recalibracion bajo demanda (boton). Tempo, Aptos y Canton: ejecuta el pipeline de benchmark por lotes (recoleccion, calculo, entregables) en un
-subproceso aislado y, al terminar, reconstruye sus perfiles de linea base en SQLite. Polygon, Celo y Arbitrum: relleno por lotes de una ventana
-reciente (bloques, pagos y anclaje en Ethereum) que acelera sus metricas en vivo; su linea base de 90 dias (tesis) no se modifica. Un solo
-trabajo a la vez, con avance y cancelacion."""
+"""Recalibracion bajo demanda: corre el benchmark por lotes de Tempo, Aptos y Canton en un subproceso aislado y rellena la ventana en vivo de Polygon, Celo y Arbitrum; un solo trabajo a la vez, con avance y cancelacion."""
 
 import asyncio
 import json

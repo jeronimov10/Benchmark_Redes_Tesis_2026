@@ -1,3 +1,4 @@
+// Estado global del usuario y su historial, persistido en el navegador.
 "use client";
 
 import { useSyncExternalStore } from "react";
@@ -16,7 +17,6 @@ export interface HistoryEntry {
   userId: string;
   createdAt: number;
   tx: TxInput;
-  /** Profile at the time of the analysis, so the result is reproducible. */
   answers: ProfileAnswers;
   seeded?: boolean;
 }
@@ -51,7 +51,6 @@ function commit(next: StoreState) {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
-    // Storage may be unavailable (private mode); the app keeps working in memory.
   }
   listeners.forEach((l) => l());
 }
@@ -71,7 +70,6 @@ export function useStore(): StoreState {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/** False during server render and hydration, true afterwards. */
 export function useHydrated(): boolean {
   return useSyncExternalStore(
     () => () => {},

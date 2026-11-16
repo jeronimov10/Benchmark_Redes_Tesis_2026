@@ -2,10 +2,11 @@
 
 Referencia completa de cómo la aplicación obtiene los datos de las seis redes (Polygon, Celo, Arbitrum, Tempo, Aptos y Canton), cada cuánto los toma, cómo los valida y los convierte en métricas, y cómo llegan al modelo de decisión y a la interfaz. Incluye la matriz de qué métrica sale de dónde en cada red, y cuánto tarda en ser "viva".
 
-Documentos relacionados: [ARCHITECTURE.md](ARCHITECTURE.md) · [DECISION_MODEL.md](DECISION_MODEL.md) · [NETWORK_INTEGRATIONS.md](NETWORK_INTEGRATIONS.md) · [API.md](API.md).
+Documentos relacionados: [ARCHITECTURE.md](ARCHITECTURE.md) (componentes, API e integraciones) · [MODELO.md](MODELO.md) (modelo de decisión y banco de usuarios simulados) · [../resultados/limitaciones.md](../resultados/limitaciones.md).
 
 ## Contenido
 
+0. [Benchmark por lotes: la línea base](#0-benchmark-por-lotes-la-línea-base)
 1. [Principios](#1-principios)
 2. [Mapa general](#2-mapa-general)
 3. [Componentes](#3-componentes)
@@ -23,6 +24,72 @@ Documentos relacionados: [ARCHITECTURE.md](ARCHITECTURE.md) · [DECISION_MODEL.m
 15. [Matriz de fuentes, cadencia y tiempo hasta ser válida](#15-matriz-de-fuentes-cadencia-y-tiempo-hasta-ser-válida)
 16. [Identificadores verificados](#16-identificadores-verificados)
 17. [Diferencias metodológicas y limitaciones](#17-diferencias-metodológicas-y-limitaciones)
+
+---
+
+## 0. Benchmark por lotes: la línea base
+
+La línea base de Tempo, Aptos y Canton sale de un pipeline por lotes en `backend/benchmark/` que corre por separado de la aplicación. La de Polygon, Celo y Arbitrum es la medición de la tesis (ventana de 90 días) y vive en `backend/modelo/perfiles.json`.
+
+```
+collect_{tempo,aptos,canton}.py       -> resultados/raw/<red>/*.json            (datos crudos)
+compute_{tempo,aptos,canton}_metrics.py -> resultados/raw/<red>_metrics.json
+build_deliverables.py                 -> resultados/metrics.csv, run_manifest.json
+score_engine.py                       -> resultados/{gates,scores,sensitivity,discrimination}.csv
+main.py                               -> reporte en consola + resultados/benchmark_final.csv
+informe_unificado.py                  -> resultados/benchmark.md, benchmark.html, limitaciones.md (seis redes)
+```
+
+```bash
+python backend/benchmark/main.py            # rápido: recalcula desde resultados/raw/ sin tocar la red
+python backend/benchmark/main.py --collect  # lento: vuelve a consultar Tempo, Aptos y Canton antes de calcular
+```
+
+Parámetros por entorno de la recolección: `N_BLOCKS_TEMPO`, `N_BLOCKS_APTOS`, `MAX_PAGES`, `CANTON_START_AFTER`, `CANTON_MIGRATION_ID`. Los tres `collect_*.py` no comparten código a propósito: cada red expone un registro distinto. `poll_finality.py` es el único sondeo en vivo (B2 de Tempo y Aptos) y está pensado para correr horas en segundo plano.
+
+### La regla de oro
+
+> Ninguna métrica se puntúa si su valor no puede derivarse de una consulta reproducible al registro público de la red. Nunca se completa un valor con documentación, blogs o declaraciones de equipos. Un `no_computable` con su razón exacta es un resultado válido. Un número mal calculado o adivinado es peor que no computarlo.
+
+Dos técnicas que respetan la regla: (1) leer código fuente público para ubicar un identificador (dirección, selector de evento, layout de un struct) y **verificarlo con una consulta en vivo**; el valor final siempre sale de la consulta, nunca del código; (2) usar la API en vivo de un servicio auxiliar para resolver un identificador y verificarlo por auto-consistencia en la propia red (por ejemplo, el feed de Pyth APT/USD se resolvió por Hermes y se comprobó porque la tabla on-chain devolvió el mismo `price_identifier`). Para listar un repositorio sin autenticación sirven `api.github.com/repos/<owner>/<repo>/git/trees/<branch>?recursive=1` y `raw.githubusercontent.com`.
+
+### Catálogo de métricas
+
+| Bloque | Métricas |
+|---|---|
+| A. Costo | A1 costo mediano por transferencia (fracción del ticket), A2 p95/mediana, A3 pendiente β de `ln(costo)` contra ocupación, A4 costo de anclaje en Ethereum (solo rollups) |
+| B. Tiempo y caudal | B1 latencia de inclusión p95, B2 tiempo a finalidad (τF − τ1), B2b irrevocabilidad en Ethereum, B3 margen de capacidad (H_cfg sobre los TPS requeridos) |
+| C. Concentración y continuidad | C1 HHI de producción, C1b HHI de peso de consenso (primaria), C2 operadores que concentran más del 50 %, C3 continuidad, C4 tasa de fallo, C5 cambios de implementación |
+| D. Primitivas | D1 pago sin activo volátil propio, D2 datos asociables a una orden (memo, `meta`), D3 transacciones multi-transferencia |
+| Transversal | E1 observabilidad por un tercero no contraparte |
+
+Cada fila de `resultados/metrics.csv` trae `estado` (`computada`, `parcialmente_derivada`, `no_computable`), `razon_estado`, `n`, `consulta_ref` y `modo_dato`:
+
+- **`historico` (W_H):** se reconstruye de bloques, eventos o estado ya producidos; aunque la petición sea en vivo, lo medido ya ocurrió. Es la inmensa mayoría.
+- **`tiempo_real` (W_L):** requiere sondeo continuo mientras el evento ocurre. Solo B2 de Tempo y Aptos (ningún evento posterior registra cuándo un bloque quedó finalizado). En Canton B2 sí es histórico: el veredicto trae su `finalization_time`.
+- **`no_aplica`:** transversal o degenerada por arquitectura (E1, D1 y C1 en Canton).
+
+### Compuertas, pesos y agregación del motor del plan
+
+El motor `score_engine.py` puntúa los escenarios E1 (remesas), E2 (comercio) y E3 (alto valor) con los mismos pesos y umbrales del estudio de referencia, para mantener comparabilidad.
+
+| Compuerta | Condición | Escenarios |
+|---|---|---|
+| G1 | B1 ≤ 20 s | E2 |
+| G2′ | E1 = 1 y τF computable (registro público que permite verificar inclusión e irreversibilidad) | todos |
+| G3 | D2 > 0 | todos |
+| G4 | H_cfg ≥ 1 | E2, E3 |
+
+Fallar una compuerta es **inadmisible sin puntaje**, no cero. Pesos por bloque (A, B, C, D): E1 0,45/0,15/0,15/0,25; E2 0,35/0,35/0,15/0,15; E3 0,10/0,30/0,40/0,20. Normalización logarítmica entre un valor objetivo y un umbral inaceptable (C3 en nueves), media aritmética dentro de cada bloque, media geométrica entre bloques con piso 0,05, sensibilidad con `W ~ Dirichlet(50·W₀)` y 10 000 réplicas. Detalle y quirk de `log(0)` en [limitaciones](../resultados/limitaciones.md).
+
+### Ventanas y controles del plan
+
+- **W_H:** 14 días consecutivos completos para todas las métricas salvo B2 (con una quincena, un fin de mes y dos fines de semana). **W_L:** 72 h continuas para B2 de Tempo y Aptos, con sondeo a ≤ 100 ms y registro de la deriva del reloj.
+- Estratificación de 24 horas × 3 tipos de día, 100 transferencias por celda; si no se alcanzan, se toma el censo y se declara el `n` real.
+- Dos proveedores independientes por red, transacciones fallidas incluidas en C4, rango exacto publicado y nunca emitir transacciones propias ni convertirse en contraparte en Canton.
+- Todo percentil calculado sobre menos de 30 observaciones se marca; las métricas determinadas por la arquitectura se marcan `degenerada`.
+
+La corrida actual **no** cumple W_H ni el segundo proveedor: es una muestra reducida de verificación (ver [limitaciones](../resultados/limitaciones.md)).
 
 ---
 
@@ -527,7 +594,7 @@ sequenceDiagram
     API-->>U: JSON
 ```
 
-**Qué hace el modelo** (`backend/modelo/modelo.py`, no se edita; detalle en [DECISION_MODEL.md](DECISION_MODEL.md)):
+**Qué hace el modelo** (`backend/modelo/modelo.py`, no se edita; detalle en [MODELO.md](MODELO.md)):
 
 1. Vector del caso → pesos interpolados entre remesas, comercio y alto valor, con certidumbre κ.
 2. Compuertas: **G1** B1 > 20 s en comercio · **G2** B2 nulo · **G3** D2 ≤ 0 · **G4** B3 < 1 salvo cota inferior. Una red que falla queda inadmisible con su motivo.

@@ -1,5 +1,4 @@
-# Imagen del frontend (Next.js, pnpm). La URL del backend se fija al construir porque next.config.ts la usa en las rewrites.
-# El contexto nombrado "certs" aporta CAs extra (antivirus/proxy que intercepta HTTPS) para npm/pnpm durante la construccion.
+# Imagen del frontend: Next.js con pnpm; BACKEND_URL se fija al construir.
 FROM node:22-alpine AS build
 COPY --from=certs . /extra-certs
 RUN cat /etc/ssl/certs/ca-certificates.crt /extra-certs/*.crt > /extra-ca.pem 2>/dev/null || cp /etc/ssl/certs/ca-certificates.crt /extra-ca.pem
@@ -19,7 +18,6 @@ ENV NODE_ENV=production
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
 COPY --from=build /app/messages ./messages
 COPY --from=build /app/next.config.ts ./next.config.ts
 EXPOSE 3000

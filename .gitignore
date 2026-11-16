@@ -6,3 +6,5 @@ __pycache__/
 backend/data/
 certs/*.crt
 certs/*.pem
+
+execution.md

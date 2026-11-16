@@ -1,3 +1,4 @@
+// Ayudantes de la pagina de simulacion: estados de ajuste, colores y porcentajes.
 import type { CicloPanel, EstadoAjuste, FilaContrafactual, FilaPersonas, FilaSensibilidad } from "@/modelo/tipos";
 
 export const ESTADOS_AJUSTE: EstadoAjuste[] = ["cumple", "parcial", "brecha", "sin_solucion", "no_evaluable"];
@@ -12,7 +13,6 @@ export const COLOR_AJUSTE: Record<EstadoAjuste, string> = {
 
 export type Lectura = "preferencia" | "requisito";
 
-/** Share of users in each fit state for one reading of the wait, in display order. */
 export function segmentosAjuste(f: FilaPersonas, lectura: Lectura): { estado: EstadoAjuste; valor: number }[] {
   return ESTADOS_AJUSTE.map((estado) => ({ estado, valor: f[`${lectura}_${estado}`] ?? 0 }));
 }
@@ -20,7 +20,6 @@ export function segmentosAjuste(f: FilaPersonas, lectura: Lectura): { estado: Es
 export const porcentaje = (x: number | "" | null | undefined, decimales = 0): string =>
   x === "" || x === null || x === undefined ? "—" : `${(x * 100).toFixed(decimales)} %`;
 
-/** Heat level 0-3 for a change share: none, low, medium, high. */
 export function nivelCambio(x: number | ""): 0 | 1 | 2 | 3 {
   if (x === "" || x <= 0) return 0;
   if (x < 0.25) return 1;
@@ -35,7 +34,6 @@ export function bandaLegible(banda: string): string {
     .join(" + ");
 }
 
-/** Most sensitive attribute per profile: the one that flips the first band most often. */
 export function atributoMasSensible(filas: FilaSensibilidad[], perfil: number): FilaSensibilidad | null {
   const propias = filas.filter((f) => f.perfil === perfil && f.cuota_cambio !== "");
   if (propias.length === 0) return null;

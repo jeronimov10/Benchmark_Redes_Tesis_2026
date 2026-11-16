@@ -1,3 +1,4 @@
+// Pagina del monitor: estado en vivo de las seis redes y sus metricas.
 "use client";
 
 import { useState } from "react";
